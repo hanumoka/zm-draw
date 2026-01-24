@@ -11,50 +11,109 @@
 ### 목표
 
 - MIT 라이센스로 npm 배포
-- React 18+ / Next.js 13+ 호환
+- **React 19** / Next.js 15 호환 (핵심)
 - ERD, 플로우차트 다이어그램 지원
 - 확장 가능한 도형 시스템
-- 실시간 협업 지원 (Phase 2)
 
 ### 기술 스택
 
-| 분류 | 기술 |
-|------|------|
-| **코어** | Konva.js |
-| **프레임워크** | React 19, Next.js 15 |
-| **언어** | TypeScript 5.7+ |
-| **빌드** | tsup, Turbo |
-| **패키지 관리** | pnpm workspaces |
+| 분류 | 기술 | 비고 |
+|------|------|------|
+| **코어** | Konva.js (vanilla) | react-konva는 React 19 미지원 |
+| **프레임워크** | React 19, Next.js 15 | App Router |
+| **언어** | TypeScript 5.7+ | strict mode |
+| **빌드** | tsup, Turbo | ESM only |
+| **패키지 관리** | pnpm workspaces | |
 
 ---
 
-## 기능 요구사항
+## 아키텍처
 
-### MVP 기능
+### 레이어 구조 (Konva)
 
-| 기능 | 설명 | 우선순위 |
-|------|------|----------|
-| **기본 캔버스** | 줌, 팬, 그리드 | 필수 |
-| **기본 도형** | 사각형, 원, 다이아몬드 | 필수 |
-| **도형 조작** | 선택, 이동, 리사이즈, 회전 | 필수 |
-| **연결선** | 직선, 화살표 | 필수 |
-| **텍스트** | 제목, 본문, 라벨 | 필수 |
+```
+Konva.Stage
+├── Layer 0: Background (배경색)
+├── Layer 1: Grid (그리드 라인, listening: false)
+├── Layer 2: Connectors (화살표/연결선)
+├── Layer 3: Shapes (도형 + 텍스트 그룹)
+└── Layer 4: Selection (Transformer)
+```
 
-### ERD 기능
+### 도형 그룹 구조
 
-| 기능 | 설명 | 우선순위 |
-|------|------|----------|
-| **테이블 도형** | 컬럼, PK/FK, 데이터 타입 | 필수 |
-| **관계선** | Crow's Foot (1:1, 1:N, N:M) | 필수 |
-| **자동 레이아웃** | 테이블 자동 배치 | 권장 |
+```
+Konva.Group (draggable)
+├── Konva.Rect/Ellipse/RegularPolygon (도형)
+└── Konva.Text (텍스트 라벨, listening: false)
+```
 
-### 플로우차트 기능
+### 상태 관리
 
-| 기능 | 설명 | 우선순위 |
-|------|------|----------|
-| **도형 7종** | Process, Decision, Terminal 등 | 필수 |
-| **커넥터 라벨** | Yes/No 등 조건 텍스트 | 필수 |
-| **자동 정렬** | 스냅, 정렬 가이드 | 권장 |
+```typescript
+// React useState로 관리
+const [shapes, setShapes] = useState<Shape[]>([]);
+const [connectors, setConnectors] = useState<Connector[]>([]);
+const [selectedId, setSelectedId] = useState<string | null>(null);
+const [tool, setTool] = useState<ToolType>('select');
+const [scale, setScale] = useState(1);
+const [editingId, setEditingId] = useState<string | null>(null);
+
+// History는 useRef로 관리 (렌더링 최적화)
+const historyRef = useRef<HistoryState[]>([]);
+const [historyIndex, setHistoryIndex] = useState(-1);
+```
+
+---
+
+## 타입 정의
+
+### Shape
+
+```typescript
+export type ShapeType = 'rectangle' | 'ellipse' | 'diamond' | 'text';
+export type ToolType = 'select' | 'connector' | ShapeType;
+
+export interface Shape {
+  id: string;
+  type: ShapeType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  rotation?: number;
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  textColor?: string;
+}
+```
+
+### Connector
+
+```typescript
+export interface Connector {
+  id: string;
+  fromShapeId: string;
+  toShapeId: string;
+  stroke: string;
+  strokeWidth: number;
+  arrow: boolean;
+}
+```
+
+### Canvas State (Save/Load 포맷)
+
+```typescript
+interface CanvasData {
+  version: '1.0';
+  shapes: Shape[];
+  connectors: Connector[];
+}
+```
 
 ---
 
@@ -62,60 +121,74 @@
 
 ```
 zm-draw/
+├── docs/                       # 문서 (Claude 필독)
+│   ├── SESSION.md             # 세션 상태 ⭐
+│   ├── PROGRESS.md            # 진행상황
+│   └── PROJECT.md             # 이 파일
+│
 ├── packages/
 │   ├── core/                   # @zm-draw/core
-│   │   ├── src/
-│   │   │   ├── shapes/        # 도형 정의
-│   │   │   │   ├── types.ts
-│   │   │   │   ├── basic/     # 기본 도형
-│   │   │   │   ├── erd/       # ERD 도형
-│   │   │   │   └── flowchart/ # 플로우차트 도형
-│   │   │   ├── connectors/    # 연결선
-│   │   │   ├── canvas/        # 캔버스 관리
-│   │   │   └── utils/         # 유틸리티
-│   │   └── package.json
+│   │   └── src/
+│   │       └── index.ts       # 타입 export
 │   │
 │   └── react/                  # @zm-draw/react
-│       ├── src/
-│       │   ├── components/    # React 컴포넌트
-│       │   │   ├── DrawCanvas.tsx
-│       │   │   ├── Toolbar.tsx
-│       │   │   └── shapes/    # 도형 컴포넌트
-│       │   ├── hooks/
-│       │   └── context/
-│       └── package.json
+│       └── src/
+│           ├── components/
+│           │   ├── DrawCanvas.tsx  # 메인 컴포넌트 (990 lines)
+│           │   └── index.ts
+│           ├── hooks/
+│           ├── context/
+│           ├── types.ts       # Shape, Connector 타입
+│           └── index.ts
 │
 ├── apps/
-│   └── demo/                   # Next.js 데모
+│   └── demo/                   # Next.js 15 데모
+│       └── src/app/
+│           ├── page.tsx       # 데모 페이지
+│           └── layout.tsx
 │
-├── docs/                       # 문서
-├── package.json
-├── turbo.json
-└── pnpm-workspace.yaml
+├── package.json               # 루트 워크스페이스
+├── turbo.json                 # Turbo 설정
+├── pnpm-workspace.yaml
+└── CLAUDE.md                  # Claude Code 가이드
 ```
 
 ---
 
-## 패키지 설명
+## 핵심 컴포넌트: DrawCanvas
 
-### @zm-draw/core
+### Props
 
-프레임워크 독립적인 코어 패키지.
+```typescript
+export interface DrawCanvasProps {
+  width?: number;              // default: 800
+  height?: number;             // default: 600
+  backgroundColor?: string;    // default: '#ffffff'
+  showGrid?: boolean;          // default: true
+  gridSize?: number;           // default: 20
+  initialShapes?: Shape[];
+  onShapesChange?: (shapes: Shape[]) => void;
+  onReady?: (stage: Konva.Stage) => void;
+}
+```
 
-**내보내기:**
-- 도형 타입 정의 (ShapeConfig, ErdTableConfig 등)
-- 커넥터 타입 정의 (ConnectorConfig, ErdConnectorConfig 등)
-- 유틸리티 함수 (generateId, clamp 등)
+### 사용 예시
 
-### @zm-draw/react
+```tsx
+'use client';
+import { DrawCanvas } from '@zm-draw/react';
 
-React 컴포넌트와 훅을 제공하는 패키지.
-
-**내보내기:**
-- `DrawCanvas` - 메인 캔버스 컴포넌트
-- `Toolbar` - 도구 모음 (예정)
-- `useCanvas` - 캔버스 훅 (예정)
-- `useSelection` - 선택 훅 (예정)
+export default function DiagramEditor() {
+  return (
+    <DrawCanvas
+      width={1200}
+      height={800}
+      showGrid={true}
+      onShapesChange={(shapes) => console.log(shapes)}
+    />
+  );
+}
+```
 
 ---
 
@@ -125,7 +198,7 @@ React 컴포넌트와 훅을 제공하는 패키지.
 # 의존성 설치
 pnpm install
 
-# 개발 서버 시작
+# 개발 서버 시작 (demo: 3200, packages watch)
 pnpm dev
 
 # 빌드
@@ -145,13 +218,13 @@ pnpm clean
 ### 공식 문서
 
 - **Konva.js**: https://konvajs.org/docs/
-- **react-konva**: https://konvajs.org/docs/react/
-- **Next.js**: https://nextjs.org/docs
+- **Next.js 15**: https://nextjs.org/docs
 
-### 참조 프로젝트
+### 주의사항
 
-- **zm-editor**: `C:/Users/amagr/projects/zm-editor/`
-- **zm-v3 DevDraw 아키텍처**: `C:/Users/amagr/projects/zm-v3/zm-claude-docs/핵심문서/05-기능/02-DevDraw-아키텍처.md`
+- **react-konva 사용 불가**: React 19와 호환되지 않음
+- **vanilla Konva 사용**: useRef + useEffect 패턴으로 직접 관리
+- **Server Component 주의**: DrawCanvas는 'use client' 필수
 
 ---
 
@@ -161,8 +234,8 @@ pnpm clean
 
 | 패키지 | 상태 | npm 이름 |
 |--------|------|----------|
-| core | 개발 중 | @zm-draw/core |
-| react | 개발 중 | @zm-draw/react |
+| core | MVP 완료 | @zm-draw/core |
+| react | MVP 완료 | @zm-draw/react |
 
 ### 배포 전 체크리스트
 
