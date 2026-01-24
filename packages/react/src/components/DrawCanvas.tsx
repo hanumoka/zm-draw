@@ -33,6 +33,10 @@ const defaultShapeProps = {
   fill: '#3b82f6',
   stroke: '#1d4ed8',
   strokeWidth: 2,
+  text: '',
+  fontSize: 14,
+  fontFamily: 'Arial',
+  textColor: '#ffffff',
 };
 
 /**
@@ -60,6 +64,7 @@ export function DrawCanvas({
   const [scale, setScale] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const connectorsLayerRef = useRef<Konva.Layer | null>(null);
   const selectionLayerRef = useRef<Konva.Layer | null>(null);
@@ -111,52 +116,6 @@ export function DrawCanvas({
     setConnectors((prev) => [...prev, newConnector]);
   }, [connectors]);
 
-  // Create Konva shape from Shape data
-  const createKonvaShape = useCallback((shape: Shape): Konva.Shape => {
-    let konvaShape: Konva.Shape;
-
-    const baseConfig = {
-      id: shape.id,
-      x: shape.x,
-      y: shape.y,
-      width: shape.width,
-      height: shape.height,
-      fill: shape.fill,
-      stroke: shape.stroke,
-      strokeWidth: shape.strokeWidth,
-      draggable: true,
-      rotation: shape.rotation || 0,
-    };
-
-    switch (shape.type) {
-      case 'ellipse':
-        konvaShape = new Konva.Ellipse({
-          ...baseConfig,
-          radiusX: shape.width / 2,
-          radiusY: shape.height / 2,
-          offsetX: -shape.width / 2,
-          offsetY: -shape.height / 2,
-        });
-        break;
-      case 'diamond':
-        konvaShape = new Konva.RegularPolygon({
-          ...baseConfig,
-          sides: 4,
-          radius: Math.min(shape.width, shape.height) / 2,
-          offsetX: -shape.width / 2,
-          offsetY: -shape.height / 2,
-        });
-        break;
-      default:
-        konvaShape = new Konva.Rect({
-          ...baseConfig,
-          cornerRadius: 4,
-        });
-    }
-
-    return konvaShape;
-  }, []);
-
   // Render all shapes to the layer
   const renderShapes = useCallback(() => {
     const layer = shapesLayerRef.current;
@@ -165,7 +124,52 @@ export function DrawCanvas({
     layer.destroyChildren();
 
     shapes.forEach((shape) => {
-      const konvaShape = createKonvaShape(shape);
+      // Create group for shape + text
+      const group = new Konva.Group({
+        id: shape.id,
+        x: shape.x,
+        y: shape.y,
+        draggable: true,
+        rotation: shape.rotation || 0,
+      });
+
+      // Create shape at origin (relative to group)
+      const shapeConfig = {
+        x: 0,
+        y: 0,
+        width: shape.width,
+        height: shape.height,
+        fill: shape.fill,
+        stroke: shape.stroke,
+        strokeWidth: shape.strokeWidth,
+      };
+
+      let konvaShape: Konva.Shape;
+      switch (shape.type) {
+        case 'ellipse':
+          konvaShape = new Konva.Ellipse({
+            ...shapeConfig,
+            x: shape.width / 2,
+            y: shape.height / 2,
+            radiusX: shape.width / 2,
+            radiusY: shape.height / 2,
+          });
+          break;
+        case 'diamond':
+          konvaShape = new Konva.RegularPolygon({
+            ...shapeConfig,
+            x: shape.width / 2,
+            y: shape.height / 2,
+            sides: 4,
+            radius: Math.min(shape.width, shape.height) / 2,
+          });
+          break;
+        default:
+          konvaShape = new Konva.Rect({
+            ...shapeConfig,
+            cornerRadius: 4,
+          });
+      }
 
       // Selection highlight
       if (shape.id === selectedId) {
@@ -173,8 +177,34 @@ export function DrawCanvas({
         konvaShape.strokeWidth(3);
       }
 
+      // Highlight when connecting from this shape
+      if (connectingFrom === shape.id) {
+        konvaShape.stroke('#22c55e');
+        konvaShape.strokeWidth(3);
+      }
+
+      group.add(konvaShape);
+
+      // Add text label
+      if (shape.text) {
+        const text = new Konva.Text({
+          x: 0,
+          y: 0,
+          width: shape.width,
+          height: shape.height,
+          text: shape.text,
+          fontSize: shape.fontSize || 14,
+          fontFamily: shape.fontFamily || 'Arial',
+          fill: shape.textColor || '#ffffff',
+          align: 'center',
+          verticalAlign: 'middle',
+          listening: false,
+        });
+        group.add(text);
+      }
+
       // Drag event handlers
-      konvaShape.on('dragend', (e) => {
+      group.on('dragend', (e) => {
         const target = e.target;
         setShapes((prev) => {
           const updated = prev.map((s) =>
@@ -186,7 +216,7 @@ export function DrawCanvas({
       });
 
       // Click to select or connect
-      konvaShape.on('click tap', () => {
+      group.on('click tap', () => {
         if (tool === 'connector') {
           if (!connectingFrom) {
             setConnectingFrom(shape.id);
@@ -199,13 +229,13 @@ export function DrawCanvas({
         }
       });
 
-      // Highlight when connecting from this shape
-      if (connectingFrom === shape.id) {
-        konvaShape.stroke('#22c55e');
-        konvaShape.strokeWidth(3);
-      }
+      // Double click to edit text
+      group.on('dblclick dbltap', () => {
+        setEditingId(shape.id);
+        setSelectedId(shape.id);
+      });
 
-      layer.add(konvaShape);
+      layer.add(group);
     });
 
     // Update transformer
@@ -223,7 +253,7 @@ export function DrawCanvas({
     }
 
     layer.batchDraw();
-  }, [shapes, selectedId, createKonvaShape, onShapesChange, tool, connectingFrom, addConnector]);
+  }, [shapes, selectedId, onShapesChange, tool, connectingFrom, addConnector, editingId]);
 
   // Add shape at position
   const addShape = useCallback((type: ShapeType, x: number, y: number) => {
@@ -310,6 +340,24 @@ export function DrawCanvas({
     layer.batchDraw();
   }, [connectors, shapes, getShapeCenter]);
 
+  // Update shape text
+  const updateShapeText = useCallback((id: string, text: string) => {
+    setShapes((prev) => {
+      const updated = prev.map((s) =>
+        s.id === id ? { ...s, text } : s
+      );
+      onShapesChange?.(updated);
+      return updated;
+    });
+    setEditingId(null);
+  }, [onShapesChange]);
+
+  // Get editing shape position for overlay
+  const getEditingShape = useCallback(() => {
+    if (!editingId) return null;
+    return shapes.find((s) => s.id === editingId) || null;
+  }, [editingId, shapes]);
+
   // Reset zoom
   const resetZoom = useCallback(() => {
     const stage = stageRef.current;
@@ -325,13 +373,16 @@ export function DrawCanvas({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (e.key === 'Backspace' && document.activeElement?.tagName !== 'INPUT') {
-          e.preventDefault();
+        // Don't delete when editing text
+        if (document.activeElement?.tagName === 'INPUT') {
+          return;
         }
+        e.preventDefault();
         deleteSelected();
       } else if (e.key === 'Escape') {
         setSelectedId(null);
         setConnectingFrom(null);
+        setEditingId(null);
         setTool('select');
       } else if (e.code === 'Space' && !isPanning) {
         e.preventDefault();
@@ -703,11 +754,55 @@ export function DrawCanvas({
       </div>
 
       {/* Canvas */}
-      <div
-        ref={containerRef}
-        className="zm-draw-canvas-container"
-        style={{ width, height, cursor: tool === 'select' ? 'default' : 'crosshair' }}
-      />
+      <div style={{ position: 'relative', width, height }}>
+        <div
+          ref={containerRef}
+          className="zm-draw-canvas-container"
+          style={{ width, height, cursor: tool === 'select' ? 'default' : 'crosshair' }}
+        />
+
+        {/* Text editing overlay */}
+        {editingId && (() => {
+          const editingShape = getEditingShape();
+          if (!editingShape) return null;
+
+          const stage = stageRef.current;
+          const stageScale = stage?.scaleX() || 1;
+          const stagePos = stage?.position() || { x: 0, y: 0 };
+
+          return (
+            <input
+              type="text"
+              autoFocus
+              defaultValue={editingShape.text || ''}
+              style={{
+                position: 'absolute',
+                left: editingShape.x * stageScale + stagePos.x,
+                top: editingShape.y * stageScale + stagePos.y,
+                width: editingShape.width * stageScale,
+                height: editingShape.height * stageScale,
+                fontSize: (editingShape.fontSize || 14) * stageScale,
+                fontFamily: editingShape.fontFamily || 'Arial',
+                textAlign: 'center',
+                border: '2px solid #3b82f6',
+                borderRadius: 4,
+                outline: 'none',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                color: '#000000',
+                padding: 0,
+              }}
+              onBlur={(e) => updateShapeText(editingId, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  updateShapeText(editingId, (e.target as HTMLInputElement).value);
+                } else if (e.key === 'Escape') {
+                  setEditingId(null);
+                }
+              }}
+            />
+          );
+        })()}
+      </div>
     </div>
   );
 }

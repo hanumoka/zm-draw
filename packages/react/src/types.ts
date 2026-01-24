@@ -16,6 +16,9 @@ export interface Shape {
   strokeWidth: number;
   rotation?: number;
   text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  textColor?: string;
 }
 
 export interface Connector {
