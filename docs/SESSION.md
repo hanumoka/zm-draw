@@ -25,7 +25,7 @@
 
 - **브랜치**: main
 - **원격**: origin/main (동기화됨)
-- **마지막 커밋**: `docs: Add comprehensive Figma-style implementation roadmap`
+- **마지막 커밋**: `docs: Update all docs with Figma-style roadmap integration`
 
 ---
 

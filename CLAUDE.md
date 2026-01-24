@@ -60,9 +60,9 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3200
 
 ### 현재 상태 (2026-01-24)
 
-- **Phase**: MVP 완료 (75%)
+- **Phase**: MVP 완료 → Figma 스타일 리팩토링 준비
 - **구현 완료**: 도형, 커넥터, 텍스트, Undo/Redo, Save/Load
-- **다음 Phase**: Copy/Paste, Multi-select
+- **다음 Phase**: Phase 1 (기초 리팩토링 - Zustand, 컴포넌트 분리)
 
 ### 기술 스택
 
@@ -82,8 +82,9 @@ zm-draw/
 ├── CLAUDE.md                   # 이 파일 (Claude 진입점)
 ├── docs/                       # 문서 (Claude 필독)
 │   ├── SESSION.md             # 세션 상태 ⭐ 가장 중요
-│   ├── PROGRESS.md            # 진행상황
-│   └── PROJECT.md             # 아키텍처
+│   ├── PROGRESS.md            # 진행상황 (7 Phase 로드맵)
+│   ├── PROJECT.md             # 아키텍처
+│   └── FIGMA-STYLE-ROADMAP.md # Figma 스타일 상세 계획
 │
 ├── packages/
 │   ├── core/                   # @zm-draw/core (타입)

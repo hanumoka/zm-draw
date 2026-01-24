@@ -247,6 +247,7 @@
 
 | 날짜 | 커밋 | 설명 |
 |------|------|------|
+| 2026-01-24 | 9878cd0 | docs: Update all docs with Figma-style roadmap |
 | 2026-01-24 | 5d69c0c | docs: Add Figma-style roadmap |
 | 2026-01-24 | 3698832 | fix: Fix shape resize |
 | 2026-01-24 | 0a33caa | docs: Update documentation |
