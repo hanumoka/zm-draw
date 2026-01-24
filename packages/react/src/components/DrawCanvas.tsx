@@ -587,19 +587,20 @@ export function DrawCanvas({
       const scaleX = node.scaleX();
       const scaleY = node.scaleY();
 
-      // Reset scale and apply to width/height
+      // Reset scale
       node.scaleX(1);
       node.scaleY(1);
 
       setShapes((prev) => {
         const updated = prev.map((s) => {
           if (s.id === id) {
+            // Use original shape dimensions and apply scale
             return {
               ...s,
               x: node.x(),
               y: node.y(),
-              width: Math.max(20, node.width() * scaleX),
-              height: Math.max(20, node.height() * scaleY),
+              width: Math.max(20, s.width * scaleX),
+              height: Math.max(20, s.height * scaleY),
               rotation: node.rotation(),
             };
           }
