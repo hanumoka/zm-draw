@@ -66,9 +66,72 @@ export function DrawCanvas({
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // History for undo/redo
+  const historyRef = useRef<{ shapes: Shape[]; connectors: Connector[] }[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const isUndoRedoRef = useRef(false);
+
   const connectorsLayerRef = useRef<Konva.Layer | null>(null);
   const selectionLayerRef = useRef<Konva.Layer | null>(null);
   const transformerRef = useRef<Konva.Transformer | null>(null);
+
+  // Save state to history
+  const saveHistory = useCallback((newShapes: Shape[], newConnectors: Connector[]) => {
+    if (isUndoRedoRef.current) {
+      isUndoRedoRef.current = false;
+      return;
+    }
+
+    setHistoryIndex((currentIndex) => {
+      // Remove future states if we're not at the end
+      historyRef.current = historyRef.current.slice(0, currentIndex + 1);
+
+      // Add new state
+      historyRef.current.push({
+        shapes: JSON.parse(JSON.stringify(newShapes)),
+        connectors: JSON.parse(JSON.stringify(newConnectors)),
+      });
+
+      // Limit history size
+      if (historyRef.current.length > 50) {
+        historyRef.current.shift();
+        return currentIndex;
+      }
+      return currentIndex + 1;
+    });
+  }, []);
+
+  // Undo
+  const undo = useCallback(() => {
+    if (historyIndex <= 0) return;
+
+    isUndoRedoRef.current = true;
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+
+    const state = historyRef.current[newIndex];
+    setShapes(JSON.parse(JSON.stringify(state.shapes)));
+    setConnectors(JSON.parse(JSON.stringify(state.connectors)));
+    setSelectedId(null);
+  }, [historyIndex]);
+
+  // Redo
+  const redo = useCallback(() => {
+    if (historyIndex >= historyRef.current.length - 1) return;
+
+    isUndoRedoRef.current = true;
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+
+    const state = historyRef.current[newIndex];
+    setShapes(JSON.parse(JSON.stringify(state.shapes)));
+    setConnectors(JSON.parse(JSON.stringify(state.connectors)));
+    setSelectedId(null);
+  }, [historyIndex]);
+
+  // Check if undo/redo is available
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < historyRef.current.length - 1;
 
   // Draw grid lines
   const drawGrid = useCallback((layer: Konva.Layer, w: number, h: number, size: number) => {
@@ -387,6 +450,12 @@ export function DrawCanvas({
       } else if (e.code === 'Space' && !isPanning) {
         e.preventDefault();
         setIsPanning(true);
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
       }
     };
 
@@ -402,7 +471,7 @@ export function DrawCanvas({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [deleteSelected, isPanning]);
+  }, [deleteSelected, isPanning, undo, redo]);
 
   // Initialize canvas
   useEffect(() => {
@@ -565,6 +634,11 @@ export function DrawCanvas({
   useEffect(() => {
     renderConnectors();
   }, [renderConnectors]);
+
+  // Save to history when shapes or connectors change
+  useEffect(() => {
+    saveHistory(shapes, connectors);
+  }, [shapes, connectors, saveHistory]);
 
   // Update click handler when tool changes
   useEffect(() => {
@@ -730,6 +804,37 @@ export function DrawCanvas({
           }}
         >
           Clear All
+        </button>
+
+        <div style={{ width: 1, backgroundColor: '#d1d5db', margin: '0 4px' }} />
+
+        <button
+          onClick={undo}
+          disabled={!canUndo}
+          style={{
+            padding: '8px 16px',
+            border: '1px solid #d1d5db',
+            borderRadius: 4,
+            backgroundColor: canUndo ? '#fff' : '#f3f4f6',
+            color: canUndo ? '#374151' : '#9ca3af',
+            cursor: canUndo ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Undo
+        </button>
+        <button
+          onClick={redo}
+          disabled={!canRedo}
+          style={{
+            padding: '8px 16px',
+            border: '1px solid #d1d5db',
+            borderRadius: 4,
+            backgroundColor: canRedo ? '#fff' : '#f3f4f6',
+            color: canRedo ? '#374151' : '#9ca3af',
+            cursor: canRedo ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Redo
         </button>
 
         <div style={{ width: 1, backgroundColor: '#d1d5db', margin: '0 4px' }} />
