@@ -1,8 +1,14 @@
 'use client';
 
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useImperativeHandle, forwardRef } from 'react';
 import Konva from 'konva';
 import type { Shape, ShapeType, ToolType } from '../types';
+
+export interface DrawCanvasRef {
+  deleteSelected: () => void;
+  getShapes: () => Shape[];
+  clearAll: () => void;
+}
 
 export interface DrawCanvasProps {
   /** Canvas width */
@@ -184,6 +190,44 @@ export function DrawCanvas({
     setTool('select');
   }, [onShapesChange]);
 
+  // Delete selected shape
+  const deleteSelected = useCallback(() => {
+    if (!selectedId) return;
+
+    setShapes((prev) => {
+      const updated = prev.filter((s) => s.id !== selectedId);
+      onShapesChange?.(updated);
+      return updated;
+    });
+    setSelectedId(null);
+  }, [selectedId, onShapesChange]);
+
+  // Clear all shapes
+  const clearAll = useCallback(() => {
+    setShapes([]);
+    setSelectedId(null);
+    onShapesChange?.([]);
+  }, [onShapesChange]);
+
+  // Keyboard event handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        // Prevent browser back navigation on Backspace
+        if (e.key === 'Backspace' && document.activeElement?.tagName !== 'INPUT') {
+          e.preventDefault();
+        }
+        deleteSelected();
+      } else if (e.key === 'Escape') {
+        setSelectedId(null);
+        setTool('select');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [deleteSelected]);
+
   // Initialize canvas
   useEffect(() => {
     if (!containerRef.current) return;
@@ -275,7 +319,7 @@ export function DrawCanvas({
   return (
     <div className="zm-draw-wrapper">
       {/* Toolbar */}
-      <div className="zm-draw-toolbar" style={{ marginBottom: 8, display: 'flex', gap: 8 }}>
+      <div className="zm-draw-toolbar" style={{ marginBottom: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
           onClick={() => setTool('select')}
           style={{
@@ -327,6 +371,37 @@ export function DrawCanvas({
           }}
         >
           Diamond
+        </button>
+
+        <div style={{ width: 1, backgroundColor: '#d1d5db', margin: '0 4px' }} />
+
+        <button
+          onClick={deleteSelected}
+          disabled={!selectedId}
+          style={{
+            padding: '8px 16px',
+            border: '1px solid #d1d5db',
+            borderRadius: 4,
+            backgroundColor: selectedId ? '#ef4444' : '#f3f4f6',
+            color: selectedId ? '#fff' : '#9ca3af',
+            cursor: selectedId ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Delete
+        </button>
+        <button
+          onClick={clearAll}
+          disabled={shapes.length === 0}
+          style={{
+            padding: '8px 16px',
+            border: '1px solid #d1d5db',
+            borderRadius: 4,
+            backgroundColor: shapes.length > 0 ? '#fff' : '#f3f4f6',
+            color: shapes.length > 0 ? '#374151' : '#9ca3af',
+            cursor: shapes.length > 0 ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Clear All
         </button>
       </div>
 
