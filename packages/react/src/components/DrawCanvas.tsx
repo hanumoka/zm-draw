@@ -62,6 +62,8 @@ export function DrawCanvas({
   const [shapes, setShapes] = useState<Shape[]>(initialShapes);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolType>('select');
+  const [scale, setScale] = useState(1);
+  const [isPanning, setIsPanning] = useState(false);
 
   // Draw grid lines
   const drawGrid = useCallback((layer: Konva.Layer, w: number, h: number, size: number) => {
@@ -209,11 +211,21 @@ export function DrawCanvas({
     onShapesChange?.([]);
   }, [onShapesChange]);
 
+  // Reset zoom
+  const resetZoom = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    stage.scale({ x: 1, y: 1 });
+    stage.position({ x: 0, y: 0 });
+    stage.batchDraw();
+    setScale(1);
+  }, []);
+
   // Keyboard event handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        // Prevent browser back navigation on Backspace
         if (e.key === 'Backspace' && document.activeElement?.tagName !== 'INPUT') {
           e.preventDefault();
         }
@@ -221,12 +233,25 @@ export function DrawCanvas({
       } else if (e.key === 'Escape') {
         setSelectedId(null);
         setTool('select');
+      } else if (e.code === 'Space' && !isPanning) {
+        e.preventDefault();
+        setIsPanning(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setIsPanning(false);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteSelected]);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [deleteSelected, isPanning]);
 
   // Initialize canvas
   useEffect(() => {
@@ -277,6 +302,39 @@ export function DrawCanvas({
       }
     });
 
+    // Zoom with mouse wheel
+    stage.on('wheel', (e) => {
+      e.evt.preventDefault();
+
+      const scaleBy = 1.1;
+      const oldScale = stage.scaleX();
+      const pointer = stage.getPointerPosition();
+
+      if (!pointer) return;
+
+      const mousePointTo = {
+        x: (pointer.x - stage.x()) / oldScale,
+        y: (pointer.y - stage.y()) / oldScale,
+      };
+
+      const direction = e.evt.deltaY > 0 ? -1 : 1;
+      const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+
+      // Limit zoom range
+      const clampedScale = Math.max(0.1, Math.min(5, newScale));
+
+      stage.scale({ x: clampedScale, y: clampedScale });
+
+      const newPos = {
+        x: pointer.x - mousePointTo.x * clampedScale,
+        y: pointer.y - mousePointTo.y * clampedScale,
+      };
+
+      stage.position(newPos);
+      stage.batchDraw();
+      setScale(clampedScale);
+    });
+
     if (onReady) {
       onReady(stage);
     }
@@ -300,6 +358,8 @@ export function DrawCanvas({
 
     stage.off('click tap');
     stage.on('click tap', (e) => {
+      if (isPanning) return;
+
       const bgLayer = stage.getLayers()[0];
       const gridLayer = stage.getLayers()[1];
 
@@ -307,14 +367,51 @@ export function DrawCanvas({
         if (tool !== 'select') {
           const pos = stage.getPointerPosition();
           if (pos) {
-            addShape(tool as ShapeType, pos.x, pos.y);
+            // Adjust position for scale and pan
+            const transform = stage.getAbsoluteTransform().copy().invert();
+            const adjustedPos = transform.point(pos);
+            addShape(tool as ShapeType, adjustedPos.x, adjustedPos.y);
           }
         } else {
           setSelectedId(null);
         }
       }
     });
-  }, [tool, addShape]);
+  }, [tool, addShape, isPanning]);
+
+  // Pan with space + drag
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    if (isPanning) {
+      stage.draggable(true);
+      stage.container().style.cursor = 'grab';
+    } else {
+      stage.draggable(false);
+      stage.container().style.cursor = tool === 'select' ? 'default' : 'crosshair';
+    }
+
+    const handleDragStart = () => {
+      if (isPanning) {
+        stage.container().style.cursor = 'grabbing';
+      }
+    };
+
+    const handleDragEnd = () => {
+      if (isPanning) {
+        stage.container().style.cursor = 'grab';
+      }
+    };
+
+    stage.on('dragstart', handleDragStart);
+    stage.on('dragend', handleDragEnd);
+
+    return () => {
+      stage.off('dragstart', handleDragStart);
+      stage.off('dragend', handleDragEnd);
+    };
+  }, [isPanning, tool]);
 
   return (
     <div className="zm-draw-wrapper">
@@ -402,6 +499,26 @@ export function DrawCanvas({
           }}
         >
           Clear All
+        </button>
+
+        <div style={{ width: 1, backgroundColor: '#d1d5db', margin: '0 4px' }} />
+
+        <span style={{ padding: '8px 12px', color: '#6b7280', fontSize: 14 }}>
+          {Math.round(scale * 100)}%
+        </span>
+        <button
+          onClick={resetZoom}
+          disabled={scale === 1}
+          style={{
+            padding: '8px 16px',
+            border: '1px solid #d1d5db',
+            borderRadius: 4,
+            backgroundColor: scale !== 1 ? '#fff' : '#f3f4f6',
+            color: scale !== 1 ? '#374151' : '#9ca3af',
+            cursor: scale !== 1 ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Reset Zoom
         </button>
       </div>
 
