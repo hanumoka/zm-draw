@@ -1,14 +1,8 @@
 'use client';
 
-import { useRef, useEffect, useCallback, useState, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import Konva from 'konva';
-import type { Shape, ShapeType, ToolType } from '../types';
-
-export interface DrawCanvasRef {
-  deleteSelected: () => void;
-  getShapes: () => Shape[];
-  clearAll: () => void;
-}
+import type { Shape, ShapeType, ToolType, Connector } from '../types';
 
 export interface DrawCanvasProps {
   /** Canvas width */
@@ -60,10 +54,14 @@ export function DrawCanvas({
   const shapesLayerRef = useRef<Konva.Layer | null>(null);
 
   const [shapes, setShapes] = useState<Shape[]>(initialShapes);
+  const [connectors, setConnectors] = useState<Connector[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tool, setTool] = useState<ToolType>('select');
   const [scale, setScale] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
+  const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
+
+  const connectorsLayerRef = useRef<Konva.Layer | null>(null);
 
   // Draw grid lines
   const drawGrid = useCallback((layer: Konva.Layer, w: number, h: number, size: number) => {
@@ -87,6 +85,29 @@ export function DrawCanvas({
 
     layer.batchDraw();
   }, []);
+
+  // Add connector between shapes
+  const addConnector = useCallback((fromId: string, toId: string) => {
+    if (fromId === toId) return;
+
+    // Check if connector already exists
+    const exists = connectors.some(
+      (c) => (c.fromShapeId === fromId && c.toShapeId === toId) ||
+             (c.fromShapeId === toId && c.toShapeId === fromId)
+    );
+    if (exists) return;
+
+    const newConnector: Connector = {
+      id: `conn-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      fromShapeId: fromId,
+      toShapeId: toId,
+      stroke: '#6b7280',
+      strokeWidth: 2,
+      arrow: true,
+    };
+
+    setConnectors((prev) => [...prev, newConnector]);
+  }, [connectors]);
 
   // Create Konva shape from Shape data
   const createKonvaShape = useCallback((shape: Shape): Konva.Shape => {
@@ -162,16 +183,31 @@ export function DrawCanvas({
         });
       });
 
-      // Click to select
+      // Click to select or connect
       konvaShape.on('click tap', () => {
-        setSelectedId(shape.id);
+        if (tool === 'connector') {
+          if (!connectingFrom) {
+            setConnectingFrom(shape.id);
+          } else {
+            addConnector(connectingFrom, shape.id);
+            setConnectingFrom(null);
+          }
+        } else {
+          setSelectedId(shape.id);
+        }
       });
+
+      // Highlight when connecting from this shape
+      if (connectingFrom === shape.id) {
+        konvaShape.stroke('#22c55e');
+        konvaShape.strokeWidth(3);
+      }
 
       layer.add(konvaShape);
     });
 
     layer.batchDraw();
-  }, [shapes, selectedId, createKonvaShape, onShapesChange]);
+  }, [shapes, selectedId, createKonvaShape, onShapesChange, tool, connectingFrom, addConnector]);
 
   // Add shape at position
   const addShape = useCallback((type: ShapeType, x: number, y: number) => {
@@ -201,15 +237,62 @@ export function DrawCanvas({
       onShapesChange?.(updated);
       return updated;
     });
+
+    // Also delete connectors attached to this shape
+    setConnectors((prev) =>
+      prev.filter((c) => c.fromShapeId !== selectedId && c.toShapeId !== selectedId)
+    );
+
     setSelectedId(null);
   }, [selectedId, onShapesChange]);
 
   // Clear all shapes
   const clearAll = useCallback(() => {
     setShapes([]);
+    setConnectors([]);
     setSelectedId(null);
     onShapesChange?.([]);
   }, [onShapesChange]);
+
+  // Get shape center position
+  const getShapeCenter = useCallback((shape: Shape) => {
+    return {
+      x: shape.x + shape.width / 2,
+      y: shape.y + shape.height / 2,
+    };
+  }, []);
+
+  // Render connectors
+  const renderConnectors = useCallback(() => {
+    const layer = connectorsLayerRef.current;
+    if (!layer) return;
+
+    layer.destroyChildren();
+
+    connectors.forEach((connector) => {
+      const fromShape = shapes.find((s) => s.id === connector.fromShapeId);
+      const toShape = shapes.find((s) => s.id === connector.toShapeId);
+
+      if (!fromShape || !toShape) return;
+
+      const from = getShapeCenter(fromShape);
+      const to = getShapeCenter(toShape);
+
+      const arrow = new Konva.Arrow({
+        id: connector.id,
+        points: [from.x, from.y, to.x, to.y],
+        stroke: connector.stroke,
+        strokeWidth: connector.strokeWidth,
+        fill: connector.stroke,
+        pointerLength: 10,
+        pointerWidth: 8,
+      });
+
+      layer.add(arrow);
+    });
+
+    layer.batchDraw();
+  }, [connectors, shapes, getShapeCenter]);
 
   // Reset zoom
   const resetZoom = useCallback(() => {
@@ -232,6 +315,7 @@ export function DrawCanvas({
         deleteSelected();
       } else if (e.key === 'Escape') {
         setSelectedId(null);
+        setConnectingFrom(null);
         setTool('select');
       } else if (e.code === 'Space' && !isPanning) {
         e.preventDefault();
@@ -281,6 +365,11 @@ export function DrawCanvas({
     if (showGrid) {
       drawGrid(gridLayer, width, height, gridSize);
     }
+
+    // Connectors layer (below shapes)
+    const connectorsLayer = new Konva.Layer();
+    stage.add(connectorsLayer);
+    connectorsLayerRef.current = connectorsLayer;
 
     // Shapes layer
     const shapesLayer = new Konva.Layer();
@@ -343,6 +432,7 @@ export function DrawCanvas({
       stage.destroy();
       stageRef.current = null;
       shapesLayerRef.current = null;
+      connectorsLayerRef.current = null;
     };
   }, [width, height, backgroundColor, showGrid, gridSize, drawGrid, onReady]);
 
@@ -350,6 +440,11 @@ export function DrawCanvas({
   useEffect(() => {
     renderShapes();
   }, [renderShapes]);
+
+  // Re-render connectors when they change
+  useEffect(() => {
+    renderConnectors();
+  }, [renderConnectors]);
 
   // Update click handler when tool changes
   useEffect(() => {
@@ -364,7 +459,10 @@ export function DrawCanvas({
       const gridLayer = stage.getLayers()[1];
 
       if (e.target === stage || e.target.getLayer() === bgLayer || e.target.getLayer() === gridLayer) {
-        if (tool !== 'select') {
+        if (tool === 'connector') {
+          // Cancel connecting on empty click
+          setConnectingFrom(null);
+        } else if (tool !== 'select') {
           const pos = stage.getPointerPosition();
           if (pos) {
             // Adjust position for scale and pan
@@ -468,6 +566,19 @@ export function DrawCanvas({
           }}
         >
           Diamond
+        </button>
+        <button
+          onClick={() => { setTool('connector'); setConnectingFrom(null); }}
+          style={{
+            padding: '8px 16px',
+            border: '1px solid #d1d5db',
+            borderRadius: 4,
+            backgroundColor: tool === 'connector' ? '#22c55e' : '#fff',
+            color: tool === 'connector' ? '#fff' : '#374151',
+            cursor: 'pointer',
+          }}
+        >
+          {connectingFrom ? 'Click target...' : 'Connector'}
         </button>
 
         <div style={{ width: 1, backgroundColor: '#d1d5db', margin: '0 4px' }} />
