@@ -1,9 +1,7 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
-import { Stage, Layer, Rect } from 'react-konva';
-import type Konva from 'konva';
-import type { CanvasConfig } from '@zm-draw/core';
+import { useRef, useEffect, useCallback } from 'react';
+import Konva from 'konva';
 
 export interface DrawCanvasProps {
   /** Canvas width */
@@ -22,6 +20,7 @@ export interface DrawCanvasProps {
 
 /**
  * Main drawing canvas component
+ * Uses vanilla Konva for React 19 compatibility
  */
 export function DrawCanvas({
   width = 800,
@@ -31,55 +30,92 @@ export function DrawCanvas({
   gridSize = 20,
   onReady,
 }: DrawCanvasProps) {
-  const stageRef = useRef<Konva.Stage>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<Konva.Stage | null>(null);
+
+  // Draw grid lines
+  const drawGrid = useCallback((layer: Konva.Layer, w: number, h: number, size: number) => {
+    layer.destroyChildren();
+
+    // Vertical lines
+    for (let x = 0; x <= w; x += size) {
+      layer.add(new Konva.Line({
+        points: [x, 0, x, h],
+        stroke: '#e5e7eb',
+        strokeWidth: 1,
+      }));
+    }
+
+    // Horizontal lines
+    for (let y = 0; y <= h; y += size) {
+      layer.add(new Konva.Line({
+        points: [0, y, w, y],
+        stroke: '#e5e7eb',
+        strokeWidth: 1,
+      }));
+    }
+
+    layer.batchDraw();
+  }, []);
 
   useEffect(() => {
-    if (stageRef.current && onReady) {
-      onReady(stageRef.current);
+    if (!containerRef.current) return;
+
+    // Create Konva Stage
+    const stage = new Konva.Stage({
+      container: containerRef.current,
+      width,
+      height,
+    });
+    stageRef.current = stage;
+
+    // Background layer
+    const bgLayer = new Konva.Layer();
+    bgLayer.add(new Konva.Rect({
+      x: 0,
+      y: 0,
+      width,
+      height,
+      fill: backgroundColor,
+    }));
+    stage.add(bgLayer);
+
+    // Grid layer
+    const gridLayer = new Konva.Layer({ listening: false });
+    stage.add(gridLayer);
+    if (showGrid) {
+      drawGrid(gridLayer, width, height, gridSize);
     }
-  }, [onReady]);
+
+    // Shapes layer
+    const shapesLayer = new Konva.Layer();
+    stage.add(shapesLayer);
+
+    // Connectors layer
+    const connectorsLayer = new Konva.Layer();
+    stage.add(connectorsLayer);
+
+    // Selection layer
+    const selectionLayer = new Konva.Layer();
+    stage.add(selectionLayer);
+
+    // Callback
+    if (onReady) {
+      onReady(stage);
+    }
+
+    // Cleanup
+    return () => {
+      stage.destroy();
+      stageRef.current = null;
+    };
+  }, [width, height, backgroundColor, showGrid, gridSize, drawGrid, onReady]);
 
   return (
-    <div className="zm-draw-canvas-container">
-      <Stage
-        ref={stageRef}
-        width={width}
-        height={height}
-        style={{ backgroundColor }}
-      >
-        {/* Background layer */}
-        <Layer>
-          <Rect
-            x={0}
-            y={0}
-            width={width}
-            height={height}
-            fill={backgroundColor}
-          />
-        </Layer>
-
-        {/* Grid layer (TODO: implement grid) */}
-        {showGrid && (
-          <Layer listening={false}>
-            {/* Grid lines will be rendered here */}
-          </Layer>
-        )}
-
-        {/* Shapes layer */}
-        <Layer>
-          {/* Shapes will be rendered here */}
-        </Layer>
-
-        {/* Connectors layer */}
-        <Layer>
-          {/* Connectors will be rendered here */}
-        </Layer>
-
-        {/* Selection layer */}
-        <Layer>
-          {/* Selection handles will be rendered here */}
-        </Layer>
-      </Stage>
-    </div>
+    <div
+      ref={containerRef}
+      className="zm-draw-canvas-container"
+      style={{ width, height }}
+    />
   );
 }

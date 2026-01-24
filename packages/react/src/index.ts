@@ -7,5 +7,4 @@ export * from './hooks';
 // Context
 export * from './context';
 
-// Re-export core
-export * from '@zm-draw/core';
+// Note: Import from '@zm-draw/core' directly for types and utilities

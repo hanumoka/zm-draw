@@ -11,14 +11,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./shapes": {
-      "types": "./dist/shapes/index.d.ts",
-      "import": "./dist/shapes/index.js"
-    },
-    "./connectors": {
-      "types": "./dist/connectors/index.d.ts",
-      "import": "./dist/connectors/index.js"
     }
   },
   "files": [
