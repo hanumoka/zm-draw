@@ -6,73 +6,135 @@
 
 ## 프로젝트 개요
 
-**zm-draw**는 개발자를 위한 Figma 라이크 다이어그램 에디터 라이브러리입니다.
+**zm-draw**는 Figma 스타일의 다이어그램 에디터 라이브러리입니다.
 
 ### 목표
 
 - MIT 라이센스로 npm 배포
-- **React 19** / Next.js 15 호환 (핵심)
+- **React 19** / Next.js 15 호환
+- **Figma 스타일 UI** (3열 패널, 속성 패널, 레이어 패널)
 - ERD, 플로우차트 다이어그램 지원
-- 확장 가능한 도형 시스템
 
 ### 기술 스택
 
-| 분류 | 기술 | 비고 |
-|------|------|------|
-| **코어** | Konva.js (vanilla) | react-konva는 React 19 미지원 |
-| **프레임워크** | React 19, Next.js 15 | App Router |
-| **언어** | TypeScript 5.7+ | strict mode |
-| **빌드** | tsup, Turbo | ESM only |
-| **패키지 관리** | pnpm workspaces | |
+| 분류 | 현재 | 목표 (Figma 스타일) |
+|------|------|---------------------|
+| **코어** | Konva.js (vanilla) | Konva.js |
+| **상태 관리** | React useState | **Zustand** |
+| **프레임워크** | React 19, Next.js 15 | React 19, Next.js 15 |
+| **UI 컴포넌트** | 직접 구현 | **Radix UI** |
+| **빌드** | tsup, Turbo | tsup, Turbo |
 
 ---
 
 ## 아키텍처
 
-### 레이어 구조 (Konva)
+### 현재 구조 (MVP)
+
+```
+┌──────────────────────────────────────┐
+│          Toolbar (상단)              │
+├──────────────────────────────────────┤
+│                                      │
+│            Canvas                    │
+│        (단일 컴포넌트)                │
+│                                      │
+└──────────────────────────────────────┘
+```
+
+### 목표 구조 (Figma 스타일)
+
+```
+┌──────────────────────────────────────────────┐
+│           Navigation Bar                     │
+├──────────┬─────────────────┬─────────────────┤
+│          │                 │                 │
+│  Left    │                 │   Right Panel   │
+│  Panel   │     Canvas      │   ───────────   │
+│ ──────── │                 │   Position      │
+│  Pages   │                 │   Size          │
+│ ──────── │                 │   Fill          │
+│  Layers  │                 │   Stroke        │
+│          │                 │   Effects       │
+│          │                 │                 │
+├──────────┴─────────────────┴─────────────────┤
+│           Bottom Toolbar (도구)              │
+└──────────────────────────────────────────────┘
+```
+
+### Konva 레이어 구조
 
 ```
 Konva.Stage
-├── Layer 0: Background (배경색)
+├── Layer 0: Background (배경색, listening: false)
 ├── Layer 1: Grid (그리드 라인, listening: false)
 ├── Layer 2: Connectors (화살표/연결선)
 ├── Layer 3: Shapes (도형 + 텍스트 그룹)
 └── Layer 4: Selection (Transformer)
 ```
 
-### 도형 그룹 구조
+---
 
-```
-Konva.Group (draggable)
-├── Konva.Rect/Ellipse/RegularPolygon (도형)
-└── Konva.Text (텍스트 라벨, listening: false)
-```
+## 상태 관리 아키텍처
 
-### 상태 관리
+### 현재 (React useState)
 
 ```typescript
-// React useState로 관리
+// 단일 컴포넌트 내 useState
 const [shapes, setShapes] = useState<Shape[]>([]);
 const [connectors, setConnectors] = useState<Connector[]>([]);
 const [selectedId, setSelectedId] = useState<string | null>(null);
 const [tool, setTool] = useState<ToolType>('select');
-const [scale, setScale] = useState(1);
-const [editingId, setEditingId] = useState<string | null>(null);
+```
 
-// History는 useRef로 관리 (렌더링 최적화)
-const historyRef = useRef<HistoryState[]>([]);
-const [historyIndex, setHistoryIndex] = useState(-1);
+### 목표 (Zustand)
+
+```typescript
+// stores/canvasStore.ts
+interface CanvasStore {
+  // 데이터
+  shapes: Shape[];
+  connectors: Connector[];
+  pages: Page[];
+
+  // 선택
+  selectedIds: string[];  // 다중 선택 지원
+  hoveredId: string | null;
+
+  // 액션
+  addShape: (shape: Shape) => void;
+  updateShape: (id: string, updates: Partial<Shape>) => void;
+  deleteShapes: (ids: string[]) => void;
+  setSelection: (ids: string[]) => void;
+}
+
+// stores/uiStore.ts
+interface UIStore {
+  tool: ToolType;
+  viewport: { x: number; y: number; zoom: number };
+  panels: {
+    left: { open: boolean; width: number };
+    right: { open: boolean; width: number };
+  };
+}
+
+// stores/historyStore.ts
+interface HistoryStore {
+  past: CanvasState[];
+  future: CanvasState[];
+  undo: () => void;
+  redo: () => void;
+}
 ```
 
 ---
 
 ## 타입 정의
 
-### Shape
+### Shape (현재)
 
 ```typescript
 export type ShapeType = 'rectangle' | 'ellipse' | 'diamond' | 'text';
-export type ToolType = 'select' | 'connector' | ShapeType;
 
 export interface Shape {
   id: string;
@@ -92,26 +154,49 @@ export interface Shape {
 }
 ```
 
-### Connector
+### Shape (목표 - 확장)
 
 ```typescript
-export interface Connector {
+export type ShapeType =
+  | 'rectangle' | 'ellipse' | 'diamond'
+  | 'line' | 'polygon' | 'star'
+  | 'text' | 'frame' | 'image';
+
+export interface Shape {
   id: string;
-  fromShapeId: string;
-  toShapeId: string;
+  type: ShapeType;
+  name: string;           // 레이어 이름
+
+  // 위치/크기
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+
+  // 스타일
+  fill: string;
+  fillOpacity: number;
   stroke: string;
   strokeWidth: number;
-  arrow: boolean;
-}
-```
+  strokeOpacity: number;
+  cornerRadius: number;
 
-### Canvas State (Save/Load 포맷)
+  // 텍스트
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: number;
+  textColor?: string;
+  textAlign?: 'left' | 'center' | 'right';
 
-```typescript
-interface CanvasData {
-  version: '1.0';
-  shapes: Shape[];
-  connectors: Connector[];
+  // 상태
+  locked: boolean;
+  visible: boolean;
+
+  // 계층
+  parentId?: string;      // Frame의 자식인 경우
+  children?: string[];    // Frame인 경우
 }
 ```
 
@@ -119,75 +204,121 @@ interface CanvasData {
 
 ## 프로젝트 구조
 
+### 현재 구조
+
 ```
 zm-draw/
-├── docs/                       # 문서 (Claude 필독)
-│   ├── SESSION.md             # 세션 상태 ⭐
-│   ├── PROGRESS.md            # 진행상황
-│   └── PROJECT.md             # 이 파일
-│
 ├── packages/
-│   ├── core/                   # @zm-draw/core
-│   │   └── src/
-│   │       └── index.ts       # 타입 export
-│   │
-│   └── react/                  # @zm-draw/react
+│   ├── core/
+│   │   └── src/index.ts
+│   └── react/
 │       └── src/
 │           ├── components/
-│           │   ├── DrawCanvas.tsx  # 메인 컴포넌트 (990 lines)
-│           │   └── index.ts
+│           │   └── DrawCanvas.tsx  # 990줄 단일 파일
+│           ├── types.ts
+│           └── index.ts
+└── apps/demo/
+```
+
+### 목표 구조 (모듈화)
+
+```
+zm-draw/
+├── packages/
+│   ├── core/                       # @zm-draw/core
+│   │   └── src/
+│   │       ├── types/
+│   │       │   ├── shape.ts
+│   │       │   ├── connector.ts
+│   │       │   └── tool.ts
+│   │       └── index.ts
+│   │
+│   └── react/                      # @zm-draw/react
+│       └── src/
+│           ├── components/
+│           │   ├── DrawEditor.tsx         # 메인 에디터
+│           │   ├── Canvas/
+│           │   │   ├── Canvas.tsx         # Konva Stage
+│           │   │   ├── ShapeRenderer.tsx
+│           │   │   ├── ConnectorRenderer.tsx
+│           │   │   └── GridLayer.tsx
+│           │   ├── Panels/
+│           │   │   ├── LeftPanel/
+│           │   │   │   ├── PagesList.tsx
+│           │   │   │   └── LayersTree.tsx
+│           │   │   └── RightPanel/
+│           │   │       ├── DesignTab.tsx
+│           │   │       └── sections/
+│           │   │           ├── PositionSection.tsx
+│           │   │           ├── FillSection.tsx
+│           │   │           └── StrokeSection.tsx
+│           │   ├── Toolbar/
+│           │   │   ├── BottomToolbar.tsx
+│           │   │   └── ToolButton.tsx
+│           │   └── common/
+│           │       ├── ColorPicker.tsx
+│           │       └── NumberInput.tsx
+│           ├── stores/
+│           │   ├── canvasStore.ts
+│           │   ├── uiStore.ts
+│           │   └── historyStore.ts
 │           ├── hooks/
-│           ├── context/
-│           ├── types.ts       # Shape, Connector 타입
+│           │   ├── useCanvas.ts
+│           │   ├── useSelection.ts
+│           │   ├── useKeyboard.ts
+│           │   └── useHistory.ts
 │           └── index.ts
 │
-├── apps/
-│   └── demo/                   # Next.js 15 데모
-│       └── src/app/
-│           ├── page.tsx       # 데모 페이지
-│           └── layout.tsx
-│
-├── package.json               # 루트 워크스페이스
-├── turbo.json                 # Turbo 설정
-├── pnpm-workspace.yaml
-└── CLAUDE.md                  # Claude Code 가이드
+└── apps/demo/
 ```
 
 ---
 
-## 핵심 컴포넌트: DrawCanvas
+## 핵심 컴포넌트 API
 
-### Props
-
-```typescript
-export interface DrawCanvasProps {
-  width?: number;              // default: 800
-  height?: number;             // default: 600
-  backgroundColor?: string;    // default: '#ffffff'
-  showGrid?: boolean;          // default: true
-  gridSize?: number;           // default: 20
-  initialShapes?: Shape[];
-  onShapesChange?: (shapes: Shape[]) => void;
-  onReady?: (stage: Konva.Stage) => void;
-}
-```
-
-### 사용 예시
+### DrawEditor (목표)
 
 ```tsx
-'use client';
+import { DrawEditor } from '@zm-draw/react';
+
+<DrawEditor
+  width={1200}
+  height={800}
+
+  // 초기 데이터
+  initialShapes={[]}
+  initialConnectors={[]}
+
+  // 콜백
+  onShapesChange={(shapes) => {}}
+  onSelectionChange={(ids) => {}}
+  onSave={(data) => {}}
+
+  // UI 옵션
+  showGrid={true}
+  showLeftPanel={true}
+  showRightPanel={true}
+
+  // 테마
+  theme="light" // 'light' | 'dark'
+/>
+```
+
+### DrawCanvas (현재)
+
+```tsx
 import { DrawCanvas } from '@zm-draw/react';
 
-export default function DiagramEditor() {
-  return (
-    <DrawCanvas
-      width={1200}
-      height={800}
-      showGrid={true}
-      onShapesChange={(shapes) => console.log(shapes)}
-    />
-  );
-}
+<DrawCanvas
+  width={800}
+  height={600}
+  backgroundColor="#ffffff"
+  showGrid={true}
+  gridSize={20}
+  initialShapes={[]}
+  onShapesChange={(shapes) => {}}
+  onReady={(stage) => {}}
+/>
 ```
 
 ---
@@ -198,7 +329,7 @@ export default function DiagramEditor() {
 # 의존성 설치
 pnpm install
 
-# 개발 서버 시작 (demo: 3200, packages watch)
+# 개발 서버 시작 (demo: 3200)
 pnpm dev
 
 # 빌드
@@ -216,35 +347,26 @@ pnpm clean
 ## 참고 자료
 
 ### 공식 문서
-
 - **Konva.js**: https://konvajs.org/docs/
-- **Next.js 15**: https://nextjs.org/docs
+- **Zustand**: https://github.com/pmndrs/zustand
+- **Radix UI**: https://www.radix-ui.com/
 
-### 주의사항
+### 참조 프로젝트
+- **Penpot**: https://github.com/penpot/penpot
+- **Figma Clone**: https://github.com/adrianhajdin/figma_clone
 
-- **react-konva 사용 불가**: React 19와 호환되지 않음
-- **vanilla Konva 사용**: useRef + useEffect 패턴으로 직접 관리
-- **Server Component 주의**: DrawCanvas는 'use client' 필수
+### 프로젝트 문서
+- **상세 로드맵**: `docs/FIGMA-STYLE-ROADMAP.md`
+- **진행상황**: `docs/PROGRESS.md`
+- **세션 상태**: `docs/SESSION.md`
 
 ---
 
-## 배포 계획
+## 주의사항
 
-### npm 패키지
-
-| 패키지 | 상태 | npm 이름 |
-|--------|------|----------|
-| core | MVP 완료 | @zm-draw/core |
-| react | MVP 완료 | @zm-draw/react |
-
-### 배포 전 체크리스트
-
-- [ ] README.md 작성
-- [ ] CHANGELOG.md 작성
-- [ ] API 문서 작성
-- [ ] 사용 예제 추가
-- [ ] 테스트 작성
-- [ ] npm 계정 설정
+- **react-konva 사용 불가**: React 19와 호환되지 않음
+- **vanilla Konva 사용**: useRef + useEffect 패턴
+- **Server Component 주의**: 'use client' 필수
 
 ---
 
