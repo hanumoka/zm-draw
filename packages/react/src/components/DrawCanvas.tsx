@@ -133,6 +133,53 @@ export function DrawCanvas({
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < historyRef.current.length - 1;
 
+  // Export to JSON
+  const exportToJson = useCallback(() => {
+    const data = {
+      version: '1.0',
+      shapes,
+      connectors,
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zm-draw-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [shapes, connectors]);
+
+  // Import from JSON
+  const importFromJson = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target?.result as string);
+          if (data.shapes && Array.isArray(data.shapes)) {
+            setShapes(data.shapes);
+          }
+          if (data.connectors && Array.isArray(data.connectors)) {
+            setConnectors(data.connectors);
+          }
+          setSelectedId(null);
+        } catch (err) {
+          console.error('Failed to parse JSON:', err);
+          alert('Invalid JSON file');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }, []);
+
   // Draw grid lines
   const drawGrid = useCallback((layer: Konva.Layer, w: number, h: number, size: number) => {
     layer.destroyChildren();
@@ -855,6 +902,35 @@ export function DrawCanvas({
           }}
         >
           Reset Zoom
+        </button>
+
+        <div style={{ width: 1, backgroundColor: '#d1d5db', margin: '0 4px' }} />
+
+        <button
+          onClick={exportToJson}
+          style={{
+            padding: '8px 16px',
+            border: '1px solid #d1d5db',
+            borderRadius: 4,
+            backgroundColor: '#fff',
+            color: '#374151',
+            cursor: 'pointer',
+          }}
+        >
+          Save
+        </button>
+        <button
+          onClick={importFromJson}
+          style={{
+            padding: '8px 16px',
+            border: '1px solid #d1d5db',
+            borderRadius: 4,
+            backgroundColor: '#fff',
+            color: '#374151',
+            cursor: 'pointer',
+          }}
+        >
+          Load
         </button>
       </div>
 
