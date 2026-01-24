@@ -1,6 +1,6 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-24 20:30
+> 최종 업데이트: 2026-01-24 21:00
 
 ---
 
@@ -11,10 +11,9 @@
 
 ### 마지막 작업 (2026-01-24)
 
-- Save/Load (JSON export/import) 기능 구현 완료
-- 전체 코드 리뷰 완료 (버그 없음 확인)
-- Git 커밋 및 푸시 완료 (commit: 164613f)
-- 문서 체계 정비 중
+- 도형 리사이즈 버그 수정 (확대 시 작아지는 문제)
+- 문서 체계 정비 완료
+- Git 커밋 및 푸시 완료 (commit: 3698832)
 
 ### 개발 서버
 
@@ -26,7 +25,7 @@
 
 - **브랜치**: main
 - **원격**: origin/main (동기화됨)
-- **마지막 커밋**: `feat: Add save/load JSON export/import`
+- **마지막 커밋**: `fix: Fix shape resize using original dimensions`
 
 ---
 
@@ -88,6 +87,7 @@
 | Backspace로 도형 삭제 | INPUT 체크 누락 | `activeElement.tagName` 체크 |
 | 텍스트 드래그 지연 | 별도 Konva.Text 사용 | Konva.Group으로 그룹핑 |
 | Ctrl+Shift+Z 미동작 | 대소문자 비교 | `toLowerCase()` 사용 |
+| 리사이즈 시 도형 작아짐 | `node.width()` 가 Group의 bbox 반환 | `s.width * scaleX` 사용 |
 
 ---
 
