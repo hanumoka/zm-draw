@@ -62,6 +62,8 @@ export function DrawCanvas({
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
 
   const connectorsLayerRef = useRef<Konva.Layer | null>(null);
+  const selectionLayerRef = useRef<Konva.Layer | null>(null);
+  const transformerRef = useRef<Konva.Transformer | null>(null);
 
   // Draw grid lines
   const drawGrid = useCallback((layer: Konva.Layer, w: number, h: number, size: number) => {
@@ -205,6 +207,20 @@ export function DrawCanvas({
 
       layer.add(konvaShape);
     });
+
+    // Update transformer
+    const transformer = transformerRef.current;
+    if (transformer && selectedId) {
+      const selectedNode = layer.findOne(`#${selectedId}`);
+      if (selectedNode) {
+        transformer.nodes([selectedNode]);
+        transformer.getLayer()?.batchDraw();
+      } else {
+        transformer.nodes([]);
+      }
+    } else if (transformer) {
+      transformer.nodes([]);
+    }
 
     layer.batchDraw();
   }, [shapes, selectedId, createKonvaShape, onShapesChange, tool, connectingFrom, addConnector]);
@@ -376,6 +392,57 @@ export function DrawCanvas({
     stage.add(shapesLayer);
     shapesLayerRef.current = shapesLayer;
 
+    // Selection layer (for transformer)
+    const selectionLayer = new Konva.Layer();
+    stage.add(selectionLayer);
+    selectionLayerRef.current = selectionLayer;
+
+    // Transformer for resize handles
+    const transformer = new Konva.Transformer({
+      rotateEnabled: true,
+      borderStroke: '#3b82f6',
+      borderStrokeWidth: 1,
+      anchorStroke: '#3b82f6',
+      anchorFill: '#ffffff',
+      anchorSize: 8,
+      anchorCornerRadius: 2,
+      padding: 2,
+    });
+    selectionLayer.add(transformer);
+    transformerRef.current = transformer;
+
+    // Handle transform end
+    transformer.on('transformend', () => {
+      const node = transformer.nodes()[0];
+      if (!node) return;
+
+      const id = node.id();
+      const scaleX = node.scaleX();
+      const scaleY = node.scaleY();
+
+      // Reset scale and apply to width/height
+      node.scaleX(1);
+      node.scaleY(1);
+
+      setShapes((prev) => {
+        const updated = prev.map((s) => {
+          if (s.id === id) {
+            return {
+              ...s,
+              x: node.x(),
+              y: node.y(),
+              width: Math.max(20, node.width() * scaleX),
+              height: Math.max(20, node.height() * scaleY),
+              rotation: node.rotation(),
+            };
+          }
+          return s;
+        });
+        onShapesChange?.(updated);
+        return updated;
+      });
+    });
+
     // Stage click handler for adding shapes
     stage.on('click tap', (e) => {
       // Only on background click
@@ -433,6 +500,8 @@ export function DrawCanvas({
       stageRef.current = null;
       shapesLayerRef.current = null;
       connectorsLayerRef.current = null;
+      selectionLayerRef.current = null;
+      transformerRef.current = null;
     };
   }, [width, height, backgroundColor, showGrid, gridSize, drawGrid, onReady]);
 
