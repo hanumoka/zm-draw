@@ -6,17 +6,23 @@
 
 ## 현재 상태
 
-**Phase**: Phase 0.9 완료 → Phase 1 (기초 리팩토링) 준비
-**진행률**: MVP 100% / Phase 0.9 100% / Figma 스타일 0%
+**Phase**: Phase 1 (기초 리팩토링) 진행 중
+**진행률**: MVP 100% / Phase 1 60% / Figma 스타일 5%
 
 ### 마지막 작업 (2026-01-25)
+
+- **Phase 1: 기초 리팩토링 진행 중** ⏳
+  - Zustand stores 생성 완료 (canvasStore, selectionStore, toolStore, historyStore, viewportStore, clipboardStore)
+  - useKeyboard 훅 생성 및 DrawCanvas에 통합 ✅
+  - Copy/Paste/Duplicate (Ctrl+C/V/D) 구현 ✅
+  - 화살표 키 이동 (1px, Shift+10px) 구현 ✅
+  - Toolbar 컴포넌트 분리 ✅
+  - TextEditor 컴포넌트 분리 ✅
+  - DrawCanvas: 1009줄 → 918줄 (91줄 감소)
 
 - **Dark Mode + Right Panel 구현** ✅
   - Figma UI3 스타일 다크 모드 CSS 변수 추가
   - Right Panel (속성 패널) 껍데기 구현
-  - Position, Size, Rotation, Fill, Stroke 섹션 표시
-  - onSelectionChange 콜백 추가
-  - 툴바 다크 모드 스타일 적용
 
 - **Phase 0.9: Konva 업그레이드 완료** ✅
   - konva: ^9.3.0 → ^10.0.0 (실제 설치: 10.2.0)
@@ -54,12 +60,12 @@
 
 | 영역 | 상태 | 우선순위 |
 |------|------|----------|
-| **UI 레이아웃** (3열 패널) | ❌ 0% | Phase 2 |
+| **상태 관리** (Zustand) | ⏳ 60% | Phase 1 |
+| **UI 레이아웃** (3열 패널) | 🔶 30% | Phase 2 |
 | **속성 패널** (Fill, Stroke, Size) | ❌ 0% | Phase 3 |
 | **레이어 패널** (트리뷰) | ❌ 0% | Phase 4 |
-| **다중 선택** | ❌ 0% | Phase 6 |
+| **다중 선택** | ❌ 0% | Phase 2.5 |
 | **정렬/분배** | ❌ 0% | Phase 6 |
-| **상태 관리** (Zustand) | ❌ 0% | Phase 1 |
 
 ---
 
@@ -72,17 +78,19 @@
 | Konva 업그레이드 | ^9.3.0 → ^10.0.0 (실제: 10.2.0) | ✅ 완료 |
 | 문서 정확성 검토 | react-konva/Next.js 이슈 정확 기재 | ✅ 완료 |
 
-### Phase 1: 기초 리팩토링 (다음 단계)
+### Phase 1: 기초 리팩토링 (진행 중)
 
-| 작업 | 설명 | 예상 |
+| 작업 | 설명 | 상태 |
 |------|------|------|
-| Zustand 도입 | useState → Zustand store | 1일 |
-| 컴포넌트 분리 | DrawCanvas 990줄 → 모듈화 | 1일 |
-| 타입 확장 | Shape, Tool 타입 강화 | 0.5일 |
-| useKeyboard 훅 | 키보드 단축키 분리 | 0.5일 |
-| **Copy/Paste/Duplicate** | Ctrl+C/V/D 구현 (누락 기능) | 0.5일 |
-| **화살표 키 이동** | 1px / Shift 10px | 0.5일 |
-| **드래그 레이어 분리** | 성능 최적화 | 0.5일 |
+| Zustand stores 생성 | 6개 store 파일 생성 | ✅ 완료 |
+| useState → Zustand | DrawCanvas 상태 마이그레이션 | ⏳ 예정 |
+| useKeyboard 훅 | 키보드 단축키 분리 | ✅ 완료 |
+| Toolbar 컴포넌트 | 툴바 분리 (169줄) | ✅ 완료 |
+| TextEditor 컴포넌트 | 텍스트 편집 분리 (60줄) | ✅ 완료 |
+| Copy/Paste/Duplicate | Ctrl+C/V/D 구현 | ✅ 완료 |
+| 화살표 키 이동 | 1px / Shift 10px | ✅ 완료 |
+| 드래그 레이어 분리 | 성능 최적화 | ⏳ 예정 |
+| 타입 확장 | Shape, Tool 타입 강화 | ⏳ 예정 |
 
 ### Phase 2: UI 레이아웃
 
