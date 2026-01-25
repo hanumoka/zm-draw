@@ -209,7 +209,7 @@ export function DrawCanvas({
     input.click();
   }, []);
 
-  // Draw infinite grid based on viewport
+  // Draw infinite dotted grid based on viewport (Figma style)
   const drawInfiniteGrid = useCallback(() => {
     const layer = gridLayerRef.current;
     const stage = stageRef.current;
@@ -232,7 +232,7 @@ export function DrawCanvas({
     // Determine grid color based on background brightness
     const isDark = backgroundColor.startsWith('#') &&
       parseInt(backgroundColor.slice(1, 3), 16) < 128;
-    const gridColor = isDark ? '#3a3a3a' : '#e5e7eb';
+    const gridColor = isDark ? '#4a4a4a' : '#d1d5db';
 
     // Adjust grid size based on zoom level for better visibility
     let effectiveGridSize = gridSize;
@@ -240,28 +240,24 @@ export function DrawCanvas({
     if (stageScale < 0.25) effectiveGridSize = gridSize * 4;
     if (stageScale > 2) effectiveGridSize = gridSize / 2;
 
-    // Calculate grid line positions
+    // Calculate grid dot positions
     const firstX = Math.floor(startX / effectiveGridSize) * effectiveGridSize;
     const firstY = Math.floor(startY / effectiveGridSize) * effectiveGridSize;
 
-    // Draw vertical lines
-    for (let x = firstX; x <= endX + effectiveGridSize; x += effectiveGridSize) {
-      layer.add(new Konva.Line({
-        points: [x, startY - effectiveGridSize, x, endY + effectiveGridSize],
-        stroke: gridColor,
-        strokeWidth: 1 / stageScale,
-        listening: false,
-      }));
-    }
+    // Dot size scales inversely with zoom for consistent appearance
+    const dotRadius = Math.max(1, 1.5 / stageScale);
 
-    // Draw horizontal lines
-    for (let y = firstY; y <= endY + effectiveGridSize; y += effectiveGridSize) {
-      layer.add(new Konva.Line({
-        points: [startX - effectiveGridSize, y, endX + effectiveGridSize, y],
-        stroke: gridColor,
-        strokeWidth: 1 / stageScale,
-        listening: false,
-      }));
+    // Draw dots at grid intersections (Figma-style dotted grid)
+    for (let x = firstX; x <= endX + effectiveGridSize; x += effectiveGridSize) {
+      for (let y = firstY; y <= endY + effectiveGridSize; y += effectiveGridSize) {
+        layer.add(new Konva.Circle({
+          x: x,
+          y: y,
+          radius: dotRadius,
+          fill: gridColor,
+          listening: false,
+        }));
+      }
     }
 
     layer.batchDraw();

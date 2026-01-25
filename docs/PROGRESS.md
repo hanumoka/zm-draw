@@ -7,8 +7,8 @@
 ## 전체 진행률
 
 **목표**: Figma 스타일 다이어그램 에디터
-**현재 Phase**: Phase 2 (UI 레이아웃) 진행 중
-**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 80% / Figma 스타일 40%
+**현재 Phase**: Phase 2 완료 → Phase 2.5 (속성 패널 기본) 준비
+**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Figma 스타일 45%
 
 ---
 
@@ -156,7 +156,7 @@
 - [x] Dark Mode 기본 지원 ✅
 - [x] RightPanel 껍데기 (속성 패널) ✅
 - [x] 헤더바 + 다크모드/패널 토글 ✅
-- [x] LeftPanel 껍데기 (레이어 패널) ✅
+- [x] LeftPanel → **Shapes 패널** (카테고리별 도형) ✅
 - [x] 3열 레이아웃 구조 ✅
 - [x] Radix UI 도입 (@radix-ui/react-tooltip) ✅
 - [x] Tooltip 컴포넌트 ✅
@@ -164,8 +164,11 @@
 - [x] 패널 리사이즈 기능 ✅
 - [x] Figma 스타일 툴바 (아이콘 기반, 그룹화) ✅
 - [x] 무한 캔버스 (동적 그리드, 무제한 패닝/줌) ✅
-- [ ] 패널 접기/펼치기 (Shift+\)
-- [ ] EditorLayout 컴포넌트 분리
+- [x] **점선 그리드** (Figma 스타일) ✅ NEW
+- [x] **검색 입력창** (UI만) ✅ NEW
+- [x] **접을 수 있는 섹션** (Connectors, Basic, Flowchart) ✅ NEW
+- [ ] 패널 접기/펼치기 (Shift+\) - 선택적
+- [ ] EditorLayout 컴포넌트 분리 - 선택적
 
 ---
 
@@ -331,6 +334,38 @@
 
 ---
 
+## 기술 스택 검토 (2026-01-25)
+
+### 현재 스택
+
+| 패키지 | 버전 | React 19 호환 |
+|--------|------|--------------|
+| React | ^19.0.0 | ✅ |
+| Next.js | ^15.0.0 | ✅ |
+| Konva | ^10.0.0 | ✅ (vanilla) |
+| Zustand | ^5.0.10 | ✅ |
+| Radix UI | ^1.1.x | ✅ |
+
+### 추가 필요 라이브러리
+
+| 라이브러리 | 용도 | 설치 시점 |
+|-----------|------|----------|
+| react-colorful | Color Picker | Phase 3 |
+| @radix-ui/react-slider | Opacity, Corner Radius | Phase 3 |
+| @radix-ui/react-dropdown-menu | Blend Mode 선택 | Phase 3 |
+| @radix-ui/react-popover | Color Picker 컨테이너 | Phase 3 |
+
+### Konva 성능 최적화 상태
+
+| 최적화 | 권장 | 현재 |
+|--------|------|------|
+| 레이어 분리 (3-5개) | ✅ | ✅ 5개 |
+| listening: false | ✅ | ✅ bg/grid |
+| 드래그 레이어 분리 | ✅ | ❌ |
+| Shape 캐싱 | 복잡 도형 | ❌ |
+
+---
+
 ## 기술 부채
 
 | 항목 | 설명 | 해결 시점 | 우선순위 |
@@ -339,7 +374,9 @@
 | ~~**Copy/Paste**~~ | ~~기본 기능 누락~~ | ~~Phase 1~~ | ✅ 해결됨 |
 | ~~**커넥터 화살촉 가려짐**~~ | ~~중심→중심 연결~~ | ~~Phase 1.5~~ | ✅ 해결됨 |
 | ~~**커넥터 선택 불가**~~ | ~~클릭 이벤트 없음~~ | ~~Phase 1.5~~ | ✅ 해결됨 |
-| 드래그 레이어 미분리 | 드래그 시 전체 레이어 redraw | Phase 1 | 중 |
+| 드래그 레이어 미분리 | 드래그 시 전체 레이어 redraw | Phase 4 | 중 |
+| react-colorful 설치 | Color Picker 필요 | Phase 3 | 높음 |
+| Radix 추가 컴포넌트 | Slider, Dropdown 등 | Phase 3 | 높음 |
 | shapes/connectors 마이그레이션 | props 연동 필요 | 선택적 | 낮음 |
 | Diamond 비율 | width≠height 시 시각적 이슈 | Phase 5 | 낮음 |
 
@@ -369,14 +406,14 @@
 
 | 날짜 | 커밋 | 설명 |
 |------|------|------|
+| 2026-01-25 | - | feat(phase2): Add dotted grid and Shapes panel (pending) |
+| 2026-01-25 | 684061a | docs: Update docs with Figma-style toolbar and infinite canvas |
 | 2026-01-25 | 6889993 | feat(phase2): Add Figma-style toolbar and infinite canvas |
 | 2026-01-25 | bd482f8 | feat(phase2): Add panel resize functionality |
 | 2026-01-25 | 9bf008e | feat(phase2): Move toolbar to bottom floating position |
 | 2026-01-25 | 3de24ba | docs: Update progress with Phase 2 UI layout status |
 | 2026-01-25 | 1e5e11f | feat(phase2): Add Radix UI with Tooltip component |
 | 2026-01-25 | e07a760 | feat(phase2): Add LeftPanel for layers (3-column layout) |
-| 2026-01-25 | f183e63 | docs: Update docs with Phase 1.5 completion |
-| 2026-01-25 | 4b5c0d9 | fix(phase1.5): Fix connector arrowhead visibility and add selection |
 
 ---
 

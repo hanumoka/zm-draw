@@ -314,3 +314,208 @@ body {
     transform: scale(1);
   }
 }
+
+/* ========================================
+   Shapes Panel (Figma-style)
+   ======================================== */
+
+/* Panel Header with Close Button */
+.zm-shapes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-transform: none;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+
+.zm-panel-close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--zm-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.zm-panel-close-button:hover {
+  background: var(--zm-bg-tertiary);
+  color: var(--zm-text-primary);
+}
+
+/* Search Bar */
+.zm-shapes-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 8px 12px;
+  background: var(--zm-bg-tertiary);
+  border: 1px solid var(--zm-border);
+  border-radius: 6px;
+  color: var(--zm-text-muted);
+}
+
+.zm-shapes-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--zm-text-primary);
+  outline: none;
+}
+
+.zm-shapes-search input::placeholder {
+  color: var(--zm-text-muted);
+}
+
+/* Shapes Content */
+.zm-shapes-content {
+  padding: 0 !important;
+}
+
+/* Collapsible Section */
+.zm-shapes-section {
+  border-bottom: 1px solid var(--zm-border);
+}
+
+.zm-shapes-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: var(--zm-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.zm-shapes-section-header:hover {
+  background: var(--zm-bg-tertiary);
+}
+
+.zm-shapes-section-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--zm-text-muted);
+}
+
+.zm-shapes-section-title {
+  flex: 1;
+}
+
+.zm-shapes-section-content {
+  padding: 8px 12px 12px;
+}
+
+/* Shapes Grid */
+.zm-shapes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+/* Shape Button */
+.zm-shape-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--zm-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.zm-shape-button:hover {
+  background: var(--zm-bg-tertiary);
+  color: var(--zm-text-primary);
+}
+
+.zm-shape-button.active {
+  background: var(--zm-accent);
+  color: white;
+}
+
+.zm-shape-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Library List */
+.zm-library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.zm-library-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.zm-library-item:hover {
+  background: var(--zm-bg-tertiary);
+}
+
+.zm-library-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--zm-accent);
+  color: white;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.zm-library-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--zm-text-primary);
+}
+
+.zm-library-count {
+  font-size: 11px;
+  color: var(--zm-text-muted);
+}
+
+/* Scrollbar for Left Panel */
+.zm-draw-left-panel ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.zm-draw-left-panel ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.zm-draw-left-panel ::-webkit-scrollbar-thumb {
+  background: var(--zm-border);
+  border-radius: 4px;
+}
+
+.zm-draw-left-panel ::-webkit-scrollbar-thumb:hover {
+  background: var(--zm-border-hover);
+}
