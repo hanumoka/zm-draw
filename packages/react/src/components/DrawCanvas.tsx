@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import Konva from 'konva';
 import type { Shape, ShapeType, Connector } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
@@ -21,6 +21,16 @@ export interface SelectedShapeInfo {
   rotation: number;
   fill: string;
   stroke: string;
+}
+
+/** Imperative handle for DrawCanvas */
+export interface DrawCanvasHandle {
+  /** Update a shape's properties */
+  updateShape: (id: string, updates: Partial<Shape>) => void;
+  /** Get current shapes */
+  getShapes: () => Shape[];
+  /** Get selected shape ID */
+  getSelectedId: () => string | null;
 }
 
 export interface DrawCanvasProps {
@@ -60,7 +70,7 @@ const defaultShapeProps = {
  * Main drawing canvas component with infinite canvas support
  * Uses vanilla Konva for React 19 compatibility
  */
-export function DrawCanvas({
+export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function DrawCanvas({
   backgroundColor = '#ffffff',
   showGrid = true,
   gridSize = 20,
@@ -68,7 +78,7 @@ export function DrawCanvas({
   onShapesChange,
   onReady,
   onSelectionChange,
-}: DrawCanvasProps) {
+}, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const shapesLayerRef = useRef<Konva.Layer | null>(null);
@@ -734,6 +744,24 @@ export function DrawCanvas({
     });
   }, [selectedId, onShapesChange]);
 
+  // Update shape properties (for external use via ref)
+  const updateShape = useCallback((id: string, updates: Partial<Shape>) => {
+    setShapes((prev) => {
+      const updated = prev.map((s) =>
+        s.id === id ? { ...s, ...updates } : s
+      );
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [onShapesChange]);
+
+  // Expose imperative methods via ref
+  useImperativeHandle(ref, () => ({
+    updateShape,
+    getShapes: () => shapes,
+    getSelectedId: () => selectedId,
+  }), [updateShape, shapes, selectedId]);
+
   // Handle escape key
   const handleEscape = useCallback(() => {
     setSelectedId(null);
@@ -1111,4 +1139,4 @@ export function DrawCanvas({
       </div>
     </div>
   );
-}
+});

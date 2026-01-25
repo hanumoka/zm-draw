@@ -6,10 +6,17 @@
 
 ## 현재 상태
 
-**Phase**: Phase 2 (UI 레이아웃) 완료 → Phase 2.5 준비
-**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Figma 스타일 45%
+**Phase**: Phase 2.5 (속성 패널 편집) 진행 중
+**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 75% / Figma 스타일 50%
 
 ### 마지막 작업 (2026-01-25)
+
+- **Phase 2.5: 속성 패널 편집 기능** ✅ NEW
+  - `DrawCanvasHandle` 인터페이스 추가 (forwardRef)
+  - `updateShape` 메서드 노출 (useImperativeHandle)
+  - Position (X, Y) 편집 가능
+  - Size (W, H) 편집 가능
+  - Rotation 편집 가능
 
 - **Figma/FigJam 상세 분석 완료** ✅
   - UI3 인터페이스 구조 문서화
@@ -113,11 +120,11 @@
 - [x] **Shapes 패널** (카테고리별 도형) ✅ NEW
 - [ ] EditorLayout 컴포넌트 분리 (선택적)
 
-### Phase 2.5 체크리스트 (다음 단계)
+### Phase 2.5 체크리스트 (진행 중)
 
-- [ ] Position 편집 (X, Y) - 속성 패널
-- [ ] Size 편집 (W, H) - 속성 패널
-- [ ] Rotation 편집 - 속성 패널
+- [x] Position 편집 (X, Y) - 속성 패널 ✅
+- [x] Size 편집 (W, H) - 속성 패널 ✅
+- [x] Rotation 편집 - 속성 패널 ✅
 - [ ] 선택 컨텍스트 메뉴 (도형 위 미니 툴바)
 
 ### Phase 1.5 완료 내용 (참고)

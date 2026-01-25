@@ -1,9 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { TooltipProvider, Tooltip } from '../components/Tooltip';
 import { PanelResizer } from '../components/PanelResizer';
+import type { DrawCanvasHandle } from '@zm-draw/react';
 
 // Konva requires window, so we need to dynamically import
 const DrawCanvas = dynamic(
@@ -259,6 +260,7 @@ function ShapeButton({
 }
 
 export default function Home() {
+  const canvasRef = useRef<DrawCanvasHandle>(null);
   const [selectedShape, setSelectedShape] = useState<SelectedShape | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
@@ -266,6 +268,14 @@ export default function Home() {
   const [leftPanelWidth, setLeftPanelWidth] = useState(240);
   const [rightPanelWidth, setRightPanelWidth] = useState(280);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Update shape property via canvas ref
+  const updateShapeProperty = useCallback((property: string, value: number) => {
+    if (!selectedShape || !canvasRef.current) return;
+    canvasRef.current.updateShape(selectedShape.id, { [property]: value });
+    // Update local state for immediate feedback
+    setSelectedShape(prev => prev ? { ...prev, [property]: value } : null);
+  }, [selectedShape]);
 
   // Apply dark mode class to html element
   useEffect(() => {
@@ -433,6 +443,7 @@ export default function Home() {
 
         {/* Canvas - Infinite canvas fills available space */}
         <DrawCanvas
+          ref={canvasRef}
           backgroundColor={canvasBgColor}
           showGrid={true}
           gridSize={20}
@@ -466,14 +477,14 @@ export default function Home() {
                       type="number"
                       className="zm-draw-panel-input"
                       value={Math.round(selectedShape.x)}
-                      readOnly
+                      onChange={(e) => updateShapeProperty('x', parseFloat(e.target.value) || 0)}
                     />
                     <span className="zm-draw-panel-label">Y</span>
                     <input
                       type="number"
                       className="zm-draw-panel-input"
                       value={Math.round(selectedShape.y)}
-                      readOnly
+                      onChange={(e) => updateShapeProperty('y', parseFloat(e.target.value) || 0)}
                     />
                   </div>
                 </div>
@@ -487,14 +498,16 @@ export default function Home() {
                       type="number"
                       className="zm-draw-panel-input"
                       value={Math.round(selectedShape.width)}
-                      readOnly
+                      onChange={(e) => updateShapeProperty('width', Math.max(1, parseFloat(e.target.value) || 1))}
+                      min={1}
                     />
                     <span className="zm-draw-panel-label">H</span>
                     <input
                       type="number"
                       className="zm-draw-panel-input"
                       value={Math.round(selectedShape.height)}
-                      readOnly
+                      onChange={(e) => updateShapeProperty('height', Math.max(1, parseFloat(e.target.value) || 1))}
+                      min={1}
                     />
                   </div>
                 </div>
@@ -508,7 +521,7 @@ export default function Home() {
                       type="number"
                       className="zm-draw-panel-input"
                       value={Math.round(selectedShape.rotation)}
-                      readOnly
+                      onChange={(e) => updateShapeProperty('rotation', parseFloat(e.target.value) || 0)}
                     />
                     <span className="zm-draw-panel-label" style={{ minWidth: 'auto' }}>deg</span>
                   </div>

@@ -7,8 +7,8 @@
 ## 전체 진행률
 
 **목표**: Figma 스타일 다이어그램 에디터
-**현재 Phase**: Phase 2 완료 → Phase 2.5 (속성 패널 기본) 준비
-**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Figma 스타일 45%
+**현재 Phase**: Phase 2.5 (속성 패널 편집) 진행 중
+**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 75% / Figma 스타일 50%
 
 ---
 
@@ -172,18 +172,38 @@
 
 ---
 
-## Phase 2.5: 다중 선택 기본 ⏳ 예정
+## Phase 2.5: 속성 패널 편집 🔄 진행 중
 
-> **목표**: 속성 패널 구현 전에 다중 선택 기반 마련
+> **목표**: 속성 패널에서 도형 속성 편집 가능
 
-### 2.5.1 다중 선택 구현
+### 2.5.1 기본 편집 ✅
+
+- [x] DrawCanvasHandle 인터페이스 (forwardRef + useImperativeHandle)
+- [x] updateShape 메서드 노출
+- [x] Position 편집 (X, Y)
+- [x] Size 편집 (W, H)
+- [x] Rotation 편집
+
+### 2.5.2 추가 기능 ⏳
+
+- [ ] 선택 컨텍스트 메뉴 (도형 위 미니 툴바)
+- [ ] Fill 색상 편집 (Color Picker 필요)
+- [ ] Stroke 색상/두께 편집
+
+---
+
+## Phase 2.6: 다중 선택 기본 ⏳ 예정
+
+> **목표**: 여러 도형 동시 선택 및 편집
+
+### 2.6.1 다중 선택 구현
 
 - [ ] selectedIds: string[] (단일 → 다중)
 - [ ] Shift+Click 다중 선택
 - [ ] 드래그 박스 선택 (Marquee selection)
 - [ ] 선택된 도형들 그룹 이동/삭제
 
-### 2.5.2 UI 연동
+### 2.6.2 UI 연동
 
 - [ ] 속성 패널 "N개 선택됨" 표시 준비
 - [ ] Transformer 다중 노드 지원

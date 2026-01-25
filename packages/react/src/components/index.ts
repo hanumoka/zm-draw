@@ -1,6 +1,6 @@
 // Main canvas component
 export { DrawCanvas } from './DrawCanvas';
-export type { DrawCanvasProps, SelectedShapeInfo } from './DrawCanvas';
+export type { DrawCanvasProps, SelectedShapeInfo, DrawCanvasHandle } from './DrawCanvas';
 
 // Toolbar
 export { Toolbar } from './Toolbar';
