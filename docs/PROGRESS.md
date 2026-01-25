@@ -133,7 +133,7 @@
 
 ---
 
-## Phase 2: UI 레이아웃 🔄 진행 중
+## Phase 2: UI 레이아웃 ✅ 95% 완료
 
 > **목표**: Figma UI3 스타일 3열 레이아웃
 
@@ -389,7 +389,7 @@
 | ~~Phase 0.9~~ | ~~즉시 조치~~ | ~~0.5일~~ | ✅ 완료 |
 | ~~Phase 1~~ | ~~기초 리팩토링~~ | ~~4일~~ | ✅ 90% 완료 |
 | **Phase 1.5** | **커넥터 기초 수정** | **1.25일** | **신규 (긴급)** |
-| Phase 2 | UI 레이아웃 | 3일 | |
+| Phase 2 | UI 레이아웃 | 3일 | ✅ 95% 완료 |
 | Phase 2.5 | 다중 선택 기본 | 2일 | |
 | Phase 3 | 속성 패널 | 4일 | |
 | **Phase 3.5** | **커넥터 고급** | **3일** | **신규** |
@@ -406,7 +406,7 @@
 
 | 날짜 | 커밋 | 설명 |
 |------|------|------|
-| 2026-01-25 | - | feat(phase2): Add dotted grid and Shapes panel (pending) |
+| 2026-01-25 | b543f2a | feat(phase2): Add dotted grid and Shapes panel |
 | 2026-01-25 | 684061a | docs: Update docs with Figma-style toolbar and infinite canvas |
 | 2026-01-25 | 6889993 | feat(phase2): Add Figma-style toolbar and infinite canvas |
 | 2026-01-25 | bd482f8 | feat(phase2): Add panel resize functionality |

@@ -60,9 +60,9 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3200
 
 ### 현재 상태 (2026-01-25)
 
-- **Phase**: Phase 0.9 완료 → Phase 1 (기초 리팩토링)
-- **구현 완료**: 도형, 커넥터, 텍스트, Undo/Redo, Save/Load
-- **다음 Phase**: Phase 1 (Zustand, Copy/Paste 등)
+- **Phase**: Phase 2 (UI 레이아웃) 95% 완료 → Phase 2.5 준비
+- **구현 완료**: 도형, 커넥터, 텍스트, Undo/Redo, Save/Load, Zustand, Copy/Paste, Figma UI
+- **다음 Phase**: Phase 2.5 (속성 패널 기본)
 
 ### 기술 스택
 
