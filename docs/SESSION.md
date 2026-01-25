@@ -1,29 +1,29 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-25 (Phase 1.5 커넥터 수정 완료)
+> 최종 업데이트: 2026-01-25 (Phase 2 UI 레이아웃 진행 중)
 
 ---
 
 ## 현재 상태
 
-**Phase**: Phase 1.5 (커넥터 수정) ✅ 완료 → Phase 2 (UI 레이아웃) 예정
-**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Figma 스타일 10%
+**Phase**: Phase 2 (UI 레이아웃) 진행 중
+**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 50% / Figma 스타일 15%
 
 ### 마지막 작업 (2026-01-25)
+
+- **Phase 2: UI 레이아웃 진행 중** 🔄
+  - LeftPanel (레이어 패널) 추가 ✅
+  - 3열 레이아웃 구조 완성 ✅
+  - Radix UI 도입 (@radix-ui/react-tooltip, react-separator) ✅
+  - Tooltip 컴포넌트 생성 및 적용 ✅
 
 - **Phase 1.5: 커넥터 기초 수정 완료** ✅
   - `getShapeEdgePoint()` 함수 구현 (Rectangle, Ellipse, Diamond)
   - 화살촉이 도형 외곽에 표시되도록 수정
   - 커넥터 클릭 선택 기능 추가
   - 커넥터 Delete 키 삭제 기능 추가
-  - `selectionStore` 확장 (selectionType: shape/connector)
 
 - **Phase 1: 기초 리팩토링 90% 완료** ✅
-  - Zustand stores 마이그레이션 (tool, selection, viewport)
-  - 컴포넌트 분리 (Toolbar, TextEditor)
-  - useKeyboard 훅 통합
-  - 타입 확장 완료
-
 - **Dark Mode + Right Panel** ✅
 - **Phase 0.9: Konva 업그레이드** ✅
 
@@ -36,8 +36,8 @@
 ### Git 상태
 
 - **브랜치**: main
-- **원격**: origin/main
-- **마지막 커밋**: `4b5c0d9 fix(phase1.5): Fix connector arrowhead visibility and add selection`
+- **원격**: origin/main (동기화됨)
+- **마지막 커밋**: `1e5e11f feat(phase2): Add Radix UI with Tooltip component`
 
 ---
 
@@ -85,11 +85,13 @@
 
 ### 체크리스트
 
-- [ ] Radix UI 도입
-- [ ] EditorLayout 컴포넌트 (3열 grid)
-- [ ] LeftPanel 껍데기 (빈 패널)
+- [x] Radix UI 도입 ✅
+- [x] LeftPanel 껍데기 (빈 패널) ✅
+- [x] 3열 레이아웃 구조 ✅
+- [x] Tooltip 컴포넌트 ✅
 - [ ] BottomToolbar (도구 버튼 이동)
 - [ ] 패널 리사이즈 기능
+- [ ] EditorLayout 컴포넌트 분리
 
 ### Phase 1.5 완료 내용 (참고)
 

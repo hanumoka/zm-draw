@@ -7,8 +7,8 @@
 ## 전체 진행률
 
 **목표**: Figma 스타일 다이어그램 에디터
-**현재 Phase**: Phase 1.5 (커넥터 수정) ✅ 완료 → Phase 2 예정
-**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Figma 스타일 10%
+**현재 Phase**: Phase 2 (UI 레이아웃) 진행 중
+**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 50% / Figma 스타일 15%
 
 ---
 
@@ -133,7 +133,7 @@
 
 ---
 
-## Phase 2: UI 레이아웃 ⏳ 예정
+## Phase 2: UI 레이아웃 🔄 진행 중
 
 > **목표**: Figma UI3 스타일 3열 레이아웃
 
@@ -153,14 +153,17 @@
 
 ### 2.2 체크리스트
 
-- [x] Dark Mode 기본 지원 ✅ 완료
-- [x] RightPanel 껍데기 (속성 패널) ✅ 완료
-- [x] 헤더바 + 다크모드/패널 토글 ✅ 완료
-- [ ] EditorLayout 컴포넌트 (3열 grid)
-- [ ] LeftPanel 껍데기 (빈 패널)
+- [x] Dark Mode 기본 지원 ✅
+- [x] RightPanel 껍데기 (속성 패널) ✅
+- [x] 헤더바 + 다크모드/패널 토글 ✅
+- [x] LeftPanel 껍데기 (레이어 패널) ✅
+- [x] 3열 레이아웃 구조 ✅
+- [x] Radix UI 도입 (@radix-ui/react-tooltip) ✅
+- [x] Tooltip 컴포넌트 ✅
 - [ ] BottomToolbar (도구 버튼 이동)
 - [ ] 패널 리사이즈 기능
 - [ ] 패널 접기/펼치기 (Shift+\)
+- [ ] EditorLayout 컴포넌트 분리
 
 ---
 
@@ -364,14 +367,14 @@
 
 | 날짜 | 커밋 | 설명 |
 |------|------|------|
+| 2026-01-25 | 1e5e11f | feat(phase2): Add Radix UI with Tooltip component |
+| 2026-01-25 | e07a760 | feat(phase2): Add LeftPanel for layers (3-column layout) |
+| 2026-01-25 | f183e63 | docs: Update docs with Phase 1.5 completion |
 | 2026-01-25 | 4b5c0d9 | fix(phase1.5): Fix connector arrowhead visibility and add selection |
 | 2026-01-25 | 516b4c0 | docs: Add connector analysis and Phase 1.5/3.5/5.5 roadmap |
-| 2026-01-25 | d83e864 | docs: Update SESSION.md with Zustand migration progress |
 | 2026-01-25 | cde21c1 | refactor(phase1): Migrate viewport state to Zustand store |
 | 2026-01-25 | 1b42ac1 | refactor(phase1): Migrate selection state to Zustand store |
 | 2026-01-25 | 22f03a1 | refactor(phase1): Migrate tool state to Zustand store |
-| 2026-01-25 | 8564d03 | feat(phase1): Extend type definitions for future features |
-| 2026-01-25 | 7e1a677 | refactor(phase1): Extract TextEditor component |
 
 ---
 
