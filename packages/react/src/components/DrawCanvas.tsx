@@ -4,6 +4,19 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import Konva from 'konva';
 import type { Shape, ShapeType, ToolType, Connector } from '../types';
 
+/** Selected shape info for external consumption */
+export interface SelectedShapeInfo {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  fill: string;
+  stroke: string;
+}
+
 export interface DrawCanvasProps {
   /** Canvas width */
   width?: number;
@@ -21,6 +34,8 @@ export interface DrawCanvasProps {
   onShapesChange?: (shapes: Shape[]) => void;
   /** Callback when canvas is ready */
   onReady?: (stage: Konva.Stage) => void;
+  /** Callback when selection changes */
+  onSelectionChange?: (shape: SelectedShapeInfo | null) => void;
 }
 
 // Generate unique ID
@@ -52,6 +67,7 @@ export function DrawCanvas({
   initialShapes = [],
   onShapesChange,
   onReady,
+  onSelectionChange,
 }: DrawCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -181,13 +197,18 @@ export function DrawCanvas({
   }, []);
 
   // Draw grid lines
-  const drawGrid = useCallback((layer: Konva.Layer, w: number, h: number, size: number) => {
+  const drawGrid = useCallback((layer: Konva.Layer, w: number, h: number, size: number, bgColor: string) => {
     layer.destroyChildren();
+
+    // Determine grid color based on background brightness
+    const isDark = bgColor.startsWith('#') &&
+      parseInt(bgColor.slice(1, 3), 16) < 128;
+    const gridColor = isDark ? '#3a3a3a' : '#e5e7eb';
 
     for (let x = 0; x <= w; x += size) {
       layer.add(new Konva.Line({
         points: [x, 0, x, h],
-        stroke: '#e5e7eb',
+        stroke: gridColor,
         strokeWidth: 1,
       }));
     }
@@ -195,7 +216,7 @@ export function DrawCanvas({
     for (let y = 0; y <= h; y += size) {
       layer.add(new Konva.Line({
         points: [0, y, w, y],
-        stroke: '#e5e7eb',
+        stroke: gridColor,
         strokeWidth: 1,
       }));
     }
@@ -546,7 +567,7 @@ export function DrawCanvas({
     const gridLayer = new Konva.Layer({ listening: false });
     stage.add(gridLayer);
     if (showGrid) {
-      drawGrid(gridLayer, width, height, gridSize);
+      drawGrid(gridLayer, width, height, gridSize, backgroundColor);
     }
 
     // Connectors layer (below shapes)
@@ -678,6 +699,31 @@ export function DrawCanvas({
     renderShapes();
   }, [renderShapes]);
 
+  // Notify parent of selection changes
+  useEffect(() => {
+    if (!onSelectionChange) return;
+
+    if (!selectedId) {
+      onSelectionChange(null);
+      return;
+    }
+
+    const shape = shapes.find((s) => s.id === selectedId);
+    if (shape) {
+      onSelectionChange({
+        id: shape.id,
+        type: shape.type,
+        x: shape.x,
+        y: shape.y,
+        width: shape.width,
+        height: shape.height,
+        rotation: shape.rotation || 0,
+        fill: shape.fill,
+        stroke: shape.stroke,
+      });
+    }
+  }, [selectedId, shapes, onSelectionChange]);
+
   // Re-render connectors when they change
   useEffect(() => {
     renderConnectors();
@@ -753,194 +799,115 @@ export function DrawCanvas({
     };
   }, [isPanning, tool]);
 
+  // Button style helper
+  const getButtonStyle = (active: boolean, disabled?: boolean, variant?: 'danger' | 'success') => ({
+    padding: '8px 16px',
+    border: '1px solid var(--zm-border, #3c3c3c)',
+    borderRadius: 6,
+    backgroundColor: disabled
+      ? 'var(--zm-bg-tertiary, #383838)'
+      : active
+        ? variant === 'success' ? '#22c55e' : variant === 'danger' ? '#ef4444' : 'var(--zm-accent, #0d99ff)'
+        : 'var(--zm-bg-tertiary, #383838)',
+    color: disabled
+      ? 'var(--zm-text-muted, #6b6b6b)'
+      : active ? '#fff' : 'var(--zm-text-secondary, #a0a0a0)',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    fontSize: 12,
+    transition: 'all 0.15s',
+  });
+
   return (
-    <div className="zm-draw-wrapper">
+    <div className="zm-draw-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Toolbar */}
-      <div className="zm-draw-toolbar" style={{ marginBottom: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button
-          onClick={() => setTool('select')}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: tool === 'select' ? '#3b82f6' : '#fff',
-            color: tool === 'select' ? '#fff' : '#374151',
-            cursor: 'pointer',
-          }}
-        >
+      <div className="zm-draw-toolbar" style={{
+        padding: '8px 12px',
+        display: 'flex',
+        gap: 4,
+        flexWrap: 'wrap',
+        backgroundColor: 'var(--zm-bg-secondary, #2c2c2c)',
+        borderBottom: '1px solid var(--zm-border, #3c3c3c)',
+      }}>
+        <button onClick={() => setTool('select')} style={getButtonStyle(tool === 'select')}>
           Select
         </button>
-        <button
-          onClick={() => setTool('rectangle')}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: tool === 'rectangle' ? '#3b82f6' : '#fff',
-            color: tool === 'rectangle' ? '#fff' : '#374151',
-            cursor: 'pointer',
-          }}
-        >
+        <button onClick={() => setTool('rectangle')} style={getButtonStyle(tool === 'rectangle')}>
           Rectangle
         </button>
-        <button
-          onClick={() => setTool('ellipse')}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: tool === 'ellipse' ? '#3b82f6' : '#fff',
-            color: tool === 'ellipse' ? '#fff' : '#374151',
-            cursor: 'pointer',
-          }}
-        >
+        <button onClick={() => setTool('ellipse')} style={getButtonStyle(tool === 'ellipse')}>
           Ellipse
         </button>
-        <button
-          onClick={() => setTool('diamond')}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: tool === 'diamond' ? '#3b82f6' : '#fff',
-            color: tool === 'diamond' ? '#fff' : '#374151',
-            cursor: 'pointer',
-          }}
-        >
+        <button onClick={() => setTool('diamond')} style={getButtonStyle(tool === 'diamond')}>
           Diamond
         </button>
         <button
           onClick={() => { setTool('connector'); setConnectingFrom(null); }}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: tool === 'connector' ? '#22c55e' : '#fff',
-            color: tool === 'connector' ? '#fff' : '#374151',
-            cursor: 'pointer',
-          }}
+          style={getButtonStyle(tool === 'connector', false, 'success')}
         >
           {connectingFrom ? 'Click target...' : 'Connector'}
         </button>
 
-        <div style={{ width: 1, backgroundColor: '#d1d5db', margin: '0 4px' }} />
+        <div style={{ width: 1, backgroundColor: 'var(--zm-border, #3c3c3c)', margin: '0 8px' }} />
 
         <button
           onClick={deleteSelected}
           disabled={!selectedId}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: selectedId ? '#ef4444' : '#f3f4f6',
-            color: selectedId ? '#fff' : '#9ca3af',
-            cursor: selectedId ? 'pointer' : 'not-allowed',
-          }}
+          style={getButtonStyle(!!selectedId, !selectedId, 'danger')}
         >
           Delete
         </button>
         <button
           onClick={clearAll}
           disabled={shapes.length === 0}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: shapes.length > 0 ? '#fff' : '#f3f4f6',
-            color: shapes.length > 0 ? '#374151' : '#9ca3af',
-            cursor: shapes.length > 0 ? 'pointer' : 'not-allowed',
-          }}
+          style={getButtonStyle(false, shapes.length === 0)}
         >
           Clear All
         </button>
 
-        <div style={{ width: 1, backgroundColor: '#d1d5db', margin: '0 4px' }} />
+        <div style={{ width: 1, backgroundColor: 'var(--zm-border, #3c3c3c)', margin: '0 8px' }} />
 
-        <button
-          onClick={undo}
-          disabled={!canUndo}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: canUndo ? '#fff' : '#f3f4f6',
-            color: canUndo ? '#374151' : '#9ca3af',
-            cursor: canUndo ? 'pointer' : 'not-allowed',
-          }}
-        >
+        <button onClick={undo} disabled={!canUndo} style={getButtonStyle(false, !canUndo)}>
           Undo
         </button>
-        <button
-          onClick={redo}
-          disabled={!canRedo}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: canRedo ? '#fff' : '#f3f4f6',
-            color: canRedo ? '#374151' : '#9ca3af',
-            cursor: canRedo ? 'pointer' : 'not-allowed',
-          }}
-        >
+        <button onClick={redo} disabled={!canRedo} style={getButtonStyle(false, !canRedo)}>
           Redo
         </button>
 
-        <div style={{ width: 1, backgroundColor: '#d1d5db', margin: '0 4px' }} />
+        <div style={{ width: 1, backgroundColor: 'var(--zm-border, #3c3c3c)', margin: '0 8px' }} />
 
-        <span style={{ padding: '8px 12px', color: '#6b7280', fontSize: 14 }}>
+        <span style={{
+          padding: '8px 12px',
+          color: 'var(--zm-text-secondary, #a0a0a0)',
+          fontSize: 12,
+        }}>
           {Math.round(scale * 100)}%
         </span>
-        <button
-          onClick={resetZoom}
-          disabled={scale === 1}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: scale !== 1 ? '#fff' : '#f3f4f6',
-            color: scale !== 1 ? '#374151' : '#9ca3af',
-            cursor: scale !== 1 ? 'pointer' : 'not-allowed',
-          }}
-        >
-          Reset Zoom
+        <button onClick={resetZoom} disabled={scale === 1} style={getButtonStyle(false, scale === 1)}>
+          Reset
         </button>
 
-        <div style={{ width: 1, backgroundColor: '#d1d5db', margin: '0 4px' }} />
+        <div style={{ width: 1, backgroundColor: 'var(--zm-border, #3c3c3c)', margin: '0 8px' }} />
 
-        <button
-          onClick={exportToJson}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: '#fff',
-            color: '#374151',
-            cursor: 'pointer',
-          }}
-        >
+        <button onClick={exportToJson} style={getButtonStyle(false)}>
           Save
         </button>
-        <button
-          onClick={importFromJson}
-          style={{
-            padding: '8px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: 4,
-            backgroundColor: '#fff',
-            color: '#374151',
-            cursor: 'pointer',
-          }}
-        >
+        <button onClick={importFromJson} style={getButtonStyle(false)}>
           Load
         </button>
       </div>
 
       {/* Canvas */}
-      <div style={{ position: 'relative', width, height }}>
+      <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
         <div
           ref={containerRef}
           className="zm-draw-canvas-container"
-          style={{ width, height, cursor: tool === 'select' ? 'default' : 'crosshair' }}
+          style={{
+            width: '100%',
+            height: '100%',
+            cursor: tool === 'select' ? 'default' : 'crosshair',
+            borderRadius: 0,
+            border: 'none',
+          }}
         />
 
         {/* Text editing overlay */}
