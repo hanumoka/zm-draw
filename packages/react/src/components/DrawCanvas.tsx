@@ -4,6 +4,7 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import Konva from 'konva';
 import type { Shape, ShapeType, ToolType, Connector } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
+import { Toolbar } from './Toolbar';
 
 /** Selected shape info for external consumption */
 export interface SelectedShapeInfo {
@@ -850,102 +851,32 @@ export function DrawCanvas({
     };
   }, [isPanning, tool]);
 
-  // Button style helper
-  const getButtonStyle = (active: boolean, disabled?: boolean, variant?: 'danger' | 'success') => ({
-    padding: '8px 16px',
-    border: '1px solid var(--zm-border, #3c3c3c)',
-    borderRadius: 6,
-    backgroundColor: disabled
-      ? 'var(--zm-bg-tertiary, #383838)'
-      : active
-        ? variant === 'success' ? '#22c55e' : variant === 'danger' ? '#ef4444' : 'var(--zm-accent, #0d99ff)'
-        : 'var(--zm-bg-tertiary, #383838)',
-    color: disabled
-      ? 'var(--zm-text-muted, #6b6b6b)'
-      : active ? '#fff' : 'var(--zm-text-secondary, #a0a0a0)',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    fontSize: 12,
-    transition: 'all 0.15s',
-  });
+  // Cancel connecting callback for Toolbar
+  const cancelConnecting = useCallback(() => {
+    setConnectingFrom(null);
+  }, []);
 
   return (
     <div className="zm-draw-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Toolbar */}
-      <div className="zm-draw-toolbar" style={{
-        padding: '8px 12px',
-        display: 'flex',
-        gap: 4,
-        flexWrap: 'wrap',
-        backgroundColor: 'var(--zm-bg-secondary, #2c2c2c)',
-        borderBottom: '1px solid var(--zm-border, #3c3c3c)',
-      }}>
-        <button onClick={() => setTool('select')} style={getButtonStyle(tool === 'select')}>
-          Select
-        </button>
-        <button onClick={() => setTool('rectangle')} style={getButtonStyle(tool === 'rectangle')}>
-          Rectangle
-        </button>
-        <button onClick={() => setTool('ellipse')} style={getButtonStyle(tool === 'ellipse')}>
-          Ellipse
-        </button>
-        <button onClick={() => setTool('diamond')} style={getButtonStyle(tool === 'diamond')}>
-          Diamond
-        </button>
-        <button
-          onClick={() => { setTool('connector'); setConnectingFrom(null); }}
-          style={getButtonStyle(tool === 'connector', false, 'success')}
-        >
-          {connectingFrom ? 'Click target...' : 'Connector'}
-        </button>
-
-        <div style={{ width: 1, backgroundColor: 'var(--zm-border, #3c3c3c)', margin: '0 8px' }} />
-
-        <button
-          onClick={deleteSelected}
-          disabled={!selectedId}
-          style={getButtonStyle(!!selectedId, !selectedId, 'danger')}
-        >
-          Delete
-        </button>
-        <button
-          onClick={clearAll}
-          disabled={shapes.length === 0}
-          style={getButtonStyle(false, shapes.length === 0)}
-        >
-          Clear All
-        </button>
-
-        <div style={{ width: 1, backgroundColor: 'var(--zm-border, #3c3c3c)', margin: '0 8px' }} />
-
-        <button onClick={undo} disabled={!canUndo} style={getButtonStyle(false, !canUndo)}>
-          Undo
-        </button>
-        <button onClick={redo} disabled={!canRedo} style={getButtonStyle(false, !canRedo)}>
-          Redo
-        </button>
-
-        <div style={{ width: 1, backgroundColor: 'var(--zm-border, #3c3c3c)', margin: '0 8px' }} />
-
-        <span style={{
-          padding: '8px 12px',
-          color: 'var(--zm-text-secondary, #a0a0a0)',
-          fontSize: 12,
-        }}>
-          {Math.round(scale * 100)}%
-        </span>
-        <button onClick={resetZoom} disabled={scale === 1} style={getButtonStyle(false, scale === 1)}>
-          Reset
-        </button>
-
-        <div style={{ width: 1, backgroundColor: 'var(--zm-border, #3c3c3c)', margin: '0 8px' }} />
-
-        <button onClick={exportToJson} style={getButtonStyle(false)}>
-          Save
-        </button>
-        <button onClick={importFromJson} style={getButtonStyle(false)}>
-          Load
-        </button>
-      </div>
+      <Toolbar
+        tool={tool}
+        setTool={setTool}
+        connectingFrom={connectingFrom}
+        cancelConnecting={cancelConnecting}
+        hasSelection={!!selectedId}
+        onDelete={deleteSelected}
+        shapeCount={shapes.length}
+        onClearAll={clearAll}
+        canUndo={canUndo}
+        onUndo={undo}
+        canRedo={canRedo}
+        onRedo={redo}
+        scale={scale}
+        onResetZoom={resetZoom}
+        onSave={exportToJson}
+        onLoad={importFromJson}
+      />
 
       {/* Canvas */}
       <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
