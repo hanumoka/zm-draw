@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useCallback, useEffect } from 'react';
+import { TooltipProvider, Tooltip } from '../components/Tooltip';
 
 // Konva requires window, so we need to dynamically import
 const DrawCanvas = dynamic(
@@ -107,58 +108,62 @@ export default function Home() {
   const canvasBgColor = isDarkMode ? '#252525' : '#fafafa';
 
   return (
-    <div className="zm-draw-editor">
-      {/* Left Panel - Layers */}
-      {isLeftPanelOpen && (
-        <aside className="zm-draw-left-panel">
-          <div className="zm-draw-panel-header">
-            Layers
-          </div>
-          <div className="zm-draw-panel-content">
-            <div className="zm-draw-empty-state">
-              <div className="zm-draw-empty-state-icon">
-                <LayersIcon />
+    <TooltipProvider>
+      <div className="zm-draw-editor">
+        {/* Left Panel - Layers */}
+        {isLeftPanelOpen && (
+          <aside className="zm-draw-left-panel">
+            <div className="zm-draw-panel-header">
+              Layers
+            </div>
+            <div className="zm-draw-panel-content">
+              <div className="zm-draw-empty-state">
+                <div className="zm-draw-empty-state-icon">
+                  <LayersIcon />
+                </div>
+                <p>No layers yet.<br />Create shapes to see them here.</p>
               </div>
-              <p>No layers yet.<br />Create shapes to see them here.</p>
             </div>
-          </div>
-        </aside>
-      )}
+          </aside>
+        )}
 
-      {/* Canvas Area */}
-      <div className="zm-draw-canvas-area">
-        {/* Top Header Bar */}
-        <div className="zm-draw-header">
-          <div className="zm-draw-header-left">
-            <button
-              className={`zm-draw-icon-button ${isLeftPanelOpen ? 'active' : ''}`}
-              onClick={toggleLeftPanel}
-              title={isLeftPanelOpen ? 'Hide Layers Panel' : 'Show Layers Panel'}
-            >
-              {isLeftPanelOpen ? <PanelLeftCloseIcon /> : <PanelLeftIcon />}
-            </button>
-            <div className="zm-draw-header-title">
-              <span className="zm-draw-logo">zm-draw</span>
-              <span className="zm-draw-version">v0.1.0</span>
+        {/* Canvas Area */}
+        <div className="zm-draw-canvas-area">
+          {/* Top Header Bar */}
+          <div className="zm-draw-header">
+            <div className="zm-draw-header-left">
+              <Tooltip content={isLeftPanelOpen ? 'Hide Layers' : 'Show Layers'}>
+                <button
+                  className={`zm-draw-icon-button ${isLeftPanelOpen ? 'active' : ''}`}
+                  onClick={toggleLeftPanel}
+                >
+                  {isLeftPanelOpen ? <PanelLeftCloseIcon /> : <PanelLeftIcon />}
+                </button>
+              </Tooltip>
+              <div className="zm-draw-header-title">
+                <span className="zm-draw-logo">zm-draw</span>
+                <span className="zm-draw-version">v0.1.0</span>
+              </div>
+            </div>
+            <div className="zm-draw-header-actions">
+              <Tooltip content={isDarkMode ? 'Light Mode' : 'Dark Mode'}>
+                <button
+                  className="zm-draw-icon-button"
+                  onClick={toggleDarkMode}
+                >
+                  {isDarkMode ? <SunIcon /> : <MoonIcon />}
+                </button>
+              </Tooltip>
+              <Tooltip content={isRightPanelOpen ? 'Hide Properties' : 'Show Properties'}>
+                <button
+                  className={`zm-draw-icon-button ${isRightPanelOpen ? 'active' : ''}`}
+                  onClick={toggleRightPanel}
+                >
+                  {isRightPanelOpen ? <PanelRightCloseIcon /> : <PanelRightIcon />}
+                </button>
+              </Tooltip>
             </div>
           </div>
-          <div className="zm-draw-header-actions">
-            <button
-              className="zm-draw-icon-button"
-              onClick={toggleDarkMode}
-              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            >
-              {isDarkMode ? <SunIcon /> : <MoonIcon />}
-            </button>
-            <button
-              className={`zm-draw-icon-button ${isRightPanelOpen ? 'active' : ''}`}
-              onClick={toggleRightPanel}
-              title={isRightPanelOpen ? 'Hide Properties Panel' : 'Show Properties Panel'}
-            >
-              {isRightPanelOpen ? <PanelRightCloseIcon /> : <PanelRightIcon />}
-            </button>
-          </div>
-        </div>
 
         {/* Canvas */}
         <DrawCanvas
@@ -307,6 +312,7 @@ export default function Home() {
           </div>
         </aside>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

@@ -288,3 +288,31 @@ body {
 .zm-draw-right-panel ::-webkit-scrollbar-thumb:hover {
   background: var(--zm-border-hover);
 }
+
+/* Radix Tooltip */
+.zm-tooltip {
+  background: var(--zm-bg-tertiary);
+  color: var(--zm-text-primary);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--zm-border);
+  z-index: 1000;
+  animation: tooltipFadeIn 0.15s ease-out;
+}
+
+.zm-tooltip-arrow {
+  fill: var(--zm-bg-tertiary);
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
