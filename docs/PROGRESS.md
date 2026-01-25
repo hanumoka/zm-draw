@@ -130,13 +130,13 @@
 
 ### 2.2 체크리스트
 
+- [x] Dark Mode 기본 지원 ✅ 완료
+- [x] RightPanel 껍데기 (속성 패널) ✅ 완료
 - [ ] EditorLayout 컴포넌트 (3열 grid)
 - [ ] LeftPanel 껍데기 (빈 패널)
-- [ ] RightPanel 껍데기 (빈 패널)
 - [ ] BottomToolbar (도구 버튼 이동)
 - [ ] 패널 리사이즈 기능
 - [ ] 패널 접기/펼치기 (Shift+\)
-- [ ] Dark Mode 기본 지원 ✅ 결정됨 (UI3 핵심)
 
 ---
 

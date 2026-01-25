@@ -11,11 +11,15 @@
 
 ### 마지막 작업 (2026-01-25)
 
+- **Dark Mode + Right Panel 구현** ✅
+  - Figma UI3 스타일 다크 모드 CSS 변수 추가
+  - Right Panel (속성 패널) 껍데기 구현
+  - Position, Size, Rotation, Fill, Stroke 섹션 표시
+  - onSelectionChange 콜백 추가
+  - 툴바 다크 모드 스타일 적용
+
 - **Phase 0.9: Konva 업그레이드 완료** ✅
   - konva: ^9.3.0 → ^10.0.0 (실제 설치: 10.2.0)
-  - 빌드 성공 확인
-  - 타입 체크 통과
-  - 개발 서버 정상 동작 확인
 
 ### 개발 서버
 
