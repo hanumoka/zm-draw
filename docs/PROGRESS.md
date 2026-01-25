@@ -8,7 +8,7 @@
 
 **목표**: Figma 스타일 다이어그램 에디터
 **현재 Phase**: Phase 2 (UI 레이아웃) 진행 중
-**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 50% / Figma 스타일 15%
+**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 80% / Figma 스타일 40%
 
 ---
 
@@ -160,8 +160,10 @@
 - [x] 3열 레이아웃 구조 ✅
 - [x] Radix UI 도입 (@radix-ui/react-tooltip) ✅
 - [x] Tooltip 컴포넌트 ✅
-- [ ] BottomToolbar (도구 버튼 이동)
-- [ ] 패널 리사이즈 기능
+- [x] BottomToolbar (플로팅 툴바로 이동) ✅
+- [x] 패널 리사이즈 기능 ✅
+- [x] Figma 스타일 툴바 (아이콘 기반, 그룹화) ✅
+- [x] 무한 캔버스 (동적 그리드, 무제한 패닝/줌) ✅
 - [ ] 패널 접기/펼치기 (Shift+\)
 - [ ] EditorLayout 컴포넌트 분리
 
@@ -367,14 +369,14 @@
 
 | 날짜 | 커밋 | 설명 |
 |------|------|------|
+| 2026-01-25 | 6889993 | feat(phase2): Add Figma-style toolbar and infinite canvas |
+| 2026-01-25 | bd482f8 | feat(phase2): Add panel resize functionality |
+| 2026-01-25 | 9bf008e | feat(phase2): Move toolbar to bottom floating position |
+| 2026-01-25 | 3de24ba | docs: Update progress with Phase 2 UI layout status |
 | 2026-01-25 | 1e5e11f | feat(phase2): Add Radix UI with Tooltip component |
 | 2026-01-25 | e07a760 | feat(phase2): Add LeftPanel for layers (3-column layout) |
 | 2026-01-25 | f183e63 | docs: Update docs with Phase 1.5 completion |
 | 2026-01-25 | 4b5c0d9 | fix(phase1.5): Fix connector arrowhead visibility and add selection |
-| 2026-01-25 | 516b4c0 | docs: Add connector analysis and Phase 1.5/3.5/5.5 roadmap |
-| 2026-01-25 | cde21c1 | refactor(phase1): Migrate viewport state to Zustand store |
-| 2026-01-25 | 1b42ac1 | refactor(phase1): Migrate selection state to Zustand store |
-| 2026-01-25 | 22f03a1 | refactor(phase1): Migrate tool state to Zustand store |
 
 ---
 

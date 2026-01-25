@@ -1,17 +1,22 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-25 (Phase 2 UI 레이아웃 진행 중)
+> 최종 업데이트: 2026-01-25 (Phase 2 UI 레이아웃 80% 완료)
 
 ---
 
 ## 현재 상태
 
 **Phase**: Phase 2 (UI 레이아웃) 진행 중
-**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 50% / Figma 스타일 15%
+**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 80% / Figma 스타일 40%
 
 ### 마지막 작업 (2026-01-25)
 
-- **Phase 2: UI 레이아웃 진행 중** 🔄
+- **Phase 2: UI 레이아웃 80% 완료** 🔄
+  - Figma 스타일 툴바 구현 (아이콘 기반, 그룹화) ✅
+  - 무한 캔버스 구현 (동적 그리드, 무제한 패닝/줌) ✅
+  - 패널 리사이즈 기능 ✅
+  - 테마 전환 시 도형 사라짐 버그 수정 ✅
+  - 캔버스 오버플로우 버그 수정 ✅
   - LeftPanel (레이어 패널) 추가 ✅
   - 3열 레이아웃 구조 완성 ✅
   - Radix UI 도입 (@radix-ui/react-tooltip, react-separator) ✅
@@ -37,7 +42,7 @@
 
 - **브랜치**: main
 - **원격**: origin/main (동기화됨)
-- **마지막 커밋**: `1e5e11f feat(phase2): Add Radix UI with Tooltip component`
+- **마지막 커밋**: `6889993 feat(phase2): Add Figma-style toolbar and infinite canvas`
 
 ---
 
@@ -89,8 +94,10 @@
 - [x] LeftPanel 껍데기 (빈 패널) ✅
 - [x] 3열 레이아웃 구조 ✅
 - [x] Tooltip 컴포넌트 ✅
-- [ ] BottomToolbar (도구 버튼 이동)
-- [ ] 패널 리사이즈 기능
+- [x] BottomToolbar (플로팅 툴바로 이동) ✅
+- [x] 패널 리사이즈 기능 ✅
+- [x] Figma 스타일 툴바 (아이콘 기반) ✅
+- [x] 무한 캔버스 (동적 그리드) ✅
 - [ ] EditorLayout 컴포넌트 분리
 
 ### Phase 1.5 완료 내용 (참고)
