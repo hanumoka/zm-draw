@@ -500,14 +500,90 @@ export function DrawCanvas({
     setScale(1);
   }, []);
 
+  // Clipboard state for copy/paste
+  const clipboardRef = useRef<Shape | null>(null);
+  const pasteOffsetRef = useRef(20);
+
+  // Copy selected shape
+  const copySelected = useCallback(() => {
+    if (!selectedId) return;
+    const shape = shapes.find((s) => s.id === selectedId);
+    if (shape) {
+      clipboardRef.current = { ...shape };
+      pasteOffsetRef.current = 20; // Reset paste offset
+    }
+  }, [selectedId, shapes]);
+
+  // Paste copied shape
+  const pasteShape = useCallback(() => {
+    if (!clipboardRef.current) return;
+
+    const newShape: Shape = {
+      ...clipboardRef.current,
+      id: generateId(),
+      x: clipboardRef.current.x + pasteOffsetRef.current,
+      y: clipboardRef.current.y + pasteOffsetRef.current,
+    };
+
+    setShapes((prev) => {
+      const updated = [...prev, newShape];
+      onShapesChange?.(updated);
+      return updated;
+    });
+    setSelectedId(newShape.id);
+    pasteOffsetRef.current += 20; // Increment for next paste
+  }, [onShapesChange]);
+
+  // Duplicate selected shape (Ctrl+D)
+  const duplicateSelected = useCallback(() => {
+    if (!selectedId) return;
+    const shape = shapes.find((s) => s.id === selectedId);
+    if (!shape) return;
+
+    const newShape: Shape = {
+      ...shape,
+      id: generateId(),
+      x: shape.x + 20,
+      y: shape.y + 20,
+    };
+
+    setShapes((prev) => {
+      const updated = [...prev, newShape];
+      onShapesChange?.(updated);
+      return updated;
+    });
+    setSelectedId(newShape.id);
+  }, [selectedId, shapes, onShapesChange]);
+
+  // Move selected shape with arrow keys
+  const moveSelected = useCallback((dx: number, dy: number) => {
+    if (!selectedId) return;
+
+    setShapes((prev) => {
+      const updated = prev.map((s) =>
+        s.id === selectedId ? { ...s, x: s.x + dx, y: s.y + dy } : s
+      );
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [selectedId, onShapesChange]);
+
+  // Movement constants
+  const MOVE_STEP = 1;
+  const MOVE_STEP_SHIFT = 10;
+
   // Keyboard event handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle when typing in input fields (except Escape)
+      if (document.activeElement?.tagName === 'INPUT' && e.key !== 'Escape') {
+        return;
+      }
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const modKey = isMac ? e.metaKey : e.ctrlKey;
+
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        // Don't delete when editing text
-        if (document.activeElement?.tagName === 'INPUT') {
-          return;
-        }
         e.preventDefault();
         deleteSelected();
       } else if (e.key === 'Escape') {
@@ -518,12 +594,38 @@ export function DrawCanvas({
       } else if (e.code === 'Space' && !isPanning) {
         e.preventDefault();
         setIsPanning(true);
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+      } else if (modKey && e.key.toLowerCase() === 'c') {
+        // Copy (Ctrl+C / Cmd+C)
+        e.preventDefault();
+        copySelected();
+      } else if (modKey && e.key.toLowerCase() === 'v') {
+        // Paste (Ctrl+V / Cmd+V)
+        e.preventDefault();
+        pasteShape();
+      } else if (modKey && e.key.toLowerCase() === 'd') {
+        // Duplicate (Ctrl+D / Cmd+D)
+        e.preventDefault();
+        duplicateSelected();
+      } else if (modKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        // Undo (Ctrl+Z / Cmd+Z)
         e.preventDefault();
         undo();
-      } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+      } else if (modKey && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+        // Redo (Ctrl+Y / Cmd+Shift+Z)
         e.preventDefault();
         redo();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveSelected(0, e.shiftKey ? -MOVE_STEP_SHIFT : -MOVE_STEP);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        moveSelected(0, e.shiftKey ? MOVE_STEP_SHIFT : MOVE_STEP);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        moveSelected(e.shiftKey ? -MOVE_STEP_SHIFT : -MOVE_STEP, 0);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        moveSelected(e.shiftKey ? MOVE_STEP_SHIFT : MOVE_STEP, 0);
       }
     };
 
@@ -539,7 +641,7 @@ export function DrawCanvas({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [deleteSelected, isPanning, undo, redo]);
+  }, [deleteSelected, isPanning, undo, redo, copySelected, pasteShape, duplicateSelected, moveSelected]);
 
   // Initialize canvas
   useEffect(() => {
