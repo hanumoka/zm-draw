@@ -48,7 +48,7 @@
 
 - **브랜치**: main
 - **원격**: origin/main (동기화됨)
-- **마지막 커밋**: `1e5695b docs: Fix inconsistencies across documentation files`
+- **마지막 커밋**: `03afb20 docs: Fix inconsistencies across documentation files`
 
 ---
 
