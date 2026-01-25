@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useState, useCallback, useEffect } from 'react';
 import { TooltipProvider, Tooltip } from '../components/Tooltip';
+import { PanelResizer } from '../components/PanelResizer';
 
 // Konva requires window, so we need to dynamically import
 const DrawCanvas = dynamic(
@@ -86,6 +87,8 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(240);
+  const [rightPanelWidth, setRightPanelWidth] = useState(280);
 
   // Apply dark mode class to html element
   useEffect(() => {
@@ -112,19 +115,28 @@ export default function Home() {
       <div className="zm-draw-editor">
         {/* Left Panel - Layers */}
         {isLeftPanelOpen && (
-          <aside className="zm-draw-left-panel">
-            <div className="zm-draw-panel-header">
-              Layers
-            </div>
-            <div className="zm-draw-panel-content">
-              <div className="zm-draw-empty-state">
-                <div className="zm-draw-empty-state-icon">
-                  <LayersIcon />
-                </div>
-                <p>No layers yet.<br />Create shapes to see them here.</p>
+          <>
+            <aside className="zm-draw-left-panel" style={{ width: leftPanelWidth, minWidth: leftPanelWidth }}>
+              <div className="zm-draw-panel-header">
+                Layers
               </div>
-            </div>
-          </aside>
+              <div className="zm-draw-panel-content">
+                <div className="zm-draw-empty-state">
+                  <div className="zm-draw-empty-state-icon">
+                    <LayersIcon />
+                  </div>
+                  <p>No layers yet.<br />Create shapes to see them here.</p>
+                </div>
+              </div>
+            </aside>
+            <PanelResizer
+              side="left"
+              width={leftPanelWidth}
+              minWidth={180}
+              maxWidth={400}
+              onWidthChange={setLeftPanelWidth}
+            />
+          </>
         )}
 
         {/* Canvas Area */}
@@ -178,10 +190,18 @@ export default function Home() {
 
       {/* Right Panel - Properties */}
       {isRightPanelOpen && (
-        <aside className="zm-draw-right-panel">
-          <div className="zm-draw-panel-header">
-            Design
-          </div>
+        <>
+          <PanelResizer
+            side="right"
+            width={rightPanelWidth}
+            minWidth={220}
+            maxWidth={450}
+            onWidthChange={setRightPanelWidth}
+          />
+          <aside className="zm-draw-right-panel" style={{ width: rightPanelWidth, minWidth: rightPanelWidth }}>
+            <div className="zm-draw-panel-header">
+              Design
+            </div>
           <div className="zm-draw-panel-content">
             {selectedShape ? (
               <>
@@ -311,6 +331,7 @@ export default function Home() {
             )}
           </div>
         </aside>
+        </>
       )}
       </div>
     </TooltipProvider>

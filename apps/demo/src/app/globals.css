@@ -132,24 +132,22 @@ body {
 
 /* Left Panel */
 .zm-draw-left-panel {
-  width: 240px;
-  min-width: 240px;
   background: var(--zm-bg-secondary);
   border-right: 1px solid var(--zm-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 /* Right Panel */
 .zm-draw-right-panel {
-  width: 280px;
-  min-width: 280px;
   background: var(--zm-bg-secondary);
   border-left: 1px solid var(--zm-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .zm-draw-panel-header {
