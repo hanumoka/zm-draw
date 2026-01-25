@@ -6,8 +6,8 @@
 
 ## 현재 상태
 
-**Phase**: Phase 1 (기초 리팩토링) 진행 중
-**진행률**: MVP 100% / Phase 1 60% / Figma 스타일 5%
+**Phase**: Phase 1 (기초 리팩토링) 거의 완료
+**진행률**: MVP 100% / Phase 1 90% / Figma 스타일 5%
 
 ### 마지막 작업 (2026-01-25)
 
@@ -60,7 +60,7 @@
 
 | 영역 | 상태 | 우선순위 |
 |------|------|----------|
-| **상태 관리** (Zustand) | ⏳ 60% | Phase 1 |
+| **상태 관리** (Zustand) | ✅ 90% | Phase 1 완료 |
 | **UI 레이아웃** (3열 패널) | 🔶 30% | Phase 2 |
 | **속성 패널** (Fill, Stroke, Size) | ❌ 0% | Phase 3 |
 | **레이어 패널** (트리뷰) | ❌ 0% | Phase 4 |
@@ -78,19 +78,20 @@
 | Konva 업그레이드 | ^9.3.0 → ^10.0.0 (실제: 10.2.0) | ✅ 완료 |
 | 문서 정확성 검토 | react-konva/Next.js 이슈 정확 기재 | ✅ 완료 |
 
-### Phase 1: 기초 리팩토링 (진행 중)
+### Phase 1: 기초 리팩토링 (거의 완료)
 
 | 작업 | 설명 | 상태 |
 |------|------|------|
 | Zustand stores 생성 | 6개 store 파일 생성 | ✅ 완료 |
-| useState → Zustand | DrawCanvas 상태 마이그레이션 | ⏳ 예정 |
+| useState → Zustand | tool, selection, viewport 마이그레이션 | ✅ 완료 |
 | useKeyboard 훅 | 키보드 단축키 분리 | ✅ 완료 |
 | Toolbar 컴포넌트 | 툴바 분리 (169줄) | ✅ 완료 |
 | TextEditor 컴포넌트 | 텍스트 편집 분리 (60줄) | ✅ 완료 |
 | Copy/Paste/Duplicate | Ctrl+C/V/D 구현 | ✅ 완료 |
 | 화살표 키 이동 | 1px / Shift 10px | ✅ 완료 |
-| 드래그 레이어 분리 | 성능 최적화 | ⏳ 예정 |
-| 타입 확장 | Shape, Tool 타입 강화 | ⏳ 예정 |
+| 타입 확장 | Shape, Connector, ViewportState 등 | ✅ 완료 |
+| 드래그 레이어 분리 | 성능 최적화 | ⏳ 예정 (Phase 1.5) |
+| shapes/connectors 마이그레이션 | props 연동 필요 | ⏳ 예정 (선택적) |
 
 ### Phase 2: UI 레이아웃
 
