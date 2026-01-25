@@ -1,6 +1,6 @@
 # zm-draw 프로젝트 문서
 
-> 최종 업데이트: 2026-01-24
+> 최종 업데이트: 2026-01-25 (문서 재검토 완료)
 
 ---
 
@@ -17,13 +17,17 @@
 
 ### 기술 스택
 
-| 분류 | 현재 | 목표 (Figma 스타일) |
-|------|------|---------------------|
-| **코어** | Konva.js (vanilla) | Konva.js |
-| **상태 관리** | React useState | **Zustand** |
-| **프레임워크** | React 19, Next.js 15 | React 19, Next.js 15 |
-| **UI 컴포넌트** | 직접 구현 | **Radix UI** |
-| **빌드** | tsup, Turbo | tsup, Turbo |
+| 분류 | 현재 | 목표 (Figma 스타일) | React 19 호환 |
+|------|------|---------------------|--------------|
+| **코어** | Konva.js ^9.3.0 | **Konva.js ^10.0.0** | ✅ |
+| **상태 관리** | React useState | **Zustand** | ✅ 확인됨 |
+| **프레임워크** | React 19, Next.js 15 | React 19, Next.js 15 | ✅ |
+| **UI 컴포넌트** | 직접 구현 | **Radix UI** | ✅ 확인됨 |
+| **컬러 피커** | 없음 | **react-colorful** | 🔶 테스트 필요 |
+| **드래그 앤 드롭** | 없음 | **HTML5 Drag API** | ✅ (@dnd-kit 대체) |
+| **빌드** | tsup, Turbo | tsup, Turbo | ✅ |
+
+> **Note**: @dnd-kit은 React 19 호환성 이슈(#1511)로 HTML5 Drag API로 대체 권장
 
 ---
 
@@ -64,14 +68,31 @@
 
 ### Konva 레이어 구조
 
+**현재 구조:**
 ```
 Konva.Stage
-├── Layer 0: Background (배경색, listening: false)
+├── Layer 0: Background (배경색)
 ├── Layer 1: Grid (그리드 라인, listening: false)
 ├── Layer 2: Connectors (화살표/연결선)
 ├── Layer 3: Shapes (도형 + 텍스트 그룹)
 └── Layer 4: Selection (Transformer)
 ```
+
+**권장 구조 (Phase 1 성능 최적화 후):**
+```
+Konva.Stage
+├── Layer 0: Background (listening: false)
+├── Layer 1: Grid (listening: false)
+├── Layer 2: MainContent (Shapes + Connectors)
+├── Layer 3: DragLayer (드래그 중인 요소 임시 이동)
+└── Layer 4: Selection (Transformer)
+```
+
+**성능 최적화 원칙:**
+- 정적 레이어: `listening: false` 설정
+- 드래그 시: 요소를 DragLayer로 이동 후 dragend에 복귀
+- 복잡한 도형: `shape.cache()` 적용
+- 레이어 수: 3-5개로 제한 (Konva 권장)
 
 ---
 
@@ -364,9 +385,28 @@ pnpm clean
 
 ## 주의사항
 
-- **react-konva 사용 불가**: React 19와 호환되지 않음
-- **vanilla Konva 사용**: useRef + useEffect 패턴
+### Canvas 라이브러리
+
+- **react-konva v19**: React 19 지원됨 (2024년 릴리즈)
+- **Next.js 15 이슈**: "Module not found: Can't resolve 'canvas'" 에러 발생
+  - 원인: Next.js가 서버에서 konva의 node 버전을 resolve 시도
+  - 해결책: `next.config.js`에 `externals: { canvas: "canvas" }` 추가 또는 vanilla Konva 사용
+- **현재 접근법**: vanilla Konva 사용 (useRef + useEffect 패턴) - Next.js 이슈 회피
+
+### 서버/클라이언트
+
 - **Server Component 주의**: 'use client' 필수
+- **dynamic import**: `ssr: false` 옵션 필수
+
+### 의존성 호환성
+
+| 라이브러리 | React 19 | 비고 |
+|-----------|----------|------|
+| Zustand | ✅ | useSyncExternalStore 사용 |
+| Radix UI | ✅ | 2024년 6월 완전 지원 |
+| react-colorful | 🔶 | 테스트 필요 |
+| @dnd-kit/core | ⚠️ | 이슈 있음 (#1511) |
+| @dnd-kit/react | 🔶 | v0.2.1 테스트 필요 |
 
 ---
 

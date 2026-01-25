@@ -1,7 +1,9 @@
 # zm-draw Figma 스타일 구현 로드맵
 
-> 최종 업데이트: 2026-01-24
+> 최종 업데이트: 2026-01-25 (문서 재검토 완료)
 > 작성 근거: Figma UI3 공식 문서, Penpot 오픈소스, Konva.js 모범 사례
+>
+> ⚠️ **2026-01-25 검토 결과 반영**: 기술 스택 호환성 검증, 로드맵 우선순위 재조정
 
 ---
 
@@ -310,6 +312,14 @@ packages/react/src/
 
 ## 7. 구현 로드맵
 
+### Phase 0.9: 즉시 조치 (Phase 1 전) ← **새 Phase**
+
+**목표**: 기반 정리
+
+| 작업 | 설명 | 예상 |
+|------|------|------|
+| Konva 업그레이드 | ^9.3.0 → ^10.0.0 | 0.5일 |
+
 ### Phase 1: 기초 리팩토링 (현재 → 구조 개선)
 
 **목표**: 현재 단일 컴포넌트를 모듈화
@@ -320,6 +330,9 @@ packages/react/src/
 | 컴포넌트 분리 | Canvas, Toolbar 분리 | 1일 |
 | 타입 정의 확장 | Shape, Tool 타입 확장 | 0.5일 |
 | 키보드 단축키 훅 | useKeyboard 커스텀 훅 | 0.5일 |
+| **Copy/Paste/Duplicate** | Ctrl+C/V/D 구현 | 0.5일 |
+| **화살표 키 이동** | 1px, Shift 10px | 0.25일 |
+| **드래그 레이어 분리** | 성능 최적화 | 0.25일 |
 
 ### Phase 2: UI 레이아웃 (Figma 스타일)
 
@@ -332,6 +345,19 @@ packages/react/src/
 | RightPanel (빈 껍데기) | 속성 패널 영역 | 0.5일 |
 | BottomToolbar | 하단 툴바 이동 | 0.5일 |
 | 패널 리사이즈/토글 | 패널 접기/펼치기 | 1일 |
+| **Dark Mode 기본** | UI3 핵심 기능 | 0.5일 |
+
+### Phase 2.5: 다중 선택 기본 ← **새 Phase (앞으로 이동)**
+
+**목표**: 속성 패널 구현 전에 다중 선택 기반 마련
+
+> **이동 이유**: 다중 선택이 있어야 속성 패널에서 "N개 선택됨" 표시 가능
+
+| 작업 | 설명 | 예상 |
+|------|------|------|
+| selectedIds 배열화 | string → string[] | 0.5일 |
+| Shift+Click | 다중 선택 추가/제거 | 0.5일 |
+| 드래그 박스 선택 | Marquee selection | 1일 |
 
 ### Phase 3: 속성 패널
 
@@ -354,9 +380,25 @@ packages/react/src/
 |------|------|------|
 | LayersTree 기본 | 레이어 목록 표시 | 1일 |
 | 레이어 선택 | 클릭으로 선택 | 0.5일 |
-| 레이어 순서 변경 | 드래그 앤 드롭 | 1일 |
+| 레이어 순서 변경 | **아래 대안 참조** | 0.5일 |
 | 레이어 잠금/숨김 | 아이콘 토글 | 0.5일 |
 | 레이어 이름 변경 | 더블클릭 편집 | 0.5일 |
+
+#### 레이어 순서 변경 - 구현 방식 ✅ 결정됨
+
+> **결정 (2026-01-25)**: HTML5 Drag API 사용
+
+```typescript
+// 구현 예시
+<div
+  draggable="true"
+  onDragStart={(e) => e.dataTransfer.setData('layerId', layer.id)}
+  onDragOver={(e) => e.preventDefault()}
+  onDrop={(e) => reorderLayer(e.dataTransfer.getData('layerId'), targetIndex)}
+>
+  {layer.name}
+</div>
+```
 
 ### Phase 5: 추가 도형 및 기능
 
@@ -370,14 +412,15 @@ packages/react/src/
 | 독립 Text | 도형 없는 텍스트 | 1일 |
 | Frame (컨테이너) | 그룹 컨테이너 | 2일 |
 
-### Phase 6: 다중 선택 및 정렬
+### Phase 6: 정렬/분배 및 그룹핑
 
 **목표**: 고급 편집 기능
 
+> **참고**: 다중 선택 기본 기능은 **Phase 2.5**로 앞으로 이동됨
+
 | 작업 | 설명 | 예상 |
 |------|------|------|
-| Multi-select | Shift+Click, 드래그 박스 | 1일 |
-| 그룹 이동 | 선택된 도형들 함께 이동 | 0.5일 |
+| 다중 선택 고급 | Select All, Invert Selection | 0.5일 |
 | 정렬 기능 | 좌/중/우/상/중/하 | 1일 |
 | 분배 기능 | 균등 분배 | 0.5일 |
 | 그룹핑 | Ctrl+G / Ctrl+Shift+G | 1일 |
@@ -418,14 +461,24 @@ packages/react/src/
 
 ### 8.3 유용한 라이브러리
 
-| 라이브러리 | 용도 |
-|------------|------|
-| **@radix-ui/react-*** | 패널, 드롭다운, 탭 UI |
-| **react-colorful** | 경량 Color Picker |
-| **@dnd-kit/core** | 드래그 앤 드롭 |
-| **zustand** | 상태 관리 |
-| **immer** | 불변 상태 업데이트 |
-| **lucide-react** | 아이콘 |
+| 라이브러리 | 용도 | React 19 호환 |
+|------------|------|--------------|
+| **@radix-ui/react-*** | 패널, 드롭다운, 탭 UI | ✅ 확인됨 |
+| **react-colorful** | 경량 Color Picker | 🔶 테스트 필요 |
+| **zustand** | 상태 관리 | ✅ 확인됨 |
+| **immer** | 불변 상태 업데이트 | ✅ |
+| **lucide-react** | 아이콘 | ✅ |
+
+#### ⚠️ 드래그 앤 드롭 라이브러리 주의
+
+| 라이브러리 | 상태 | 비고 |
+|------------|------|------|
+| **@dnd-kit/core** | ⚠️ React 19 이슈 | GitHub #1511 미해결, 1년간 미업데이트 |
+| **@dnd-kit/react** | 🔶 테스트 필요 | v0.2.1 최신, "use client" 수동 추가 필요 |
+| **HTML5 Drag API** | ✅ 권장 | 네이티브, 호환성 좋음 |
+| **react-beautiful-dnd** | ❌ | 유지보수 중단 |
+
+**권장**: 레이어 순서 변경에 HTML5 Drag API 또는 버튼 조작 방식 사용
 
 ---
 
@@ -482,37 +535,53 @@ complexGroup.cache();
 
 ### 예상 총 개발 기간
 
-| Phase | 작업 | 예상 기간 |
-|-------|------|----------|
-| Phase 1 | 기초 리팩토링 | 3일 |
-| Phase 2 | UI 레이아웃 | 3일 |
-| Phase 3 | 속성 패널 | 4일 |
-| Phase 4 | 레이어 패널 | 4일 |
-| Phase 5 | 추가 도형 | 5일 |
-| Phase 6 | 다중 선택/정렬 | 4일 |
-| Phase 7 | 고급 기능 | 5일 |
-| **총계** | | **약 28일 (4주)** |
+| Phase | 작업 | 예상 기간 | 비고 |
+|-------|------|----------|------|
+| Phase 0.9 | 즉시 조치 | 0.5일 | Konva 업그레이드 |
+| Phase 1 | 기초 리팩토링 | 4일 | Copy/Paste 등 추가 |
+| Phase 2 | UI 레이아웃 | 3.5일 | Dark Mode 포함 |
+| Phase 2.5 | 다중 선택 기본 | 2일 | **앞으로 이동** |
+| Phase 3 | 속성 패널 | 4일 | |
+| Phase 4 | 레이어 패널 | 3일 | dnd-kit 대안 반영 |
+| Phase 5 | 추가 도형 | 5일 | |
+| Phase 6 | 정렬/그룹핑 | 3일 | 다중선택 기본 제외 |
+| Phase 7 | 고급 기능 | 5일 | |
+| **총계** | | **약 30일 (4주+)** | |
 
-### 권장 우선순위
+### 권장 우선순위 (2026-01-25 재조정)
 
-1. **Phase 1-2**: UI 구조부터 잡기 (핵심)
-2. **Phase 3**: 속성 패널 (사용성 대폭 향상)
-3. **Phase 6**: 다중 선택 (생산성)
-4. **Phase 4-5**: 레이어/도형 (기능 확장)
-5. **Phase 7**: 고급 기능 (완성도)
+1. **Phase 0.9**: 즉시 조치 (Konva 업그레이드)
+2. **Phase 1-2**: 기초 + UI 구조 (핵심)
+3. **Phase 2.5**: 다중 선택 기본 ← **앞으로 이동** (속성 패널 전제조건)
+4. **Phase 3**: 속성 패널 (사용성 대폭 향상)
+5. **Phase 4**: 레이어 패널 (기능 확장)
+6. **Phase 5-6**: 도형/정렬 (기능 확장)
+7. **Phase 7**: 고급 기능 (완성도)
 
 ---
 
 ## Sources
 
+### Figma UI3
 - [Figma UI3 Navigation](https://help.figma.com/hc/en-us/articles/23954856027159-Navigating-UI3-Figma-s-new-UI)
 - [Figma Left Sidebar](https://help.figma.com/hc/en-us/articles/360039831974-View-layers-and-pages-in-the-left-sidebar)
 - [Figma Right Sidebar Properties](https://help.figma.com/hc/en-us/articles/360039832014-Design-prototype-and-explore-layer-properties-in-the-right-sidebar)
 - [Figma Toolbar Tools](https://help.figma.com/hc/en-us/articles/360041064174-Access-design-tools-from-the-toolbar)
 - [Figma Keyboard Shortcuts](https://help.figma.com/hc/en-us/articles/360040328653-Keyboard-shortcuts-in-Figma)
 - [Figma Auto Layout](https://help.figma.com/hc/en-us/articles/360040451373-Explore-auto-layout-properties)
+
+### Konva.js
 - [Konva Layer Management](https://konvajs.org/docs/performance/Layer_Management.html)
 - [Konva Performance Tips](https://konvajs.org/docs/performance/All_Performance_Tips.html)
+
+### React 19 호환성 (2026-01-25 검증)
+- [react-konva GitHub Releases](https://github.com/konvajs/react-konva/releases) - v19 React 19 지원
+- [react-konva Next.js 15 이슈 #826](https://github.com/konvajs/react-konva/issues/826)
+- [Zustand React 19 Discussion #2686](https://github.com/pmndrs/zustand/discussions/2686) - ✅ 호환
+- [Radix UI React 19 이슈 #2900](https://github.com/radix-ui/primitives/issues/2900) - ✅ 호환
+- [@dnd-kit React 19 이슈 #1511](https://github.com/clauderic/dnd-kit/issues/1511) - ⚠️ 미해결
+
+### 참조 프로젝트
 - [Zustand GitHub](https://github.com/pmndrs/zustand)
 - [Penpot GitHub](https://github.com/penpot/penpot)
 - [Figma Clone (adrianhajdin)](https://github.com/adrianhajdin/figma_clone)
