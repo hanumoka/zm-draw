@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@zm-draw/core": "workspace:*",
-    "konva": "^9.3.0"
+    "konva": "^10.0.0"
   },
   "devDependencies": {
     "@types/react": "^19",

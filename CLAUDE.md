@@ -1,7 +1,7 @@
 # CLAUDE.md - zm-draw 프로젝트 가이드
 
 > **Claude Code를 위한 zm-draw 프로젝트 지침서**
-> 최종 업데이트: 2026-01-24
+> 최종 업데이트: 2026-01-25 (문서 재검토 완료)
 
 ---
 
@@ -58,20 +58,22 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3200
 - **데모 서버**: http://localhost:3200
 - **GitHub**: origin/main
 
-### 현재 상태 (2026-01-24)
+### 현재 상태 (2026-01-25)
 
-- **Phase**: MVP 완료 → Figma 스타일 리팩토링 준비
+- **Phase**: Phase 0.9 완료 → Phase 1 (기초 리팩토링)
 - **구현 완료**: 도형, 커넥터, 텍스트, Undo/Redo, Save/Load
-- **다음 Phase**: Phase 1 (기초 리팩토링 - Zustand, 컴포넌트 분리)
+- **다음 Phase**: Phase 1 (Zustand, Copy/Paste 등)
 
 ### 기술 스택
 
 | 분류 | 기술 | 비고 |
 |------|------|------|
-| **코어** | Konva.js (vanilla) | react-konva는 React 19 미지원 |
+| **코어** | Konva.js ^10.0.0 (vanilla) | 2026-01-25 업그레이드 완료 |
 | **프레임워크** | React 19, Next.js 15 | App Router |
 | **언어** | TypeScript 5.7+ | strict mode |
 | **빌드** | tsup, Turbo | ESM only |
+
+> **Note**: react-konva v19가 React 19를 지원하나, Next.js 15 App Router에서 canvas 모듈 이슈로 vanilla Konva 유지
 
 ---
 
@@ -181,9 +183,12 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 | 항목 | 결정 | 이유 |
 |------|------|------|
-| Canvas 라이브러리 | Konva.js (vanilla) | react-konva React 19 미지원 |
+| Canvas 라이브러리 | Konva.js (vanilla) | Next.js 15 App Router canvas 모듈 이슈 회피 |
 | 도형+텍스트 | Konva.Group | 함께 드래그/회전/리사이즈 |
 | Transformer | 별도 레이어 | destroyChildren() 충돌 방지 |
+| 상태 관리 (예정) | Zustand | React 19 호환 확인됨 |
+| UI 컴포넌트 (예정) | Radix UI | React 19 호환 확인됨 |
+| 드래그앤드롭 (예정) | HTML5 Drag API | @dnd-kit React 19 이슈로 대체 |
 
 ---
 
@@ -194,4 +199,4 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 ---
 
-*마지막 업데이트: 2026-01-24*
+*마지막 업데이트: 2026-01-25*
