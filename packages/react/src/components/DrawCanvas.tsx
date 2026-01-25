@@ -4,6 +4,7 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import Konva from 'konva';
 import type { Shape, ShapeType, ToolType, Connector } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
+import { useToolStore } from '../stores/toolStore';
 import { Toolbar } from './Toolbar';
 import { TextEditor } from './TextEditor';
 
@@ -79,11 +80,17 @@ export function DrawCanvas({
   const [shapes, setShapes] = useState<Shape[]>(initialShapes);
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [tool, setTool] = useState<ToolType>('select');
   const [scale, setScale] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
-  const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Tool state from Zustand store
+  const tool = useToolStore((s) => s.tool);
+  const setTool = useToolStore((s) => s.setTool);
+  const connectingFrom = useToolStore((s) => s.connectingFrom);
+  const setConnectingFrom = useToolStore((s) => s.setConnectingFrom);
+  const editingId = useToolStore((s) => s.editingId);
+  const setEditingId = useToolStore((s) => s.setEditingId);
+  const resetTool = useToolStore((s) => s.resetTool);
 
   // History for undo/redo
   const historyRef = useRef<{ shapes: Shape[]; connectors: Connector[] }[]>([]);
@@ -574,10 +581,8 @@ export function DrawCanvas({
   // Handle escape key
   const handleEscape = useCallback(() => {
     setSelectedId(null);
-    setConnectingFrom(null);
-    setEditingId(null);
-    setTool('select');
-  }, []);
+    resetTool(); // Resets tool to 'select', clears connectingFrom and editingId
+  }, [resetTool]);
 
   // Use keyboard hook for shortcuts
   useKeyboard({
@@ -852,10 +857,8 @@ export function DrawCanvas({
     };
   }, [isPanning, tool]);
 
-  // Cancel connecting callback for Toolbar
-  const cancelConnecting = useCallback(() => {
-    setConnectingFrom(null);
-  }, []);
+  // Cancel connecting - use store action directly
+  const cancelConnecting = useToolStore((s) => s.cancelConnecting);
 
   return (
     <div className="zm-draw-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
