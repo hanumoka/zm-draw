@@ -82,9 +82,11 @@ export function Toolbar({
       padding: '8px 12px',
       display: 'flex',
       gap: 4,
-      flexWrap: 'wrap',
+      flexWrap: 'nowrap',
       backgroundColor: 'var(--zm-bg-secondary, #2c2c2c)',
-      borderBottom: '1px solid var(--zm-border, #3c3c3c)',
+      border: '1px solid var(--zm-border, #3c3c3c)',
+      borderRadius: 12,
+      boxShadow: '0 4px 24px rgba(0, 0, 0, 0.25)',
     }}>
       {/* Tool Selection */}
       <button onClick={() => setTool('select')} style={getButtonStyle(tool === 'select')}>

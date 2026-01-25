@@ -988,26 +988,6 @@ export function DrawCanvas({
 
   return (
     <div className="zm-draw-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Toolbar */}
-      <Toolbar
-        tool={tool}
-        setTool={setTool}
-        connectingFrom={connectingFrom}
-        cancelConnecting={cancelConnecting}
-        hasSelection={!!selectedId}
-        onDelete={deleteSelected}
-        shapeCount={shapes.length}
-        onClearAll={clearAll}
-        canUndo={canUndo}
-        onUndo={undo}
-        canRedo={canRedo}
-        onRedo={redo}
-        scale={scale}
-        onResetZoom={resetZoom}
-        onSave={exportToJson}
-        onLoad={importFromJson}
-      />
-
       {/* Canvas */}
       <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
         <div
@@ -1021,6 +1001,34 @@ export function DrawCanvas({
             border: 'none',
           }}
         />
+
+        {/* Bottom Floating Toolbar */}
+        <div style={{
+          position: 'absolute',
+          bottom: 16,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 100,
+        }}>
+          <Toolbar
+            tool={tool}
+            setTool={setTool}
+            connectingFrom={connectingFrom}
+            cancelConnecting={cancelConnecting}
+            hasSelection={!!selectedId}
+            onDelete={deleteSelected}
+            shapeCount={shapes.length}
+            onClearAll={clearAll}
+            canUndo={canUndo}
+            onUndo={undo}
+            canRedo={canRedo}
+            onRedo={redo}
+            scale={scale}
+            onResetZoom={resetZoom}
+            onSave={exportToJson}
+            onLoad={importFromJson}
+          />
+        </div>
 
         {/* Text editing overlay */}
         {editingId && (() => {
