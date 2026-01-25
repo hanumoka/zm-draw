@@ -5,6 +5,7 @@ import Konva from 'konva';
 import type { Shape, ShapeType, ToolType, Connector } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { Toolbar } from './Toolbar';
+import { TextEditor } from './TextEditor';
 
 /** Selected shape info for external consumption */
 export interface SelectedShapeInfo {
@@ -902,34 +903,12 @@ export function DrawCanvas({
           const stagePos = stage?.position() || { x: 0, y: 0 };
 
           return (
-            <input
-              type="text"
-              autoFocus
-              defaultValue={editingShape.text || ''}
-              style={{
-                position: 'absolute',
-                left: editingShape.x * stageScale + stagePos.x,
-                top: editingShape.y * stageScale + stagePos.y,
-                width: editingShape.width * stageScale,
-                height: editingShape.height * stageScale,
-                fontSize: (editingShape.fontSize || 14) * stageScale,
-                fontFamily: editingShape.fontFamily || 'Arial',
-                textAlign: 'center',
-                border: '2px solid #3b82f6',
-                borderRadius: 4,
-                outline: 'none',
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                color: '#000000',
-                padding: 0,
-              }}
-              onBlur={(e) => updateShapeText(editingId, e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  updateShapeText(editingId, (e.target as HTMLInputElement).value);
-                } else if (e.key === 'Escape') {
-                  setEditingId(null);
-                }
-              }}
+            <TextEditor
+              shape={editingShape}
+              stageScale={stageScale}
+              stagePosition={stagePos}
+              onSubmit={(text) => updateShapeText(editingId, text)}
+              onCancel={() => setEditingId(null)}
             />
           );
         })()}
