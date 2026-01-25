@@ -177,10 +177,8 @@ export default function Home() {
             </div>
           </div>
 
-        {/* Canvas */}
+        {/* Canvas - Infinite canvas fills available space */}
         <DrawCanvas
-          width={1200}
-          height={800}
           backgroundColor={canvasBgColor}
           showGrid={true}
           gridSize={20}

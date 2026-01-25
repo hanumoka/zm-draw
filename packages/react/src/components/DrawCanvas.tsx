@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react';
 import Konva from 'konva';
-import type { Shape, ShapeType, ToolType, Connector } from '../types';
+import type { Shape, ShapeType, Connector } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { useToolStore } from '../stores/toolStore';
 import { useSelectionStore } from '../stores/selectionStore';
@@ -24,10 +24,6 @@ export interface SelectedShapeInfo {
 }
 
 export interface DrawCanvasProps {
-  /** Canvas width */
-  width?: number;
-  /** Canvas height */
-  height?: number;
   /** Background color */
   backgroundColor?: string;
   /** Show grid */
@@ -61,12 +57,10 @@ const defaultShapeProps = {
 };
 
 /**
- * Main drawing canvas component
+ * Main drawing canvas component with infinite canvas support
  * Uses vanilla Konva for React 19 compatibility
  */
 export function DrawCanvas({
-  width = 800,
-  height = 600,
   backgroundColor = '#ffffff',
   showGrid = true,
   gridSize = 20,
@@ -78,9 +72,12 @@ export function DrawCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const shapesLayerRef = useRef<Konva.Layer | null>(null);
+  const bgLayerRef = useRef<Konva.Layer | null>(null);
+  const gridLayerRef = useRef<Konva.Layer | null>(null);
 
   const [shapes, setShapes] = useState<Shape[]>(initialShapes);
   const [connectors, setConnectors] = useState<Connector[]>([]);
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
   // Selection state from Zustand store
   const selectedId = useSelectionStore((s) => s.selectedId);
@@ -113,6 +110,9 @@ export function DrawCanvas({
   const selectionLayerRef = useRef<Konva.Layer | null>(null);
   const transformerRef = useRef<Konva.Transformer | null>(null);
 
+  // Track canvas initialization to trigger re-render of shapes
+  const [canvasVersion, setCanvasVersion] = useState(0);
+
   // Save state to history
   const saveHistory = useCallback((newShapes: Shape[], newConnectors: Connector[]) => {
     if (isUndoRedoRef.current) {
@@ -121,16 +121,12 @@ export function DrawCanvas({
     }
 
     setHistoryIndex((currentIndex) => {
-      // Remove future states if we're not at the end
       historyRef.current = historyRef.current.slice(0, currentIndex + 1);
-
-      // Add new state
       historyRef.current.push({
         shapes: JSON.parse(JSON.stringify(newShapes)),
         connectors: JSON.parse(JSON.stringify(newConnectors)),
       });
 
-      // Limit history size
       if (historyRef.current.length > 50) {
         historyRef.current.shift();
         return currentIndex;
@@ -167,17 +163,12 @@ export function DrawCanvas({
     setSelectedId(null);
   }, [historyIndex]);
 
-  // Check if undo/redo is available
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < historyRef.current.length - 1;
 
   // Export to JSON
   const exportToJson = useCallback(() => {
-    const data = {
-      version: '1.0',
-      shapes,
-      connectors,
-    };
+    const data = { version: '1.0', shapes, connectors };
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -218,39 +209,117 @@ export function DrawCanvas({
     input.click();
   }, []);
 
-  // Draw grid lines
-  const drawGrid = useCallback((layer: Konva.Layer, w: number, h: number, size: number, bgColor: string) => {
+  // Draw infinite grid based on viewport
+  const drawInfiniteGrid = useCallback(() => {
+    const layer = gridLayerRef.current;
+    const stage = stageRef.current;
+    if (!layer || !stage) return;
+
     layer.destroyChildren();
 
+    const stagePos = stage.position();
+    const stageScale = stage.scaleX();
+
+    // Use actual stage dimensions (not state, which might be stale)
+    const viewportWidth = stage.width();
+    const viewportHeight = stage.height();
+
+    const startX = -stagePos.x / stageScale;
+    const startY = -stagePos.y / stageScale;
+    const endX = startX + viewportWidth / stageScale;
+    const endY = startY + viewportHeight / stageScale;
+
     // Determine grid color based on background brightness
-    const isDark = bgColor.startsWith('#') &&
-      parseInt(bgColor.slice(1, 3), 16) < 128;
+    const isDark = backgroundColor.startsWith('#') &&
+      parseInt(backgroundColor.slice(1, 3), 16) < 128;
     const gridColor = isDark ? '#3a3a3a' : '#e5e7eb';
 
-    for (let x = 0; x <= w; x += size) {
+    // Adjust grid size based on zoom level for better visibility
+    let effectiveGridSize = gridSize;
+    if (stageScale < 0.5) effectiveGridSize = gridSize * 2;
+    if (stageScale < 0.25) effectiveGridSize = gridSize * 4;
+    if (stageScale > 2) effectiveGridSize = gridSize / 2;
+
+    // Calculate grid line positions
+    const firstX = Math.floor(startX / effectiveGridSize) * effectiveGridSize;
+    const firstY = Math.floor(startY / effectiveGridSize) * effectiveGridSize;
+
+    // Draw vertical lines
+    for (let x = firstX; x <= endX + effectiveGridSize; x += effectiveGridSize) {
       layer.add(new Konva.Line({
-        points: [x, 0, x, h],
+        points: [x, startY - effectiveGridSize, x, endY + effectiveGridSize],
         stroke: gridColor,
-        strokeWidth: 1,
+        strokeWidth: 1 / stageScale,
+        listening: false,
       }));
     }
 
-    for (let y = 0; y <= h; y += size) {
+    // Draw horizontal lines
+    for (let y = firstY; y <= endY + effectiveGridSize; y += effectiveGridSize) {
       layer.add(new Konva.Line({
-        points: [0, y, w, y],
+        points: [startX - effectiveGridSize, y, endX + effectiveGridSize, y],
         stroke: gridColor,
-        strokeWidth: 1,
+        strokeWidth: 1 / stageScale,
+        listening: false,
       }));
     }
 
     layer.batchDraw();
-  }, []);
+  }, [backgroundColor, gridSize]);
+
+  // Update background for infinite canvas
+  const updateBackground = useCallback(() => {
+    const layer = bgLayerRef.current;
+    const stage = stageRef.current;
+    if (!layer || !stage) return;
+
+    layer.destroyChildren();
+
+    // Use a very large background rect centered at origin
+    // This covers any reasonable pan/zoom range
+    const largeSize = 100000;
+
+    layer.add(new Konva.Rect({
+      x: -largeSize / 2,
+      y: -largeSize / 2,
+      width: largeSize,
+      height: largeSize,
+      fill: backgroundColor,
+      listening: false,
+    }));
+
+    layer.batchDraw();
+  }, [backgroundColor]);
+
+  // Update viewport (background + grid)
+  const updateViewport = useCallback(() => {
+    const stage = stageRef.current;
+    const container = containerRef.current;
+
+    // Ensure stage size matches container size using offsetWidth/offsetHeight
+    if (stage && container) {
+      const containerWidth = container.offsetWidth;
+      const containerHeight = container.offsetHeight;
+
+      if (containerWidth > 0 && containerHeight > 0) {
+        const needsResize = stage.width() !== containerWidth || stage.height() !== containerHeight;
+        if (needsResize) {
+          stage.width(containerWidth);
+          stage.height(containerHeight);
+        }
+      }
+    }
+
+    updateBackground();
+    if (showGrid) {
+      drawInfiniteGrid();
+    }
+  }, [updateBackground, showGrid, drawInfiniteGrid]);
 
   // Add connector between shapes
   const addConnector = useCallback((fromId: string, toId: string) => {
     if (fromId === toId) return;
 
-    // Check if connector already exists
     const exists = connectors.some(
       (c) => (c.fromShapeId === fromId && c.toShapeId === toId) ||
              (c.fromShapeId === toId && c.toShapeId === fromId)
@@ -277,7 +346,6 @@ export function DrawCanvas({
     layer.destroyChildren();
 
     shapes.forEach((shape) => {
-      // Create group for shape + text
       const group = new Konva.Group({
         id: shape.id,
         x: shape.x,
@@ -286,7 +354,6 @@ export function DrawCanvas({
         rotation: shape.rotation || 0,
       });
 
-      // Create shape at origin (relative to group)
       const shapeConfig = {
         x: 0,
         y: 0,
@@ -324,13 +391,11 @@ export function DrawCanvas({
           });
       }
 
-      // Selection highlight (only when shape is selected, not connector)
       if (shape.id === selectedId && selectionType === 'shape') {
         konvaShape.stroke('#ef4444');
         konvaShape.strokeWidth(3);
       }
 
-      // Highlight when connecting from this shape
       if (connectingFrom === shape.id) {
         konvaShape.stroke('#22c55e');
         konvaShape.strokeWidth(3);
@@ -338,7 +403,6 @@ export function DrawCanvas({
 
       group.add(konvaShape);
 
-      // Add text label
       if (shape.text) {
         const text = new Konva.Text({
           x: 0,
@@ -356,7 +420,6 @@ export function DrawCanvas({
         group.add(text);
       }
 
-      // Drag event handlers
       group.on('dragend', (e) => {
         const target = e.target;
         setShapes((prev) => {
@@ -368,7 +431,6 @@ export function DrawCanvas({
         });
       });
 
-      // Click to select or connect
       group.on('click tap', () => {
         if (tool === 'connector') {
           if (!connectingFrom) {
@@ -382,7 +444,6 @@ export function DrawCanvas({
         }
       });
 
-      // Double click to edit text
       group.on('dblclick dbltap', () => {
         setEditingId(shape.id);
         setSelectedId(shape.id);
@@ -391,7 +452,6 @@ export function DrawCanvas({
       layer.add(group);
     });
 
-    // Update transformer (only for shapes, not connectors)
     const transformer = transformerRef.current;
     if (transformer && selectedId && selectionType === 'shape') {
       const selectedNode = layer.findOne(`#${selectedId}`);
@@ -432,22 +492,17 @@ export function DrawCanvas({
     if (!selectedId) return;
 
     if (selectionType === 'connector') {
-      // Delete selected connector
       setConnectors((prev) => prev.filter((c) => c.id !== selectedId));
       clearSelection();
     } else {
-      // Delete selected shape
       setShapes((prev) => {
         const updated = prev.filter((s) => s.id !== selectedId);
         onShapesChange?.(updated);
         return updated;
       });
-
-      // Also delete connectors attached to this shape
       setConnectors((prev) =>
         prev.filter((c) => c.fromShapeId !== selectedId && c.toShapeId !== selectedId)
       );
-
       clearSelection();
     }
   }, [selectedId, selectionType, onShapesChange, clearSelection]);
@@ -468,18 +523,16 @@ export function DrawCanvas({
     };
   }, []);
 
-  // Get edge intersection point for a shape (where line from center to target intersects the shape edge)
+  // Get edge intersection point for a shape
   const getShapeEdgePoint = useCallback((shape: Shape, targetPoint: { x: number; y: number }) => {
     const center = {
       x: shape.x + shape.width / 2,
       y: shape.y + shape.height / 2,
     };
 
-    // Direction vector from center to target
     const dx = targetPoint.x - center.x;
     const dy = targetPoint.y - center.y;
 
-    // Avoid division by zero
     if (dx === 0 && dy === 0) {
       return center;
     }
@@ -488,7 +541,6 @@ export function DrawCanvas({
 
     switch (shape.type) {
       case 'ellipse': {
-        // Ellipse intersection: parametric solution
         const rx = shape.width / 2;
         const ry = shape.height / 2;
         const angle = Math.atan2(dy, dx);
@@ -500,23 +552,14 @@ export function DrawCanvas({
       }
 
       case 'diamond': {
-        // Diamond (rotated square) intersection
-        // Diamond vertices: top, right, bottom, left
         const hw = shape.width / 2;
         const hh = shape.height / 2;
-
-        // Normalize direction
         const len = Math.sqrt(dx * dx + dy * dy);
         const ndx = dx / len;
         const ndy = dy / len;
-
-        // Find intersection with diamond edges
-        // Diamond has 4 edges, each at 45-degree angles
-        // Using parametric line-segment intersection
         const absDx = Math.abs(ndx);
         const absDy = Math.abs(ndy);
 
-        // Scale factor to reach diamond edge
         let t: number;
         if (absDx * hh + absDy * hw !== 0) {
           t = (hw * hh) / (absDx * hh + absDy * hw);
@@ -532,20 +575,15 @@ export function DrawCanvas({
       }
 
       default: {
-        // Rectangle intersection
         const hw = shape.width / 2;
         const hh = shape.height / 2;
-
-        // Calculate intersection with each edge and find the closest one
         const absX = Math.abs(dx);
         const absY = Math.abs(dy);
 
         let t: number;
         if (absX * hh > absY * hw) {
-          // Intersects left or right edge
           t = hw / absX;
         } else {
-          // Intersects top or bottom edge
           t = hh / absY;
         }
 
@@ -573,15 +611,11 @@ export function DrawCanvas({
 
       if (!fromShape || !toShape) return;
 
-      // Get center points first
       const fromCenter = getShapeCenter(fromShape);
       const toCenter = getShapeCenter(toShape);
-
-      // Calculate edge intersection points (arrow starts/ends at shape edges)
       const from = getShapeEdgePoint(fromShape, toCenter);
       const to = getShapeEdgePoint(toShape, fromCenter);
 
-      // Check if this connector is selected
       const isSelected = selectedId === connector.id && selectionType === 'connector';
 
       const arrow = new Konva.Arrow({
@@ -592,12 +626,11 @@ export function DrawCanvas({
         fill: isSelected ? '#ef4444' : connector.stroke,
         pointerLength: 10,
         pointerWidth: 8,
-        hitStrokeWidth: 20, // Larger hit area for easier clicking
+        hitStrokeWidth: 20,
       });
 
-      // Click to select connector
       arrow.on('click tap', (e) => {
-        e.cancelBubble = true; // Prevent stage click
+        e.cancelBubble = true;
         selectConnector(connector.id);
       });
 
@@ -625,7 +658,7 @@ export function DrawCanvas({
     return shapes.find((s) => s.id === editingId) || null;
   }, [editingId, shapes]);
 
-  // Reset zoom
+  // Reset zoom and position
   const resetZoom = useCallback(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -634,7 +667,8 @@ export function DrawCanvas({
     stage.position({ x: 0, y: 0 });
     stage.batchDraw();
     setScale(1);
-  }, []);
+    updateViewport();
+  }, [updateViewport]);
 
   // Clipboard state for copy/paste
   const clipboardRef = useRef<Shape | null>(null);
@@ -646,7 +680,7 @@ export function DrawCanvas({
     const shape = shapes.find((s) => s.id === selectedId);
     if (shape) {
       clipboardRef.current = { ...shape };
-      pasteOffsetRef.current = 20; // Reset paste offset
+      pasteOffsetRef.current = 20;
     }
   }, [selectedId, shapes]);
 
@@ -667,10 +701,10 @@ export function DrawCanvas({
       return updated;
     });
     setSelectedId(newShape.id);
-    pasteOffsetRef.current += 20; // Increment for next paste
+    pasteOffsetRef.current += 20;
   }, [onShapesChange]);
 
-  // Duplicate selected shape (Ctrl+D)
+  // Duplicate selected shape
   const duplicateSelected = useCallback(() => {
     if (!selectedId) return;
     const shape = shapes.find((s) => s.id === selectedId);
@@ -707,7 +741,7 @@ export function DrawCanvas({
   // Handle escape key
   const handleEscape = useCallback(() => {
     setSelectedId(null);
-    resetTool(); // Resets tool to 'select', clears connectingFrom and editingId
+    resetTool();
   }, [resetTool]);
 
   // Use keyboard hook for shortcuts
@@ -725,36 +759,63 @@ export function DrawCanvas({
     onMove: moveSelected,
   });
 
+  // Handle container resize
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setCanvasSize({ width, height });
+        }
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    // Initial size
+    const rect = container.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      setCanvasSize({ width: rect.width, height: rect.height });
+    }
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Update stage size when canvas size changes
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    stage.width(canvasSize.width);
+    stage.height(canvasSize.height);
+    updateViewport();
+  }, [canvasSize, updateViewport]);
+
   // Initialize canvas
   useEffect(() => {
     if (!containerRef.current) return;
 
     const stage = new Konva.Stage({
       container: containerRef.current,
-      width,
-      height,
+      width: canvasSize.width,
+      height: canvasSize.height,
     });
     stageRef.current = stage;
 
-    // Background layer
-    const bgLayer = new Konva.Layer();
-    bgLayer.add(new Konva.Rect({
-      x: 0,
-      y: 0,
-      width,
-      height,
-      fill: backgroundColor,
-    }));
+    // Background layer (large rect for infinite canvas)
+    const bgLayer = new Konva.Layer({ listening: false });
     stage.add(bgLayer);
+    bgLayerRef.current = bgLayer;
 
-    // Grid layer
+    // Grid layer (infinite)
     const gridLayer = new Konva.Layer({ listening: false });
     stage.add(gridLayer);
-    if (showGrid) {
-      drawGrid(gridLayer, width, height, gridSize, backgroundColor);
-    }
+    gridLayerRef.current = gridLayer;
 
-    // Connectors layer (below shapes)
+    // Connectors layer
     const connectorsLayer = new Konva.Layer();
     stage.add(connectorsLayer);
     connectorsLayerRef.current = connectorsLayer;
@@ -792,14 +853,12 @@ export function DrawCanvas({
       const scaleX = node.scaleX();
       const scaleY = node.scaleY();
 
-      // Reset scale
       node.scaleX(1);
       node.scaleY(1);
 
       setShapes((prev) => {
         const updated = prev.map((s) => {
           if (s.id === id) {
-            // Use original shape dimensions and apply scale
             return {
               ...s,
               x: node.x(),
@@ -814,21 +873,6 @@ export function DrawCanvas({
         onShapesChange?.(updated);
         return updated;
       });
-    });
-
-    // Stage click handler for adding shapes
-    stage.on('click tap', (e) => {
-      // Only on background click
-      if (e.target === stage || e.target.getLayer() === bgLayer || e.target.getLayer() === gridLayer) {
-        if (tool !== 'select') {
-          const pos = stage.getPointerPosition();
-          if (pos) {
-            addShape(tool as ShapeType, pos.x, pos.y);
-          }
-        } else {
-          setSelectedId(null);
-        }
-      }
     });
 
     // Zoom with mouse wheel
@@ -849,7 +893,6 @@ export function DrawCanvas({
       const direction = e.evt.deltaY > 0 ? -1 : 1;
       const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
 
-      // Limit zoom range
       const clampedScale = Math.max(0.1, Math.min(5, newScale));
 
       stage.scale({ x: clampedScale, y: clampedScale });
@@ -862,11 +905,19 @@ export function DrawCanvas({
       stage.position(newPos);
       stage.batchDraw();
       setScale(clampedScale);
+
+      // Update infinite grid and background
+      updateViewport();
     });
 
     if (onReady) {
       onReady(stage);
     }
+
+    // Initial viewport render
+    updateViewport();
+
+    setCanvasVersion((v) => v + 1);
 
     return () => {
       stage.destroy();
@@ -875,13 +926,15 @@ export function DrawCanvas({
       connectorsLayerRef.current = null;
       selectionLayerRef.current = null;
       transformerRef.current = null;
+      bgLayerRef.current = null;
+      gridLayerRef.current = null;
     };
-  }, [width, height, backgroundColor, showGrid, gridSize, drawGrid, onReady]);
+  }, [backgroundColor, showGrid, gridSize, onReady]);
 
-  // Re-render shapes when they change
+  // Re-render shapes when they change or canvas is re-initialized
   useEffect(() => {
     renderShapes();
-  }, [renderShapes]);
+  }, [renderShapes, canvasVersion]);
 
   // Notify parent of selection changes
   useEffect(() => {
@@ -908,10 +961,10 @@ export function DrawCanvas({
     }
   }, [selectedId, shapes, onSelectionChange]);
 
-  // Re-render connectors when they change
+  // Re-render connectors when they change or canvas is re-initialized
   useEffect(() => {
     renderConnectors();
-  }, [renderConnectors]);
+  }, [renderConnectors, canvasVersion]);
 
   // Save to history when shapes or connectors change
   useEffect(() => {
@@ -927,17 +980,16 @@ export function DrawCanvas({
     stage.on('click tap', (e) => {
       if (isPanning) return;
 
-      const bgLayer = stage.getLayers()[0];
-      const gridLayer = stage.getLayers()[1];
+      const bgLayer = bgLayerRef.current;
+      const gridLayer = gridLayerRef.current;
 
+      // Click on stage background, bg layer, or grid layer
       if (e.target === stage || e.target.getLayer() === bgLayer || e.target.getLayer() === gridLayer) {
         if (tool === 'connector') {
-          // Cancel connecting on empty click
           setConnectingFrom(null);
         } else if (tool !== 'select') {
           const pos = stage.getPointerPosition();
           if (pos) {
-            // Adjust position for scale and pan
             const transform = stage.getAbsoluteTransform().copy().invert();
             const adjustedPos = transform.point(pos);
             addShape(tool as ShapeType, adjustedPos.x, adjustedPos.y);
@@ -949,7 +1001,7 @@ export function DrawCanvas({
     });
   }, [tool, addShape, isPanning]);
 
-  // Pan with space + drag
+  // Pan with space + drag (infinite canvas)
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -968,28 +1020,37 @@ export function DrawCanvas({
       }
     };
 
+    const handleDragMove = () => {
+      if (isPanning) {
+        updateViewport();
+      }
+    };
+
     const handleDragEnd = () => {
       if (isPanning) {
         stage.container().style.cursor = 'grab';
+        updateViewport();
       }
     };
 
     stage.on('dragstart', handleDragStart);
+    stage.on('dragmove', handleDragMove);
     stage.on('dragend', handleDragEnd);
 
     return () => {
       stage.off('dragstart', handleDragStart);
+      stage.off('dragmove', handleDragMove);
       stage.off('dragend', handleDragEnd);
     };
-  }, [isPanning, tool]);
+  }, [isPanning, tool, updateViewport]);
 
   // Cancel connecting - use store action directly
   const cancelConnecting = useToolStore((s) => s.cancelConnecting);
 
   return (
-    <div className="zm-draw-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="zm-draw-wrapper" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'visible' }}>
       {/* Canvas */}
-      <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+      <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'visible' }}>
         <div
           ref={containerRef}
           className="zm-draw-canvas-container"
@@ -999,6 +1060,8 @@ export function DrawCanvas({
             cursor: tool === 'select' ? 'default' : 'crosshair',
             borderRadius: 0,
             border: 'none',
+            overflow: 'hidden',
+            backgroundColor: backgroundColor,
           }}
         />
 

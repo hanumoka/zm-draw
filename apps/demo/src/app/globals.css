@@ -126,8 +126,8 @@ body {
   flex: 1;
   border: 1px solid var(--zm-border);
   border-radius: 8px;
-  overflow: hidden;
   background: var(--zm-bg-canvas);
+  /* overflow: hidden removed to allow floating toolbar visibility */
 }
 
 /* Left Panel */
