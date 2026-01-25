@@ -84,7 +84,9 @@ export function DrawCanvas({
 
   // Selection state from Zustand store
   const selectedId = useSelectionStore((s) => s.selectedId);
+  const selectionType = useSelectionStore((s) => s.selectionType);
   const setSelectedId = useSelectionStore((s) => s.select);
+  const selectConnector = useSelectionStore((s) => s.selectConnector);
   const clearSelection = useSelectionStore((s) => s.clearSelection);
 
   // Viewport state from Zustand store
@@ -322,8 +324,8 @@ export function DrawCanvas({
           });
       }
 
-      // Selection highlight
-      if (shape.id === selectedId) {
+      // Selection highlight (only when shape is selected, not connector)
+      if (shape.id === selectedId && selectionType === 'shape') {
         konvaShape.stroke('#ef4444');
         konvaShape.strokeWidth(3);
       }
@@ -389,9 +391,9 @@ export function DrawCanvas({
       layer.add(group);
     });
 
-    // Update transformer
+    // Update transformer (only for shapes, not connectors)
     const transformer = transformerRef.current;
-    if (transformer && selectedId) {
+    if (transformer && selectedId && selectionType === 'shape') {
       const selectedNode = layer.findOne(`#${selectedId}`);
       if (selectedNode) {
         transformer.nodes([selectedNode]);
@@ -404,7 +406,7 @@ export function DrawCanvas({
     }
 
     layer.batchDraw();
-  }, [shapes, selectedId, onShapesChange, tool, connectingFrom, addConnector, editingId]);
+  }, [shapes, selectedId, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId]);
 
   // Add shape at position
   const addShape = useCallback((type: ShapeType, x: number, y: number) => {
@@ -425,23 +427,30 @@ export function DrawCanvas({
     setTool('select');
   }, [onShapesChange]);
 
-  // Delete selected shape
+  // Delete selected shape or connector
   const deleteSelected = useCallback(() => {
     if (!selectedId) return;
 
-    setShapes((prev) => {
-      const updated = prev.filter((s) => s.id !== selectedId);
-      onShapesChange?.(updated);
-      return updated;
-    });
+    if (selectionType === 'connector') {
+      // Delete selected connector
+      setConnectors((prev) => prev.filter((c) => c.id !== selectedId));
+      clearSelection();
+    } else {
+      // Delete selected shape
+      setShapes((prev) => {
+        const updated = prev.filter((s) => s.id !== selectedId);
+        onShapesChange?.(updated);
+        return updated;
+      });
 
-    // Also delete connectors attached to this shape
-    setConnectors((prev) =>
-      prev.filter((c) => c.fromShapeId !== selectedId && c.toShapeId !== selectedId)
-    );
+      // Also delete connectors attached to this shape
+      setConnectors((prev) =>
+        prev.filter((c) => c.fromShapeId !== selectedId && c.toShapeId !== selectedId)
+      );
 
-    setSelectedId(null);
-  }, [selectedId, onShapesChange]);
+      clearSelection();
+    }
+  }, [selectedId, selectionType, onShapesChange, clearSelection]);
 
   // Clear all shapes
   const clearAll = useCallback(() => {
@@ -459,6 +468,98 @@ export function DrawCanvas({
     };
   }, []);
 
+  // Get edge intersection point for a shape (where line from center to target intersects the shape edge)
+  const getShapeEdgePoint = useCallback((shape: Shape, targetPoint: { x: number; y: number }) => {
+    const center = {
+      x: shape.x + shape.width / 2,
+      y: shape.y + shape.height / 2,
+    };
+
+    // Direction vector from center to target
+    const dx = targetPoint.x - center.x;
+    const dy = targetPoint.y - center.y;
+
+    // Avoid division by zero
+    if (dx === 0 && dy === 0) {
+      return center;
+    }
+
+    let edgePoint = { x: center.x, y: center.y };
+
+    switch (shape.type) {
+      case 'ellipse': {
+        // Ellipse intersection: parametric solution
+        const rx = shape.width / 2;
+        const ry = shape.height / 2;
+        const angle = Math.atan2(dy, dx);
+        edgePoint = {
+          x: center.x + rx * Math.cos(angle),
+          y: center.y + ry * Math.sin(angle),
+        };
+        break;
+      }
+
+      case 'diamond': {
+        // Diamond (rotated square) intersection
+        // Diamond vertices: top, right, bottom, left
+        const hw = shape.width / 2;
+        const hh = shape.height / 2;
+
+        // Normalize direction
+        const len = Math.sqrt(dx * dx + dy * dy);
+        const ndx = dx / len;
+        const ndy = dy / len;
+
+        // Find intersection with diamond edges
+        // Diamond has 4 edges, each at 45-degree angles
+        // Using parametric line-segment intersection
+        const absDx = Math.abs(ndx);
+        const absDy = Math.abs(ndy);
+
+        // Scale factor to reach diamond edge
+        let t: number;
+        if (absDx * hh + absDy * hw !== 0) {
+          t = (hw * hh) / (absDx * hh + absDy * hw);
+        } else {
+          t = 0;
+        }
+
+        edgePoint = {
+          x: center.x + ndx * t,
+          y: center.y + ndy * t,
+        };
+        break;
+      }
+
+      default: {
+        // Rectangle intersection
+        const hw = shape.width / 2;
+        const hh = shape.height / 2;
+
+        // Calculate intersection with each edge and find the closest one
+        const absX = Math.abs(dx);
+        const absY = Math.abs(dy);
+
+        let t: number;
+        if (absX * hh > absY * hw) {
+          // Intersects left or right edge
+          t = hw / absX;
+        } else {
+          // Intersects top or bottom edge
+          t = hh / absY;
+        }
+
+        edgePoint = {
+          x: center.x + dx * t,
+          y: center.y + dy * t,
+        };
+        break;
+      }
+    }
+
+    return edgePoint;
+  }, []);
+
   // Render connectors
   const renderConnectors = useCallback(() => {
     const layer = connectorsLayerRef.current;
@@ -472,24 +573,39 @@ export function DrawCanvas({
 
       if (!fromShape || !toShape) return;
 
-      const from = getShapeCenter(fromShape);
-      const to = getShapeCenter(toShape);
+      // Get center points first
+      const fromCenter = getShapeCenter(fromShape);
+      const toCenter = getShapeCenter(toShape);
+
+      // Calculate edge intersection points (arrow starts/ends at shape edges)
+      const from = getShapeEdgePoint(fromShape, toCenter);
+      const to = getShapeEdgePoint(toShape, fromCenter);
+
+      // Check if this connector is selected
+      const isSelected = selectedId === connector.id && selectionType === 'connector';
 
       const arrow = new Konva.Arrow({
         id: connector.id,
         points: [from.x, from.y, to.x, to.y],
-        stroke: connector.stroke,
-        strokeWidth: connector.strokeWidth,
-        fill: connector.stroke,
+        stroke: isSelected ? '#ef4444' : connector.stroke,
+        strokeWidth: isSelected ? connector.strokeWidth + 1 : connector.strokeWidth,
+        fill: isSelected ? '#ef4444' : connector.stroke,
         pointerLength: 10,
         pointerWidth: 8,
+        hitStrokeWidth: 20, // Larger hit area for easier clicking
+      });
+
+      // Click to select connector
+      arrow.on('click tap', (e) => {
+        e.cancelBubble = true; // Prevent stage click
+        selectConnector(connector.id);
       });
 
       layer.add(arrow);
     });
 
     layer.batchDraw();
-  }, [connectors, shapes, getShapeCenter]);
+  }, [connectors, shapes, getShapeCenter, getShapeEdgePoint, selectedId, selectionType, selectConnector]);
 
   // Update shape text
   const updateShapeText = useCallback((id: string, text: string) => {
