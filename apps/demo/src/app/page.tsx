@@ -335,7 +335,7 @@ function SelectionContextMenu({
 
 export default function Home() {
   const canvasRef = useRef<DrawCanvasHandle>(null);
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const canvasAreaRef = useRef<HTMLDivElement>(null);
   const [selectedShape, setSelectedShape] = useState<SelectedShape | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
@@ -344,12 +344,13 @@ export default function Home() {
   const [rightPanelWidth, setRightPanelWidth] = useState(280);
   const [searchQuery, setSearchQuery] = useState('');
   const [canvasOffset, setCanvasOffset] = useState({ left: 0, top: 0 });
+  const [viewport, setViewport] = useState({ scale: 1, position: { x: 0, y: 0 } });
 
-  // Update canvas offset when panels change
+  // Update canvas offset when panels change or window resizes
   useEffect(() => {
     const updateOffset = () => {
-      if (canvasContainerRef.current) {
-        const rect = canvasContainerRef.current.getBoundingClientRect();
+      if (canvasAreaRef.current) {
+        const rect = canvasAreaRef.current.getBoundingClientRect();
         setCanvasOffset({ left: rect.left, top: rect.top });
       }
     };
@@ -357,6 +358,11 @@ export default function Home() {
     window.addEventListener('resize', updateOffset);
     return () => window.removeEventListener('resize', updateOffset);
   }, [isLeftPanelOpen, leftPanelWidth, isRightPanelOpen, rightPanelWidth]);
+
+  // Handle viewport changes from canvas (zoom/pan)
+  const handleViewportChange = useCallback((newViewport: { scale: number; position: { x: number; y: number } }) => {
+    setViewport(newViewport);
+  }, []);
 
   // Update shape property via canvas ref
   const updateShapeProperty = useCallback((property: string, value: number) => {
@@ -500,7 +506,7 @@ export default function Home() {
         )}
 
         {/* Canvas Area */}
-        <div className="zm-draw-canvas-area">
+        <div ref={canvasAreaRef} className="zm-draw-canvas-area">
           {/* Top Header Bar */}
           <div className="zm-draw-header">
             <div className="zm-draw-header-left">
@@ -545,21 +551,20 @@ export default function Home() {
           </div>
 
         {/* Canvas - Infinite canvas fills available space */}
-        <div ref={canvasContainerRef} style={{ flex: 1, position: 'relative' }}>
-          <DrawCanvas
-            ref={canvasRef}
-            backgroundColor={canvasBgColor}
-            showGrid={true}
-            gridSize={20}
-            onSelectionChange={handleSelectionChange}
-          />
-        </div>
+        <DrawCanvas
+          ref={canvasRef}
+          backgroundColor={canvasBgColor}
+          showGrid={true}
+          gridSize={20}
+          onSelectionChange={handleSelectionChange}
+          onViewportChange={handleViewportChange}
+        />
 
         {/* Selection Context Menu */}
-        {selectedShape && canvasRef.current && (
+        {selectedShape && (
           <SelectionContextMenu
             shape={selectedShape}
-            viewport={canvasRef.current.getViewport()}
+            viewport={viewport}
             canvasOffset={canvasOffset}
             onCopy={handleCopy}
             onDuplicate={handleDuplicate}

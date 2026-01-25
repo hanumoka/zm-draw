@@ -62,6 +62,8 @@ export interface DrawCanvasProps {
   onReady?: (stage: Konva.Stage) => void;
   /** Callback when selection changes */
   onSelectionChange?: (shape: SelectedShapeInfo | null) => void;
+  /** Callback when viewport changes (zoom/pan) */
+  onViewportChange?: (viewport: ViewportInfo) => void;
 }
 
 // Generate unique ID
@@ -92,6 +94,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   onShapesChange,
   onReady,
   onSelectionChange,
+  onViewportChange,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -334,7 +337,15 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     if (showGrid) {
       drawInfiniteGrid();
     }
-  }, [updateBackground, showGrid, drawInfiniteGrid]);
+
+    // Notify parent of viewport changes
+    if (stage && onViewportChange) {
+      onViewportChange({
+        scale: stage.scaleX(),
+        position: stage.position(),
+      });
+    }
+  }, [updateBackground, showGrid, drawInfiniteGrid, onViewportChange]);
 
   // Add connector between shapes
   const addConnector = useCallback((fromId: string, toId: string) => {
