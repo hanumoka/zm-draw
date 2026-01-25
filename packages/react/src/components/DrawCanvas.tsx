@@ -6,6 +6,7 @@ import type { Shape, ShapeType, ToolType, Connector } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { useToolStore } from '../stores/toolStore';
 import { useSelectionStore } from '../stores/selectionStore';
+import { useViewportStore } from '../stores/viewportStore';
 import { Toolbar } from './Toolbar';
 import { TextEditor } from './TextEditor';
 
@@ -80,13 +81,17 @@ export function DrawCanvas({
 
   const [shapes, setShapes] = useState<Shape[]>(initialShapes);
   const [connectors, setConnectors] = useState<Connector[]>([]);
-  const [scale, setScale] = useState(1);
-  const [isPanning, setIsPanning] = useState(false);
 
   // Selection state from Zustand store
   const selectedId = useSelectionStore((s) => s.selectedId);
   const setSelectedId = useSelectionStore((s) => s.select);
   const clearSelection = useSelectionStore((s) => s.clearSelection);
+
+  // Viewport state from Zustand store
+  const scale = useViewportStore((s) => s.scale);
+  const setScale = useViewportStore((s) => s.setScale);
+  const isPanning = useViewportStore((s) => s.isPanning);
+  const setIsPanning = useViewportStore((s) => s.setIsPanning);
 
   // Tool state from Zustand store
   const tool = useToolStore((s) => s.tool);
