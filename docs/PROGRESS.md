@@ -7,8 +7,8 @@
 ## 전체 진행률
 
 **목표**: Figma 스타일 다이어그램 에디터
-**현재 Phase**: Phase 2.5 (속성 패널 편집) 진행 중
-**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 75% / Figma 스타일 50%
+**현재 Phase**: Phase 2.5 완료 → Phase 3 (속성 패널 고급) 준비
+**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Figma 스타일 55%
 
 ---
 
@@ -172,21 +172,26 @@
 
 ---
 
-## Phase 2.5: 속성 패널 편집 🔄 진행 중
+## Phase 2.5: 속성 패널 편집 ✅ 완료
 
 > **목표**: 속성 패널에서 도형 속성 편집 가능
 
 ### 2.5.1 기본 편집 ✅
 
 - [x] DrawCanvasHandle 인터페이스 (forwardRef + useImperativeHandle)
-- [x] updateShape 메서드 노출
+- [x] updateShape, deleteSelected, duplicateSelected, copySelected 메서드 노출
 - [x] Position 편집 (X, Y)
 - [x] Size 편집 (W, H)
 - [x] Rotation 편집
 
-### 2.5.2 추가 기능 ⏳
+### 2.5.2 선택 컨텍스트 메뉴 ✅
 
-- [ ] 선택 컨텍스트 메뉴 (도형 위 미니 툴바)
+- [x] 플로팅 컨텍스트 메뉴 (선택된 도형 위에 표시)
+- [x] Copy, Duplicate, Delete 버튼
+- [x] 툴팁 및 키보드 단축키 힌트
+
+### 2.5.3 추가 기능 ⏳ (Phase 3으로 이동)
+
 - [ ] Fill 색상 편집 (Color Picker 필요)
 - [ ] Stroke 색상/두께 편집
 

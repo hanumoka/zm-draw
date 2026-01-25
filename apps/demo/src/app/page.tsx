@@ -86,6 +86,28 @@ const SearchIcon = () => (
   </svg>
 );
 
+// Context menu icons
+const CopyIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
+const DuplicateIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="8" y="8" width="12" height="12" rx="2" />
+    <rect x="4" y="4" width="12" height="12" rx="2" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+
 // Shape icons for the Shapes panel
 const ShapeIcons = {
   // Connectors
@@ -259,8 +281,61 @@ function ShapeButton({
   );
 }
 
+// Selection Context Menu Component
+function SelectionContextMenu({
+  shape,
+  viewport,
+  canvasOffset,
+  onCopy,
+  onDuplicate,
+  onDelete,
+}: {
+  shape: SelectedShape;
+  viewport: { scale: number; position: { x: number; y: number } };
+  canvasOffset: { left: number; top: number };
+  onCopy: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}) {
+  // Calculate screen position of the shape
+  const screenX = shape.x * viewport.scale + viewport.position.x + canvasOffset.left;
+  const screenY = shape.y * viewport.scale + viewport.position.y + canvasOffset.top;
+  const screenWidth = shape.width * viewport.scale;
+
+  // Position menu above the shape, centered
+  const menuStyle: React.CSSProperties = {
+    position: 'fixed',
+    left: screenX + screenWidth / 2,
+    top: screenY - 48,
+    transform: 'translateX(-50%)',
+    zIndex: 1000,
+  };
+
+  return (
+    <div className="zm-context-menu" style={menuStyle}>
+      <Tooltip content="Copy (Ctrl+C)">
+        <button className="zm-context-menu-button" onClick={onCopy}>
+          <CopyIcon />
+        </button>
+      </Tooltip>
+      <Tooltip content="Duplicate (Ctrl+D)">
+        <button className="zm-context-menu-button" onClick={onDuplicate}>
+          <DuplicateIcon />
+        </button>
+      </Tooltip>
+      <div className="zm-context-menu-divider" />
+      <Tooltip content="Delete (Del)">
+        <button className="zm-context-menu-button zm-context-menu-button-danger" onClick={onDelete}>
+          <TrashIcon />
+        </button>
+      </Tooltip>
+    </div>
+  );
+}
+
 export default function Home() {
   const canvasRef = useRef<DrawCanvasHandle>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [selectedShape, setSelectedShape] = useState<SelectedShape | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
@@ -268,6 +343,20 @@ export default function Home() {
   const [leftPanelWidth, setLeftPanelWidth] = useState(240);
   const [rightPanelWidth, setRightPanelWidth] = useState(280);
   const [searchQuery, setSearchQuery] = useState('');
+  const [canvasOffset, setCanvasOffset] = useState({ left: 0, top: 0 });
+
+  // Update canvas offset when panels change
+  useEffect(() => {
+    const updateOffset = () => {
+      if (canvasContainerRef.current) {
+        const rect = canvasContainerRef.current.getBoundingClientRect();
+        setCanvasOffset({ left: rect.left, top: rect.top });
+      }
+    };
+    updateOffset();
+    window.addEventListener('resize', updateOffset);
+    return () => window.removeEventListener('resize', updateOffset);
+  }, [isLeftPanelOpen, leftPanelWidth, isRightPanelOpen, rightPanelWidth]);
 
   // Update shape property via canvas ref
   const updateShapeProperty = useCallback((property: string, value: number) => {
@@ -276,6 +365,20 @@ export default function Home() {
     // Update local state for immediate feedback
     setSelectedShape(prev => prev ? { ...prev, [property]: value } : null);
   }, [selectedShape]);
+
+  // Context menu actions
+  const handleCopy = useCallback(() => {
+    canvasRef.current?.copySelected();
+  }, []);
+
+  const handleDuplicate = useCallback(() => {
+    canvasRef.current?.duplicateSelected();
+  }, []);
+
+  const handleDelete = useCallback(() => {
+    canvasRef.current?.deleteSelected();
+    setSelectedShape(null);
+  }, []);
 
   // Apply dark mode class to html element
   useEffect(() => {
@@ -442,13 +545,27 @@ export default function Home() {
           </div>
 
         {/* Canvas - Infinite canvas fills available space */}
-        <DrawCanvas
-          ref={canvasRef}
-          backgroundColor={canvasBgColor}
-          showGrid={true}
-          gridSize={20}
-          onSelectionChange={handleSelectionChange}
-        />
+        <div ref={canvasContainerRef} style={{ flex: 1, position: 'relative' }}>
+          <DrawCanvas
+            ref={canvasRef}
+            backgroundColor={canvasBgColor}
+            showGrid={true}
+            gridSize={20}
+            onSelectionChange={handleSelectionChange}
+          />
+        </div>
+
+        {/* Selection Context Menu */}
+        {selectedShape && canvasRef.current && (
+          <SelectionContextMenu
+            shape={selectedShape}
+            viewport={canvasRef.current.getViewport()}
+            canvasOffset={canvasOffset}
+            onCopy={handleCopy}
+            onDuplicate={handleDuplicate}
+            onDelete={handleDelete}
+          />
+        )}
       </div>
 
       {/* Right Panel - Properties */}

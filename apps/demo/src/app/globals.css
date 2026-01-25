@@ -519,3 +519,54 @@ body {
 .zm-draw-left-panel ::-webkit-scrollbar-thumb:hover {
   background: var(--zm-border-hover);
 }
+
+/* ========================================
+   Selection Context Menu
+   ======================================== */
+
+.zm-context-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--zm-bg-secondary);
+  border: 1px solid var(--zm-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: auto;
+}
+
+.zm-context-menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--zm-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.zm-context-menu-button:hover {
+  background: var(--zm-bg-tertiary);
+  color: var(--zm-text-primary);
+}
+
+.zm-context-menu-button:active {
+  transform: scale(0.95);
+}
+
+.zm-context-menu-button-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.zm-context-menu-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--zm-border);
+  margin: 0 4px;
+}

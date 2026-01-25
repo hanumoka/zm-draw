@@ -23,6 +23,12 @@ export interface SelectedShapeInfo {
   stroke: string;
 }
 
+/** Viewport state for positioning overlays */
+export interface ViewportInfo {
+  scale: number;
+  position: { x: number; y: number };
+}
+
 /** Imperative handle for DrawCanvas */
 export interface DrawCanvasHandle {
   /** Update a shape's properties */
@@ -31,6 +37,14 @@ export interface DrawCanvasHandle {
   getShapes: () => Shape[];
   /** Get selected shape ID */
   getSelectedId: () => string | null;
+  /** Get current viewport info */
+  getViewport: () => ViewportInfo;
+  /** Delete selected shape */
+  deleteSelected: () => void;
+  /** Duplicate selected shape */
+  duplicateSelected: () => void;
+  /** Copy selected shape to clipboard */
+  copySelected: () => void;
 }
 
 export interface DrawCanvasProps {
@@ -760,7 +774,14 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     updateShape,
     getShapes: () => shapes,
     getSelectedId: () => selectedId,
-  }), [updateShape, shapes, selectedId]);
+    getViewport: () => ({
+      scale: stageRef.current?.scaleX() || 1,
+      position: stageRef.current?.position() || { x: 0, y: 0 },
+    }),
+    deleteSelected,
+    duplicateSelected,
+    copySelected,
+  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected]);
 
   // Handle escape key
   const handleEscape = useCallback(() => {
