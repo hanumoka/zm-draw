@@ -431,6 +431,10 @@
 
 | 날짜 | 커밋 | 설명 |
 |------|------|------|
+| 2026-01-25 | 2a62d70 | fix: Context menu follows shape during zoom/pan |
+| 2026-01-25 | e187394 | feat(phase2.5): Add selection context menu |
+| 2026-01-25 | cde0ce6 | feat(phase2.5): Add property panel editing |
+| 2026-01-25 | 03afb20 | docs: Fix inconsistencies across documentation |
 | 2026-01-25 | b543f2a | feat(phase2): Add dotted grid and Shapes panel |
 | 2026-01-25 | 684061a | docs: Update docs with Figma-style toolbar and infinite canvas |
 | 2026-01-25 | 6889993 | feat(phase2): Add Figma-style toolbar and infinite canvas |

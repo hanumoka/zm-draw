@@ -1,6 +1,6 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-25 (Figma UI 분석 완료 + UI 변경)
+> 최종 업데이트: 2026-01-25 (Phase 2.5 완료)
 
 ---
 
@@ -11,11 +11,16 @@
 
 ### 마지막 작업 (2026-01-25)
 
-- **Phase 2.5: 속성 패널 편집 + 컨텍스트 메뉴** ✅ NEW
-  - `DrawCanvasHandle` 인터페이스 추가 (forwardRef)
+- **Phase 2.5: 속성 패널 편집 + 컨텍스트 메뉴** ✅ 완료
+  - `DrawCanvasHandle` 인터페이스 추가 (forwardRef + useImperativeHandle)
   - `updateShape`, `deleteSelected`, `duplicateSelected`, `copySelected` 메서드 노출
+  - `onViewportChange` 콜백 추가 (줌/팬 시 실시간 업데이트)
   - Position (X, Y), Size (W, H), Rotation 편집 가능
   - **선택 컨텍스트 메뉴** 구현 (Copy, Duplicate, Delete 버튼)
+  - 줌/팬 시 컨텍스트 메뉴가 도형 따라가도록 수정
+
+- **문서 정비** ✅
+  - 4개 문서 불일치 사항 수정 (SESSION, PROGRESS, PROJECT, CLAUDE.md)
 
 - **Figma/FigJam 상세 분석 완료** ✅
   - UI3 인터페이스 구조 문서화
@@ -54,7 +59,7 @@
 
 - **브랜치**: main
 - **원격**: origin/main (동기화됨)
-- **마지막 커밋**: `03afb20 docs: Fix inconsistencies across documentation files`
+- **마지막 커밋**: `2a62d70 fix: Context menu follows shape during zoom/pan`
 
 ---
 
@@ -84,24 +89,23 @@
 
 ---
 
-## 다음 작업: Phase 2.5 (속성 패널 기본)
+## 다음 작업: Phase 3 (속성 패널 고급)
 
-### 목표: 속성 패널 편집 기능 + 선택 컨텍스트 메뉴
+### 목표: Fill/Stroke 색상 편집 + Color Picker
 
 ```
 ┌─────────────────────────────┐
 │ Design                      │
 ├─────────────────────────────┤
-│ Position                    │
-│ X [120]  →  편집 가능!      │
-│ Y [80]   →  편집 가능!      │
+│ Fill                        │
+│ [■] #3b82f6  →  Color Picker│
 ├─────────────────────────────┤
-│ Size                        │
-│ W [100]  →  편집 가능!      │
-│ H [60]   →  편집 가능!      │
+│ Stroke                      │
+│ [■] #1d4ed8  →  Color Picker│
+│ Width: [2]                  │
 ├─────────────────────────────┤
-│ Rotation                    │
-│ R [0°]   →  편집 가능!      │
+│ Corner Radius               │
+│ [4]                         │
 └─────────────────────────────┘
 ```
 
