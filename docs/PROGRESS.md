@@ -7,8 +7,8 @@
 ## 전체 진행률
 
 **목표**: Figma 스타일 다이어그램 에디터
-**현재 Phase**: Phase 1 (기초 리팩토링) 90% 완료
-**완료율**: MVP 100% / Phase 1 90% / Figma 스타일 5%
+**현재 Phase**: Phase 1.5 (커넥터 수정) ✅ 완료 → Phase 2 예정
+**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Figma 스타일 10%
 
 ---
 
@@ -109,10 +109,10 @@
 
 ---
 
-## Phase 1.5: 커넥터 기초 수정 ⏳ 신규
+## Phase 1.5: 커넥터 기초 수정 ✅ 완료
 
 > **목표**: 화살촉 가려짐 해결 + 커넥터 선택 가능
-> **배경**: 현재 커넥터가 도형 중심→중심으로 연결되어 화살촉이 도형에 가려짐
+> **완료일**: 2026-01-25
 
 ### 1.5.1 문제 분석 ✅
 
@@ -122,13 +122,14 @@
 3. 커넥터 선택 불가 (클릭 이벤트 없음)
 4. 단순 직선만 지원 (라우팅 없음)
 
-### 1.5.2 수정 계획
+### 1.5.2 구현 완료 ✅
 
-| 작업 | 설명 | 예상 |
+| 작업 | 설명 | 상태 |
 |------|------|------|
-| 화살촉 위치 수정 | 도형 외곽 교차점 계산 | 0.5일 |
-| 커넥터 선택 | 클릭 이벤트, 선택 하이라이트 | 0.5일 |
-| 커넥터 삭제 | Delete 키, Transformer 연결 | 0.25일 |
+| 화살촉 위치 수정 | `getShapeEdgePoint()` 구현 | ✅ 완료 |
+| 커넥터 선택 | 클릭 이벤트, 선택 하이라이트 | ✅ 완료 |
+| 커넥터 삭제 | Delete 키 처리 | ✅ 완료 |
+| selectionStore 확장 | selectionType 추가 | ✅ 완료 |
 
 ---
 
@@ -331,8 +332,8 @@
 |------|------|----------|---------|
 | ~~**Konva 버전**~~ | ~~^9.3.0 → ^10.0.0~~ | ~~Phase 0.9~~ | ✅ 해결됨 |
 | ~~**Copy/Paste**~~ | ~~기본 기능 누락~~ | ~~Phase 1~~ | ✅ 해결됨 |
-| **커넥터 화살촉 가려짐** | 중심→중심 연결 + 레이어 순서 | Phase 1.5 | **긴급** |
-| **커넥터 선택 불가** | 클릭 이벤트 없음 | Phase 1.5 | **긴급** |
+| ~~**커넥터 화살촉 가려짐**~~ | ~~중심→중심 연결~~ | ~~Phase 1.5~~ | ✅ 해결됨 |
+| ~~**커넥터 선택 불가**~~ | ~~클릭 이벤트 없음~~ | ~~Phase 1.5~~ | ✅ 해결됨 |
 | 드래그 레이어 미분리 | 드래그 시 전체 레이어 redraw | Phase 1 | 중 |
 | shapes/connectors 마이그레이션 | props 연동 필요 | 선택적 | 낮음 |
 | Diamond 비율 | width≠height 시 시각적 이슈 | Phase 5 | 낮음 |
@@ -363,14 +364,14 @@
 
 | 날짜 | 커밋 | 설명 |
 |------|------|------|
+| 2026-01-25 | 4b5c0d9 | fix(phase1.5): Fix connector arrowhead visibility and add selection |
+| 2026-01-25 | 516b4c0 | docs: Add connector analysis and Phase 1.5/3.5/5.5 roadmap |
 | 2026-01-25 | d83e864 | docs: Update SESSION.md with Zustand migration progress |
 | 2026-01-25 | cde21c1 | refactor(phase1): Migrate viewport state to Zustand store |
 | 2026-01-25 | 1b42ac1 | refactor(phase1): Migrate selection state to Zustand store |
 | 2026-01-25 | 22f03a1 | refactor(phase1): Migrate tool state to Zustand store |
 | 2026-01-25 | 8564d03 | feat(phase1): Extend type definitions for future features |
-| 2026-01-25 | 9dd8e67 | docs: Update SESSION.md with Phase 1 progress |
 | 2026-01-25 | 7e1a677 | refactor(phase1): Extract TextEditor component |
-| 2026-01-25 | 29dbcd9 | refactor(phase1): Extract Toolbar component |
 
 ---
 
@@ -378,8 +379,8 @@
 
 | 기능 | FigJam | Excalidraw | Draw.io | **zm-draw** |
 |------|--------|------------|---------|-------------|
-| 커넥터 선택 | ✅ | ✅ | ✅ | ❌ |
-| 화살촉 위치 | 도형 외곽 | 도형 외곽 | 커스텀 | **도형 내부** |
+| 커넥터 선택 | ✅ | ✅ | ✅ | ✅ (v1.5) |
+| 화살촉 위치 | 도형 외곽 | 도형 외곽 | 커스텀 | ✅ 도형 외곽 (v1.5) |
 | 라우팅 | Bent/Curved/Straight | Simple/Elbow | Waypoint | **Straight만** |
 | Connection Points | 4방향 스냅 | 4방향 | 완전 커스텀 | ❌ |
 | 화살촉 종류 | 5가지 | 다양 | UML포함 | **1가지** |

@@ -1,21 +1,22 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-25 (커넥터 분석 및 고도화 계획 추가)
+> 최종 업데이트: 2026-01-25 (Phase 1.5 커넥터 수정 완료)
 
 ---
 
 ## 현재 상태
 
-**Phase**: Phase 1 (기초 리팩토링) 90% 완료 → Phase 1.5 (커넥터 수정) 예정
-**진행률**: MVP 100% / Phase 1 90% / Figma 스타일 5%
+**Phase**: Phase 1.5 (커넥터 수정) ✅ 완료 → Phase 2 (UI 레이아웃) 예정
+**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Figma 스타일 10%
 
 ### 마지막 작업 (2026-01-25)
 
-- **커넥터 문제 분석 완료** ✅
-  - 화살촉 가려짐: 중심→중심 연결 + 레이어 순서 문제
-  - 커넥터 선택 불가: 클릭 이벤트 없음
-  - Figma/Excalidraw/Draw.io 비교 분석 완료
-  - Phase 1.5, 3.5, 5.5 커넥터 고도화 계획 수립
+- **Phase 1.5: 커넥터 기초 수정 완료** ✅
+  - `getShapeEdgePoint()` 함수 구현 (Rectangle, Ellipse, Diamond)
+  - 화살촉이 도형 외곽에 표시되도록 수정
+  - 커넥터 클릭 선택 기능 추가
+  - 커넥터 Delete 키 삭제 기능 추가
+  - `selectionStore` 확장 (selectionType: shape/connector)
 
 - **Phase 1: 기초 리팩토링 90% 완료** ✅
   - Zustand stores 마이그레이션 (tool, selection, viewport)
@@ -35,48 +36,67 @@
 ### Git 상태
 
 - **브랜치**: main
-- **원격**: origin/main (동기화됨)
-- **마지막 커밋**: `d83e864 docs: Update SESSION.md with Zustand migration progress`
+- **원격**: origin/main
+- **마지막 커밋**: `4b5c0d9 fix(phase1.5): Fix connector arrowhead visibility and add selection`
 
 ---
 
-## 커넥터 문제점 (긴급)
+## 커넥터 문제점 (해결됨 ✅)
 
-### 발견된 문제
+### Phase 1.5에서 해결된 문제
 
 ```
-현재 상태:
+이전:
 ┌─────────────┐      ┌─────────────┐
 │   도형 A    │      │   도형 B    │
 │      ●──────────────────>●      │  ← 화살촉이 도형 내부에!
 └─────────────┘      └─────────────┘
 
-개선 후:
+현재 (수정됨):
 ┌─────────────┐      ┌─────────────┐
-│   도형 A    │──────>│   도형 B    │  ← 화살촉이 도형 외곽에
+│   도형 A    │──────>│   도형 B    │  ← 화살촉이 도형 외곽에 ✅
 └─────────────┘      └─────────────┘
 ```
 
-| 문제 | 원인 | 해결 Phase |
-|------|------|-----------|
-| 화살촉 가려짐 | 중심→중심 연결 | Phase 1.5 |
-| 레이어 순서 | 커넥터가 도형 아래 | Phase 1.5 |
-| 선택 불가 | 클릭 이벤트 없음 | Phase 1.5 |
-| 라우팅 없음 | 직선만 지원 | Phase 3.5 |
+| 문제 | 원인 | 상태 |
+|------|------|------|
+| 화살촉 가려짐 | 중심→중심 연결 | ✅ 해결 |
+| 선택 불가 | 클릭 이벤트 없음 | ✅ 해결 |
+| 삭제 불가 | Delete 처리 없음 | ✅ 해결 |
+| 라우팅 없음 | 직선만 지원 | ⏳ Phase 3.5 |
 
 ---
 
-## 다음 작업: Phase 1.5 (커넥터 기초 수정)
+## 다음 작업: Phase 2 (UI 레이아웃)
 
-### 우선순위 1: 화살촉 위치 수정
+### 목표: Figma UI3 스타일 3열 레이아웃
+
+```
+┌────────────────────────────────────────────┐
+│  Navigation Bar                            │
+├──────────┬─────────────────┬───────────────┤
+│  Left    │                 │  Right Panel  │
+│  Panel   │     Canvas      │  (속성)       │
+│ (레이어)  │                 │               │
+├──────────┴─────────────────┴───────────────┤
+│  Bottom Toolbar                            │
+└────────────────────────────────────────────┘
+```
+
+### 체크리스트
+
+- [ ] Radix UI 도입
+- [ ] EditorLayout 컴포넌트 (3열 grid)
+- [ ] LeftPanel 껍데기 (빈 패널)
+- [ ] BottomToolbar (도구 버튼 이동)
+- [ ] 패널 리사이즈 기능
+
+### Phase 1.5 완료 내용 (참고)
 
 ```typescript
-// 현재 코드 (문제)
-const from = getShapeCenter(fromShape);  // 도형 중심
-const to = getShapeCenter(toShape);      // 도형 중심
-points: [from.x, from.y, to.x, to.y]
-
-// 개선 코드
+// 구현된 코드
+const fromCenter = getShapeCenter(fromShape);
+const toCenter = getShapeCenter(toShape);
 const from = getShapeEdgePoint(fromShape, toCenter);  // 도형 외곽
 const to = getShapeEdgePoint(toShape, fromCenter);    // 도형 외곽
 ```
