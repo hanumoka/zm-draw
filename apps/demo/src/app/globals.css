@@ -60,6 +60,12 @@ body {
   min-height: 48px;
 }
 
+.zm-draw-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .zm-draw-header-title {
   display: flex;
   align-items: center;
@@ -122,6 +128,17 @@ body {
   border-radius: 8px;
   overflow: hidden;
   background: var(--zm-bg-canvas);
+}
+
+/* Left Panel */
+.zm-draw-left-panel {
+  width: 240px;
+  min-width: 240px;
+  background: var(--zm-bg-secondary);
+  border-right: 1px solid var(--zm-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Right Panel */

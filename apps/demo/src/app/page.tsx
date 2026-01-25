@@ -57,9 +57,33 @@ const PanelRightCloseIcon = () => (
   </svg>
 );
 
+const PanelLeftIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <line x1="9" y1="3" x2="9" y2="21" />
+  </svg>
+);
+
+const PanelLeftCloseIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <line x1="9" y1="3" x2="9" y2="21" />
+    <polyline points="14 9 11 12 14 15" />
+  </svg>
+);
+
+const LayersIcon = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+    <polyline points="2 17 12 22 22 17" />
+    <polyline points="2 12 12 17 22 12" />
+  </svg>
+);
+
 export default function Home() {
   const [selectedShape, setSelectedShape] = useState<SelectedShape | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
 
   // Apply dark mode class to html element
@@ -76,6 +100,7 @@ export default function Home() {
   }, []);
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+  const toggleLeftPanel = () => setIsLeftPanelOpen(!isLeftPanelOpen);
   const toggleRightPanel = () => setIsRightPanelOpen(!isRightPanelOpen);
 
   // Dynamic background color based on theme
@@ -83,13 +108,39 @@ export default function Home() {
 
   return (
     <div className="zm-draw-editor">
+      {/* Left Panel - Layers */}
+      {isLeftPanelOpen && (
+        <aside className="zm-draw-left-panel">
+          <div className="zm-draw-panel-header">
+            Layers
+          </div>
+          <div className="zm-draw-panel-content">
+            <div className="zm-draw-empty-state">
+              <div className="zm-draw-empty-state-icon">
+                <LayersIcon />
+              </div>
+              <p>No layers yet.<br />Create shapes to see them here.</p>
+            </div>
+          </div>
+        </aside>
+      )}
+
       {/* Canvas Area */}
       <div className="zm-draw-canvas-area">
         {/* Top Header Bar */}
         <div className="zm-draw-header">
-          <div className="zm-draw-header-title">
-            <span className="zm-draw-logo">zm-draw</span>
-            <span className="zm-draw-version">v0.1.0</span>
+          <div className="zm-draw-header-left">
+            <button
+              className={`zm-draw-icon-button ${isLeftPanelOpen ? 'active' : ''}`}
+              onClick={toggleLeftPanel}
+              title={isLeftPanelOpen ? 'Hide Layers Panel' : 'Show Layers Panel'}
+            >
+              {isLeftPanelOpen ? <PanelLeftCloseIcon /> : <PanelLeftIcon />}
+            </button>
+            <div className="zm-draw-header-title">
+              <span className="zm-draw-logo">zm-draw</span>
+              <span className="zm-draw-version">v0.1.0</span>
+            </div>
           </div>
           <div className="zm-draw-header-actions">
             <button
