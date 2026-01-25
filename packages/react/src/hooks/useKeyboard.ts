@@ -15,6 +15,14 @@ interface UseKeyboardOptions {
   getShapes?: () => Shape[];
   /** Callback to set shapes (for components not using store directly) */
   setShapes?: (shapes: Shape[]) => void;
+  /** External selected ID (overrides store) */
+  selectedId?: string | null;
+  /** External isPanning state (overrides store) */
+  isPanning?: boolean;
+  /** External setIsPanning function (overrides store) */
+  setIsPanning?: (isPanning: boolean) => void;
+  /** Callback when escape is pressed (overrides default behavior) */
+  onEscape?: () => void;
   /** Callback when selection is cleared */
   onSelectionClear?: () => void;
   /** Callback when shape is deleted */
@@ -23,6 +31,14 @@ interface UseKeyboardOptions {
   onUndo?: () => void;
   /** External redo function */
   onRedo?: () => void;
+  /** External copy function */
+  onCopy?: () => void;
+  /** External paste function */
+  onPaste?: () => void;
+  /** External duplicate function */
+  onDuplicate?: () => void;
+  /** External move function */
+  onMove?: (dx: number, dy: number) => void;
   /** Whether keyboard handling is enabled */
   enabled?: boolean;
 }
@@ -40,15 +56,23 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
   const {
     getShapes,
     setShapes,
+    selectedId: externalSelectedId,
+    isPanning: externalIsPanning,
+    setIsPanning: externalSetIsPanning,
+    onEscape,
     onSelectionClear,
     onDelete,
     onUndo,
     onRedo,
+    onCopy,
+    onPaste,
+    onDuplicate,
+    onMove,
     enabled = true,
   } = options;
 
-  // Store hooks
-  const selectedId = useSelectionStore((s) => s.selectedId);
+  // Store hooks (used as fallbacks when external values not provided)
+  const storeSelectedId = useSelectionStore((s) => s.selectedId);
   const clearSelection = useSelectionStore((s) => s.clearSelection);
   const shapes = useCanvasStore((s) => s.shapes);
   const updateShape = useCanvasStore((s) => s.updateShape);
@@ -58,11 +82,18 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
   const resetTool = useToolStore((s) => s.resetTool);
   const cancelConnecting = useToolStore((s) => s.cancelConnecting);
   const stopEditing = useToolStore((s) => s.stopEditing);
-  const setIsPanning = useViewportStore((s) => s.setIsPanning);
-  const isPanning = useViewportStore((s) => s.isPanning);
+  const storeSetIsPanning = useViewportStore((s) => s.setIsPanning);
+  const storeIsPanning = useViewportStore((s) => s.isPanning);
   const copy = useClipboardStore((s) => s.copy);
   const paste = useClipboardStore((s) => s.paste);
-  const hasCopied = useClipboardStore((s) => s.hasCopied);
+
+  // Unused but available for future use
+  // const hasCopied = useClipboardStore((s) => s.hasCopied);
+
+  // Use external values if provided, otherwise fall back to store values
+  const selectedId = externalSelectedId !== undefined ? externalSelectedId : storeSelectedId;
+  const isPanning = externalIsPanning !== undefined ? externalIsPanning : storeIsPanning;
+  const setIsPanning = externalSetIsPanning ?? storeSetIsPanning;
 
   // Get the selected shape
   const getSelectedShape = useCallback(() => {
@@ -73,14 +104,22 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
 
   // Copy selected shape
   const handleCopy = useCallback(() => {
+    if (onCopy) {
+      onCopy();
+      return;
+    }
     const shape = getSelectedShape();
     if (shape) {
       copy([shape]);
     }
-  }, [getSelectedShape, copy]);
+  }, [getSelectedShape, copy, onCopy]);
 
   // Paste copied shapes
   const handlePaste = useCallback(() => {
+    if (onPaste) {
+      onPaste();
+      return;
+    }
     const pastedShapes = paste();
     if (!pastedShapes || pastedShapes.length === 0) return;
 
@@ -99,10 +138,14 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
         addShape(newShape);
       }
     });
-  }, [paste, addShape, setShapes, getShapes]);
+  }, [paste, addShape, setShapes, getShapes, onPaste]);
 
   // Duplicate selected shape (copy + paste in one action)
   const handleDuplicate = useCallback(() => {
+    if (onDuplicate) {
+      onDuplicate();
+      return;
+    }
     const shape = getSelectedShape();
     if (!shape) return;
 
@@ -118,10 +161,14 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     } else {
       addShape(newShape);
     }
-  }, [getSelectedShape, addShape, setShapes, getShapes]);
+  }, [getSelectedShape, addShape, setShapes, getShapes, onDuplicate]);
 
   // Move selected shape with arrow keys
   const handleMove = useCallback((dx: number, dy: number) => {
+    if (onMove) {
+      onMove(dx, dy);
+      return;
+    }
     const shape = getSelectedShape();
     if (!shape) return;
 
@@ -138,7 +185,7 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     } else {
       updateShape(shape.id, { x: newX, y: newY });
     }
-  }, [getSelectedShape, updateShape, setShapes, getShapes]);
+  }, [getSelectedShape, updateShape, setShapes, getShapes, onMove]);
 
   // Delete selected shape
   const handleDelete = useCallback(() => {
@@ -155,12 +202,16 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
 
   // Handle escape key
   const handleEscape = useCallback(() => {
+    if (onEscape) {
+      onEscape();
+      return;
+    }
     clearSelection();
     cancelConnecting();
     stopEditing();
     resetTool();
     onSelectionClear?.();
-  }, [clearSelection, cancelConnecting, stopEditing, resetTool, onSelectionClear]);
+  }, [clearSelection, cancelConnecting, stopEditing, resetTool, onSelectionClear, onEscape]);
 
   // Main keyboard handler
   useEffect(() => {

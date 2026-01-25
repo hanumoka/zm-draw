@@ -3,6 +3,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import Konva from 'konva';
 import type { Shape, ShapeType, ToolType, Connector } from '../types';
+import { useKeyboard } from '../hooks/useKeyboard';
 
 /** Selected shape info for external consumption */
 export interface SelectedShapeInfo {
@@ -568,80 +569,28 @@ export function DrawCanvas({
     });
   }, [selectedId, onShapesChange]);
 
-  // Movement constants
-  const MOVE_STEP = 1;
-  const MOVE_STEP_SHIFT = 10;
+  // Handle escape key
+  const handleEscape = useCallback(() => {
+    setSelectedId(null);
+    setConnectingFrom(null);
+    setEditingId(null);
+    setTool('select');
+  }, []);
 
-  // Keyboard event handler
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle when typing in input fields (except Escape)
-      if (document.activeElement?.tagName === 'INPUT' && e.key !== 'Escape') {
-        return;
-      }
-
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-      const modKey = isMac ? e.metaKey : e.ctrlKey;
-
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault();
-        deleteSelected();
-      } else if (e.key === 'Escape') {
-        setSelectedId(null);
-        setConnectingFrom(null);
-        setEditingId(null);
-        setTool('select');
-      } else if (e.code === 'Space' && !isPanning) {
-        e.preventDefault();
-        setIsPanning(true);
-      } else if (modKey && e.key.toLowerCase() === 'c') {
-        // Copy (Ctrl+C / Cmd+C)
-        e.preventDefault();
-        copySelected();
-      } else if (modKey && e.key.toLowerCase() === 'v') {
-        // Paste (Ctrl+V / Cmd+V)
-        e.preventDefault();
-        pasteShape();
-      } else if (modKey && e.key.toLowerCase() === 'd') {
-        // Duplicate (Ctrl+D / Cmd+D)
-        e.preventDefault();
-        duplicateSelected();
-      } else if (modKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-        // Undo (Ctrl+Z / Cmd+Z)
-        e.preventDefault();
-        undo();
-      } else if (modKey && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
-        // Redo (Ctrl+Y / Cmd+Shift+Z)
-        e.preventDefault();
-        redo();
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        moveSelected(0, e.shiftKey ? -MOVE_STEP_SHIFT : -MOVE_STEP);
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        moveSelected(0, e.shiftKey ? MOVE_STEP_SHIFT : MOVE_STEP);
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        moveSelected(e.shiftKey ? -MOVE_STEP_SHIFT : -MOVE_STEP, 0);
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        moveSelected(e.shiftKey ? MOVE_STEP_SHIFT : MOVE_STEP, 0);
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        setIsPanning(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [deleteSelected, isPanning, undo, redo, copySelected, pasteShape, duplicateSelected, moveSelected]);
+  // Use keyboard hook for shortcuts
+  useKeyboard({
+    selectedId,
+    isPanning,
+    setIsPanning,
+    onEscape: handleEscape,
+    onDelete: deleteSelected,
+    onUndo: undo,
+    onRedo: redo,
+    onCopy: copySelected,
+    onPaste: pasteShape,
+    onDuplicate: duplicateSelected,
+    onMove: moveSelected,
+  });
 
   // Initialize canvas
   useEffect(() => {
