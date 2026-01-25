@@ -49,6 +49,73 @@ body {
   min-width: 0;
 }
 
+/* Header Bar */
+.zm-draw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--zm-bg-secondary);
+  border-bottom: 1px solid var(--zm-border);
+  min-height: 48px;
+}
+
+.zm-draw-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zm-draw-logo {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--zm-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.zm-draw-version {
+  font-size: 11px;
+  color: var(--zm-text-muted);
+  background: var(--zm-bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.zm-draw-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Icon Button */
+.zm-draw-icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--zm-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.zm-draw-icon-button:hover {
+  background: var(--zm-bg-tertiary);
+  color: var(--zm-text-primary);
+}
+
+.zm-draw-icon-button.active {
+  background: var(--zm-accent);
+  color: white;
+}
+
+.zm-draw-icon-button:active {
+  transform: scale(0.95);
+}
+
 .zm-draw-canvas-container {
   flex: 1;
   border: 1px solid var(--zm-border);
