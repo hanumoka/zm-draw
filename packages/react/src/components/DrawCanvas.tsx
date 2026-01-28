@@ -83,6 +83,10 @@ export interface DrawCanvasHandle {
   zoomToFit: () => void;
   /** Zoom to 100% */
   zoomTo100: () => void;
+  /** Set viewport position */
+  setViewportPosition: (position: { x: number; y: number }) => void;
+  /** Get canvas size */
+  getCanvasSize: () => { width: number; height: number };
 }
 
 export interface DrawCanvasProps {
@@ -1735,6 +1739,19 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     setZoom(1);
   }, [setZoom]);
 
+  // Set viewport position (for minimap navigation)
+  const setViewportPosition = useCallback((newPos: { x: number; y: number }) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    stage.position(newPos);
+    stage.batchDraw();
+    onViewportChange?.({
+      scale: stage.scaleX(),
+      position: newPos,
+    });
+  }, [onViewportChange]);
+
   // Expose imperative methods via ref
   useImperativeHandle(ref, () => ({
     updateShape,
@@ -1762,7 +1779,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     setZoom,
     zoomToFit,
     zoomTo100,
-  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, onShapesChange, alignShapes, distributeShapes, groupSelected, ungroupSelected, exportToPNG, exportToSVG, setZoom, zoomToFit, zoomTo100]);
+    setViewportPosition,
+    getCanvasSize: () => canvasSize,
+  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, onShapesChange, alignShapes, distributeShapes, groupSelected, ungroupSelected, exportToPNG, exportToSVG, setZoom, zoomToFit, zoomTo100, setViewportPosition, canvasSize]);
 
   // Handle escape key
   const handleEscape = useCallback(() => {

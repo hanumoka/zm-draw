@@ -14,6 +14,11 @@ const DrawCanvas = dynamic(
   { ssr: false }
 );
 
+const Minimap = dynamic(
+  () => import('@zm-draw/react').then((mod) => mod.Minimap),
+  { ssr: false }
+);
+
 interface SelectedShape {
   id: string;
   type: string;
@@ -594,6 +599,9 @@ export default function Home() {
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const exportDropdownRef = useRef<HTMLDivElement>(null);
+  const [showMinimap, setShowMinimap] = useState(true);
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+  const [connectors, setConnectors] = useState<Connector[]>([]);
 
   // Close export dropdown when clicking outside
   useEffect(() => {
@@ -624,6 +632,12 @@ export default function Home() {
   // Handle shapes change from canvas
   const handleShapesChange = useCallback((newShapes: Shape[]) => {
     setShapes(newShapes);
+    // Also update connectors for minimap
+    if (canvasRef.current) {
+      setConnectors(canvasRef.current.getConnectors());
+      const size = canvasRef.current.getCanvasSize();
+      setCanvasSize(size);
+    }
   }, []);
 
   // Handle layer click - select shape
@@ -1076,6 +1090,24 @@ export default function Home() {
             onDuplicate={handleDuplicate}
             onDelete={handleDelete}
           />
+        )}
+
+        {/* Minimap */}
+        {showMinimap && (
+          <div className="zm-draw-minimap">
+            <Minimap
+              shapes={shapes}
+              connectors={connectors}
+              scale={viewport.scale}
+              position={viewport.position}
+              canvasSize={canvasSize}
+              onViewportChange={(pos) => {
+                canvasRef.current?.setViewportPosition(pos);
+              }}
+              width={180}
+              height={120}
+            />
+          </div>
         )}
       </div>
 

@@ -9,3 +9,7 @@ export type { ToolbarProps } from './Toolbar';
 // TextEditor
 export { TextEditor } from './TextEditor';
 export type { TextEditorProps } from './TextEditor';
+
+// Minimap
+export { Minimap } from './Minimap';
+export type { MinimapProps } from './Minimap';

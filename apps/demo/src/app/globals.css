@@ -95,6 +95,17 @@ body {
   gap: 4px;
 }
 
+/* Minimap */
+.zm-draw-minimap {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 100;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
 /* Zoom Controls */
 .zm-draw-zoom-controls {
   display: flex;
