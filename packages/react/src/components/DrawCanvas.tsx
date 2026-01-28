@@ -617,88 +617,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     };
   }, []);
 
-  // Get connection point coordinates for a shape
-  const getConnectionPoint = useCallback((shape: Shape, point: 'top' | 'right' | 'bottom' | 'left' | 'auto', targetShape?: Shape) => {
-    const center = getShapeCenter(shape);
-
-    if (point === 'auto' && targetShape) {
-      // Auto: use edge point toward target
-      const targetCenter = getShapeCenter(targetShape);
-      return getShapeEdgePoint(shape, targetCenter);
-    }
-
-    // For specific connection points
-    switch (point) {
-      case 'top':
-        return { x: center.x, y: shape.y };
-      case 'right':
-        return { x: shape.x + shape.width, y: center.y };
-      case 'bottom':
-        return { x: center.x, y: shape.y + shape.height };
-      case 'left':
-        return { x: shape.x, y: center.y };
-      default:
-        return center;
-    }
-  }, [getShapeCenter]);
-
-  // Get all 4 connection points for a shape
-  const getConnectionPoints = useCallback((shape: Shape) => {
-    const center = getShapeCenter(shape);
-    return {
-      top: { x: center.x, y: shape.y },
-      right: { x: shape.x + shape.width, y: center.y },
-      bottom: { x: center.x, y: shape.y + shape.height },
-      left: { x: shape.x, y: center.y },
-    };
-  }, [getShapeCenter]);
-
-  // Calculate orthogonal (elbow) path between two points
-  const getOrthogonalPath = useCallback((
-    from: { x: number; y: number },
-    to: { x: number; y: number },
-    fromPoint?: 'top' | 'right' | 'bottom' | 'left' | 'auto',
-    toPoint?: 'top' | 'right' | 'bottom' | 'left' | 'auto'
-  ): number[] => {
-    // Simple orthogonal routing with one bend point
-    const midX = (from.x + to.x) / 2;
-    const midY = (from.y + to.y) / 2;
-
-    // Determine routing direction based on connection points
-    if (fromPoint === 'left' || fromPoint === 'right' || toPoint === 'left' || toPoint === 'right') {
-      // Horizontal first, then vertical
-      return [from.x, from.y, midX, from.y, midX, to.y, to.x, to.y];
-    } else if (fromPoint === 'top' || fromPoint === 'bottom' || toPoint === 'top' || toPoint === 'bottom') {
-      // Vertical first, then horizontal
-      return [from.x, from.y, from.x, midY, to.x, midY, to.x, to.y];
-    } else {
-      // Auto: choose based on distance
-      const dx = Math.abs(to.x - from.x);
-      const dy = Math.abs(to.y - from.y);
-
-      if (dx > dy) {
-        // More horizontal distance - go horizontal first
-        return [from.x, from.y, midX, from.y, midX, to.y, to.x, to.y];
-      } else {
-        // More vertical distance - go vertical first
-        return [from.x, from.y, from.x, midY, to.x, midY, to.x, to.y];
-      }
-    }
-  }, []);
-
-  // Get line dash pattern based on style
-  const getLineDash = useCallback((style?: 'solid' | 'dashed' | 'dotted'): number[] => {
-    switch (style) {
-      case 'dashed':
-        return [10, 5];
-      case 'dotted':
-        return [3, 3];
-      default:
-        return [];
-    }
-  }, []);
-
-  // Get edge intersection point for a shape
+  // Get edge intersection point for a shape (moved before getConnectionPoint)
   const getShapeEdgePoint = useCallback((shape: Shape, targetPoint: { x: number; y: number }) => {
     const center = {
       x: shape.x + shape.width / 2,
@@ -771,6 +690,87 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     }
 
     return edgePoint;
+  }, []);
+
+  // Get connection point coordinates for a shape
+  const getConnectionPoint = useCallback((shape: Shape, point: 'top' | 'right' | 'bottom' | 'left' | 'auto', targetShape?: Shape) => {
+    const center = getShapeCenter(shape);
+
+    if (point === 'auto' && targetShape) {
+      // Auto: use edge point toward target
+      const targetCenter = getShapeCenter(targetShape);
+      return getShapeEdgePoint(shape, targetCenter);
+    }
+
+    // For specific connection points
+    switch (point) {
+      case 'top':
+        return { x: center.x, y: shape.y };
+      case 'right':
+        return { x: shape.x + shape.width, y: center.y };
+      case 'bottom':
+        return { x: center.x, y: shape.y + shape.height };
+      case 'left':
+        return { x: shape.x, y: center.y };
+      default:
+        return center;
+    }
+  }, [getShapeCenter, getShapeEdgePoint]);
+
+  // Get all 4 connection points for a shape
+  const getConnectionPoints = useCallback((shape: Shape) => {
+    const center = getShapeCenter(shape);
+    return {
+      top: { x: center.x, y: shape.y },
+      right: { x: shape.x + shape.width, y: center.y },
+      bottom: { x: center.x, y: shape.y + shape.height },
+      left: { x: shape.x, y: center.y },
+    };
+  }, [getShapeCenter]);
+
+  // Calculate orthogonal (elbow) path between two points
+  const getOrthogonalPath = useCallback((
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    fromPoint?: 'top' | 'right' | 'bottom' | 'left' | 'auto',
+    toPoint?: 'top' | 'right' | 'bottom' | 'left' | 'auto'
+  ): number[] => {
+    // Simple orthogonal routing with one bend point
+    const midX = (from.x + to.x) / 2;
+    const midY = (from.y + to.y) / 2;
+
+    // Determine routing direction based on connection points
+    if (fromPoint === 'left' || fromPoint === 'right' || toPoint === 'left' || toPoint === 'right') {
+      // Horizontal first, then vertical
+      return [from.x, from.y, midX, from.y, midX, to.y, to.x, to.y];
+    } else if (fromPoint === 'top' || fromPoint === 'bottom' || toPoint === 'top' || toPoint === 'bottom') {
+      // Vertical first, then horizontal
+      return [from.x, from.y, from.x, midY, to.x, midY, to.x, to.y];
+    } else {
+      // Auto: choose based on distance
+      const dx = Math.abs(to.x - from.x);
+      const dy = Math.abs(to.y - from.y);
+
+      if (dx > dy) {
+        // More horizontal distance - go horizontal first
+        return [from.x, from.y, midX, from.y, midX, to.y, to.x, to.y];
+      } else {
+        // More vertical distance - go vertical first
+        return [from.x, from.y, from.x, midY, to.x, midY, to.x, to.y];
+      }
+    }
+  }, []);
+
+  // Get line dash pattern based on style
+  const getLineDash = useCallback((style?: 'solid' | 'dashed' | 'dotted'): number[] => {
+    switch (style) {
+      case 'dashed':
+        return [10, 5];
+      case 'dotted':
+        return [3, 3];
+      default:
+        return [];
+    }
   }, []);
 
   // Render connectors
