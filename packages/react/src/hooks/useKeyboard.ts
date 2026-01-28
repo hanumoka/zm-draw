@@ -39,6 +39,10 @@ interface UseKeyboardOptions {
   onDuplicate?: () => void;
   /** External move function */
   onMove?: (dx: number, dy: number) => void;
+  /** External save function */
+  onSave?: () => void;
+  /** External load function */
+  onLoad?: () => void;
   /** Whether keyboard handling is enabled */
   enabled?: boolean;
 }
@@ -50,7 +54,8 @@ const MOVE_STEP_SHIFT = 10;
 /**
  * Hook for handling keyboard shortcuts
  * Supports: Delete, Escape, Space (pan), Ctrl+Z (undo), Ctrl+Y/Shift+Z (redo),
- * Ctrl+C (copy), Ctrl+V (paste), Ctrl+D (duplicate), Arrow keys (move)
+ * Ctrl+C (copy), Ctrl+V (paste), Ctrl+D (duplicate), Ctrl+S (save), Ctrl+O (load),
+ * V (select), R (rectangle), O (ellipse), Arrow keys (move)
  */
 export function useKeyboard(options: UseKeyboardOptions = {}) {
   const {
@@ -68,6 +73,8 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     onPaste,
     onDuplicate,
     onMove,
+    onSave,
+    onLoad,
     enabled = true,
   } = options;
 
@@ -79,6 +86,7 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
   const addShape = useCanvasStore((s) => s.addShape);
   const deleteShape = useCanvasStore((s) => s.deleteShape);
   const deleteConnectorsByShapeId = useCanvasStore((s) => s.deleteConnectorsByShapeId);
+  const setTool = useToolStore((s) => s.setTool);
   const resetTool = useToolStore((s) => s.resetTool);
   const cancelConnecting = useToolStore((s) => s.cancelConnecting);
   const stopEditing = useToolStore((s) => s.stopEditing);
@@ -259,6 +267,10 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
           if (modKey) {
             e.preventDefault();
             handlePaste();
+          } else {
+            // V without modifier: select tool
+            e.preventDefault();
+            setTool('select');
           }
           break;
 
@@ -309,6 +321,35 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
           e.preventDefault();
           handleMove(e.shiftKey ? MOVE_STEP_SHIFT : MOVE_STEP, 0);
           break;
+
+        // Tool shortcuts (only without modifier keys)
+        case 'r':
+        case 'R':
+          if (!modKey) {
+            e.preventDefault();
+            setTool('rectangle');
+          }
+          break;
+
+        case 'o':
+        case 'O':
+          if (modKey) {
+            e.preventDefault();
+            onLoad?.();
+          } else {
+            e.preventDefault();
+            setTool('ellipse');
+          }
+          break;
+
+        // File shortcuts
+        case 's':
+        case 'S':
+          if (modKey) {
+            e.preventDefault();
+            onSave?.();
+          }
+          break;
       }
     };
 
@@ -336,6 +377,9 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     handleMove,
     onUndo,
     onRedo,
+    onSave,
+    onLoad,
+    setTool,
     setIsPanning,
   ]);
 

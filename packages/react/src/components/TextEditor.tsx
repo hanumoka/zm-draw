@@ -18,6 +18,7 @@ export interface TextEditorProps {
 /**
  * Text editing overlay for shapes
  * Positioned over the shape to allow inline text editing
+ * Supports rotation to match rotated shapes
  */
 export function TextEditor({
   shape,
@@ -26,6 +27,14 @@ export function TextEditor({
   onSubmit,
   onCancel,
 }: TextEditorProps) {
+  const rotation = shape.rotation || 0;
+  const scaledWidth = shape.width * stageScale;
+  const scaledHeight = shape.height * stageScale;
+
+  // Calculate the center position of the shape
+  const centerX = shape.x * stageScale + stagePosition.x + scaledWidth / 2;
+  const centerY = shape.y * stageScale + stagePosition.y + scaledHeight / 2;
+
   return (
     <input
       type="text"
@@ -33,10 +42,11 @@ export function TextEditor({
       defaultValue={shape.text || ''}
       style={{
         position: 'absolute',
-        left: shape.x * stageScale + stagePosition.x,
-        top: shape.y * stageScale + stagePosition.y,
-        width: shape.width * stageScale,
-        height: shape.height * stageScale,
+        // Position from center, then offset by half width/height
+        left: centerX - scaledWidth / 2,
+        top: centerY - scaledHeight / 2,
+        width: scaledWidth,
+        height: scaledHeight,
         fontSize: (shape.fontSize || 14) * stageScale,
         fontFamily: shape.fontFamily || 'Arial',
         textAlign: 'center',
@@ -46,6 +56,9 @@ export function TextEditor({
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
         color: '#000000',
         padding: 0,
+        // Apply rotation around the center
+        transform: `rotate(${rotation}deg)`,
+        transformOrigin: 'center center',
       }}
       onBlur={(e) => onSubmit(e.target.value)}
       onKeyDown={(e) => {

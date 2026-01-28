@@ -4,7 +4,8 @@ import dynamic from 'next/dynamic';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { TooltipProvider, Tooltip } from '../components/Tooltip';
 import { PanelResizer } from '../components/PanelResizer';
-import type { DrawCanvasHandle } from '@zm-draw/react';
+import type { DrawCanvasHandle, ToolType } from '@zm-draw/react';
+import { useToolStore } from '@zm-draw/react';
 
 // Konva requires window, so we need to dynamically import
 const DrawCanvas = dynamic(
@@ -346,6 +347,15 @@ export default function Home() {
   const [canvasOffset, setCanvasOffset] = useState({ left: 0, top: 0 });
   const [viewport, setViewport] = useState({ scale: 1, position: { x: 0, y: 0 } });
 
+  // Tool store for shape panel buttons
+  const setTool = useToolStore((s) => s.setTool);
+  const currentTool = useToolStore((s) => s.tool);
+
+  // Handle shape button click - set tool for drawing
+  const handleShapeClick = useCallback((toolType: ToolType) => {
+    setTool(toolType);
+  }, [setTool]);
+
   // Update canvas offset when panels change or window resizes
   useEffect(() => {
     const updateOffset = () => {
@@ -437,7 +447,7 @@ export default function Home() {
                 {/* Connectors Section */}
                 <CollapsibleSection title="Connectors">
                   <div className="zm-shapes-grid">
-                    <ShapeButton icon={ShapeIcons.arrowRight} label="Arrow" />
+                    <ShapeButton icon={ShapeIcons.arrowRight} label="Arrow (Connector)" onClick={() => handleShapeClick('connector')} active={currentTool === 'connector'} />
                     <ShapeButton icon={ShapeIcons.arrowBidirectional} label="Bidirectional Arrow" />
                     <ShapeButton icon={ShapeIcons.arrowElbow} label="Elbow Arrow" />
                     <ShapeButton icon={ShapeIcons.line} label="Line" />
@@ -447,13 +457,13 @@ export default function Home() {
                 {/* Basic Shapes Section */}
                 <CollapsibleSection title="Basic">
                   <div className="zm-shapes-grid">
-                    <ShapeButton icon={ShapeIcons.rectangle} label="Rectangle" />
+                    <ShapeButton icon={ShapeIcons.rectangle} label="Rectangle (R)" onClick={() => handleShapeClick('rectangle')} active={currentTool === 'rectangle'} />
                     <ShapeButton icon={ShapeIcons.roundedRect} label="Rounded Rectangle" />
-                    <ShapeButton icon={ShapeIcons.circle} label="Circle" />
-                    <ShapeButton icon={ShapeIcons.ellipse} label="Ellipse" />
+                    <ShapeButton icon={ShapeIcons.circle} label="Circle" onClick={() => handleShapeClick('ellipse')} active={currentTool === 'ellipse'} />
+                    <ShapeButton icon={ShapeIcons.ellipse} label="Ellipse (O)" onClick={() => handleShapeClick('ellipse')} active={currentTool === 'ellipse'} />
                     <ShapeButton icon={ShapeIcons.triangle} label="Triangle" />
                     <ShapeButton icon={ShapeIcons.triangleDown} label="Triangle Down" />
-                    <ShapeButton icon={ShapeIcons.diamond} label="Diamond" />
+                    <ShapeButton icon={ShapeIcons.diamond} label="Diamond" onClick={() => handleShapeClick('diamond')} active={currentTool === 'diamond'} />
                     <ShapeButton icon={ShapeIcons.pentagon} label="Pentagon" />
                     <ShapeButton icon={ShapeIcons.hexagon} label="Hexagon" />
                     <ShapeButton icon={ShapeIcons.star} label="Star" />
@@ -464,9 +474,9 @@ export default function Home() {
                 {/* Flowchart Section */}
                 <CollapsibleSection title="Flowchart">
                   <div className="zm-shapes-grid">
-                    <ShapeButton icon={ShapeIcons.process} label="Process" />
-                    <ShapeButton icon={ShapeIcons.decision} label="Decision" />
-                    <ShapeButton icon={ShapeIcons.terminal} label="Terminal" />
+                    <ShapeButton icon={ShapeIcons.process} label="Process" onClick={() => handleShapeClick('rectangle')} active={currentTool === 'rectangle'} />
+                    <ShapeButton icon={ShapeIcons.decision} label="Decision" onClick={() => handleShapeClick('diamond')} active={currentTool === 'diamond'} />
+                    <ShapeButton icon={ShapeIcons.terminal} label="Terminal" onClick={() => handleShapeClick('ellipse')} active={currentTool === 'ellipse'} />
                     <ShapeButton icon={ShapeIcons.document} label="Document" />
                     <ShapeButton icon={ShapeIcons.database} label="Database" />
                     <ShapeButton icon={ShapeIcons.parallelogram} label="Data" />

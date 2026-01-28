@@ -1,6 +1,6 @@
 # zm-draw 진행상황
 
-> 최종 업데이트: 2026-01-25 (커넥터 분석 및 고도화 계획 추가)
+> 최종 업데이트: 2026-01-28 (코드 품질 개선)
 
 ---
 
@@ -102,9 +102,12 @@
 - [x] Paste (Ctrl+V)
 - [x] Duplicate (Ctrl+D)
 - [x] 화살표 키 이동 (1px, Shift+화살표 10px)
+- [x] 도구 단축키 V(선택), R(사각형), O(타원) ✅ 2026-01-28
+- [x] 파일 단축키 Ctrl+S(저장), Ctrl+O(불러오기) ✅ 2026-01-28
 
 ### 1.6 성능 최적화 ⏳
 
+- [x] 그리드 sceneFunc 최적화 (수천 Circle → 단일 Shape) ✅ 2026-01-28
 - [ ] 드래그 레이어 분리 (dragstart → dragLayer, dragend → mainLayer)
 
 ---
@@ -386,6 +389,7 @@
 |--------|------|------|
 | 레이어 분리 (3-5개) | ✅ | ✅ 5개 |
 | listening: false | ✅ | ✅ bg/grid |
+| 그리드 sceneFunc | ✅ | ✅ 단일 Shape로 최적화 |
 | 드래그 레이어 분리 | ✅ | ❌ |
 | Shape 캐싱 | 복잡 도형 | ❌ |
 
@@ -399,11 +403,14 @@
 | ~~**Copy/Paste**~~ | ~~기본 기능 누락~~ | ~~Phase 1~~ | ✅ 해결됨 |
 | ~~**커넥터 화살촉 가려짐**~~ | ~~중심→중심 연결~~ | ~~Phase 1.5~~ | ✅ 해결됨 |
 | ~~**커넥터 선택 불가**~~ | ~~클릭 이벤트 없음~~ | ~~Phase 1.5~~ | ✅ 해결됨 |
+| ~~**Diamond 비율**~~ | ~~width≠height 시 시각적 이슈~~ | ~~2026-01-28~~ | ✅ 해결됨 |
+| ~~**메모리 누수**~~ | ~~Stage cleanup 미흡~~ | ~~2026-01-28~~ | ✅ 해결됨 |
+| ~~**History 초기 상태**~~ | ~~첫 Undo 동작 안 함~~ | ~~2026-01-28~~ | ✅ 해결됨 |
+| ~~**그리드 성능**~~ | ~~수천 개 노드 생성~~ | ~~2026-01-28~~ | ✅ 해결됨 |
 | 드래그 레이어 미분리 | 드래그 시 전체 레이어 redraw | Phase 4 | 중 |
 | react-colorful 설치 | Color Picker 필요 | Phase 3 | 높음 |
 | Radix 추가 컴포넌트 | Slider, Dropdown 등 | Phase 3 | 높음 |
 | shapes/connectors 마이그레이션 | props 연동 필요 | 선택적 | 낮음 |
-| Diamond 비율 | width≠height 시 시각적 이슈 | Phase 5 | 낮음 |
 
 ---
 
@@ -431,6 +438,8 @@
 
 | 날짜 | 커밋 | 설명 |
 |------|------|------|
+| 2026-01-28 | e6a55a9 | refactor: Code quality improvements and bug fixes |
+| 2026-01-25 | 58bce3d | docs: Update documentation with Phase 2.5 completion |
 | 2026-01-25 | 2a62d70 | fix: Context menu follows shape during zoom/pan |
 | 2026-01-25 | e187394 | feat(phase2.5): Add selection context menu |
 | 2026-01-25 | cde0ce6 | feat(phase2.5): Add property panel editing |

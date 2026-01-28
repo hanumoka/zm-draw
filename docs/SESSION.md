@@ -1,6 +1,6 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-25 (Phase 2.5 완료)
+> 최종 업데이트: 2026-01-28 (코드 품질 개선)
 
 ---
 
@@ -9,7 +9,30 @@
 **Phase**: Phase 2.5 완료 → Phase 3 준비
 **진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Figma 스타일 55%
 
-### 마지막 작업 (2026-01-25)
+### 마지막 작업 (2026-01-28)
+
+- **코드 심층 분석 및 품질 개선** ✅
+  - 전체 코드베이스 리뷰 및 이슈 분류 (P0~P3)
+
+- **P0 (심각) 버그 수정** ✅
+  - **메모리 누수 수정**: Stage cleanup 시 모든 레이어 `destroyChildren()` 호출
+  - **History 초기 상태**: 초기 상태를 history에 저장하여 첫 번째 Undo 정상 동작
+
+- **P1 (성능) 개선** ✅
+  - **그리드 성능 최적화**: 수천 개 Circle 노드 → `sceneFunc` 단일 Shape로 변경
+
+- **P2 (버그) 수정** ✅
+  - **TextEditor rotation**: 회전된 도형에서 텍스트 편집 시 CSS transform 적용
+  - **Diamond 비율**: `RegularPolygon` → `Konva.Line`으로 변경, width≠height 지원
+  - **Undo/Redo selection**: `setSelectedId(null)` → `clearSelection()` 변경
+  - **Shapes 패널 연결**: 도형 버튼 클릭 시 해당 도구로 전환 (onClick 연결)
+
+- **P3 (코드 품질) 개선** ✅
+  - **중복 코드 정리**: `generateId`, `defaultShapeProps`를 canvasStore에서 import
+  - **단축키 추가**: V(선택), R(사각형), O(타원), Ctrl+S(저장), Ctrl+O(불러오기)
+  - **단축키 버그 수정**: switch문 case 'v' 중복 정의 문제 해결
+
+### 이전 작업 (2026-01-25)
 
 - **Phase 2.5: 속성 패널 편집 + 컨텍스트 메뉴** ✅ 완료
   - `DrawCanvasHandle` 인터페이스 추가 (forwardRef + useImperativeHandle)
@@ -58,8 +81,8 @@
 ### Git 상태
 
 - **브랜치**: main
-- **원격**: origin/main (동기화됨)
-- **마지막 커밋**: `2a62d70 fix: Context menu follows shape during zoom/pan`
+- **원격**: origin/main
+- **마지막 커밋**: `e6a55a9 refactor: Code quality improvements and bug fixes`
 
 ---
 

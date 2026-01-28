@@ -7,6 +7,7 @@ import { useKeyboard } from '../hooks/useKeyboard';
 import { useToolStore } from '../stores/toolStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useViewportStore } from '../stores/viewportStore';
+import { generateId, defaultShapeProps } from '../stores/canvasStore';
 import { Toolbar } from './Toolbar';
 import { TextEditor } from './TextEditor';
 
@@ -66,22 +67,6 @@ export interface DrawCanvasProps {
   onViewportChange?: (viewport: ViewportInfo) => void;
 }
 
-// Generate unique ID
-const generateId = () => `shape-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
-// Default shape properties
-const defaultShapeProps = {
-  width: 100,
-  height: 60,
-  fill: '#3b82f6',
-  stroke: '#1d4ed8',
-  strokeWidth: 2,
-  text: '',
-  fontSize: 14,
-  fontFamily: 'Arial',
-  textColor: '#ffffff',
-};
-
 /**
  * Main drawing canvas component with infinite canvas support
  * Uses vanilla Konva for React 19 compatibility
@@ -132,6 +117,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const historyRef = useRef<{ shapes: Shape[]; connectors: Connector[] }[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const isUndoRedoRef = useRef(false);
+  const historyInitializedRef = useRef(false);
 
   const connectorsLayerRef = useRef<Konva.Layer | null>(null);
   const selectionLayerRef = useRef<Konva.Layer | null>(null);
@@ -162,6 +148,19 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     });
   }, []);
 
+  // Initialize history with initial state (only once)
+  useEffect(() => {
+    if (historyInitializedRef.current) return;
+    historyInitializedRef.current = true;
+
+    // Save initial state to history so undo can return to it
+    historyRef.current.push({
+      shapes: JSON.parse(JSON.stringify(shapes)),
+      connectors: JSON.parse(JSON.stringify(connectors)),
+    });
+    setHistoryIndex(0);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Undo
   const undo = useCallback(() => {
     if (historyIndex <= 0) return;
@@ -173,8 +172,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     const state = historyRef.current[newIndex];
     setShapes(JSON.parse(JSON.stringify(state.shapes)));
     setConnectors(JSON.parse(JSON.stringify(state.connectors)));
-    setSelectedId(null);
-  }, [historyIndex]);
+    clearSelection();
+  }, [historyIndex, clearSelection]);
 
   // Redo
   const redo = useCallback(() => {
@@ -187,8 +186,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     const state = historyRef.current[newIndex];
     setShapes(JSON.parse(JSON.stringify(state.shapes)));
     setConnectors(JSON.parse(JSON.stringify(state.connectors)));
-    setSelectedId(null);
-  }, [historyIndex]);
+    clearSelection();
+  }, [historyIndex, clearSelection]);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < historyRef.current.length - 1;
@@ -236,57 +235,72 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     input.click();
   }, []);
 
+  // Grid shape ref for performance optimization
+  const gridShapeRef = useRef<Konva.Shape | null>(null);
+
   // Draw infinite dotted grid based on viewport (Figma style)
+  // Uses a single Konva.Shape with sceneFunc for performance (instead of thousands of Circle nodes)
   const drawInfiniteGrid = useCallback(() => {
     const layer = gridLayerRef.current;
     const stage = stageRef.current;
     if (!layer || !stage) return;
-
-    layer.destroyChildren();
-
-    const stagePos = stage.position();
-    const stageScale = stage.scaleX();
-
-    // Use actual stage dimensions (not state, which might be stale)
-    const viewportWidth = stage.width();
-    const viewportHeight = stage.height();
-
-    const startX = -stagePos.x / stageScale;
-    const startY = -stagePos.y / stageScale;
-    const endX = startX + viewportWidth / stageScale;
-    const endY = startY + viewportHeight / stageScale;
 
     // Determine grid color based on background brightness
     const isDark = backgroundColor.startsWith('#') &&
       parseInt(backgroundColor.slice(1, 3), 16) < 128;
     const gridColor = isDark ? '#4a4a4a' : '#d1d5db';
 
-    // Adjust grid size based on zoom level for better visibility
-    let effectiveGridSize = gridSize;
-    if (stageScale < 0.5) effectiveGridSize = gridSize * 2;
-    if (stageScale < 0.25) effectiveGridSize = gridSize * 4;
-    if (stageScale > 2) effectiveGridSize = gridSize / 2;
-
-    // Calculate grid dot positions
-    const firstX = Math.floor(startX / effectiveGridSize) * effectiveGridSize;
-    const firstY = Math.floor(startY / effectiveGridSize) * effectiveGridSize;
-
-    // Dot size scales inversely with zoom for consistent appearance
-    const dotRadius = Math.max(1, 1.5 / stageScale);
-
-    // Draw dots at grid intersections (Figma-style dotted grid)
-    for (let x = firstX; x <= endX + effectiveGridSize; x += effectiveGridSize) {
-      for (let y = firstY; y <= endY + effectiveGridSize; y += effectiveGridSize) {
-        layer.add(new Konva.Circle({
-          x: x,
-          y: y,
-          radius: dotRadius,
-          fill: gridColor,
-          listening: false,
-        }));
-      }
+    // Remove existing grid shape if any
+    if (gridShapeRef.current) {
+      gridShapeRef.current.destroy();
+      gridShapeRef.current = null;
     }
 
+    // Create a single shape that draws all dots using sceneFunc
+    const gridShape = new Konva.Shape({
+      sceneFunc: (context, shape) => {
+        const stageRef = shape.getStage();
+        if (!stageRef) return;
+
+        const stagePos = stageRef.position();
+        const stageScale = stageRef.scaleX();
+        const viewportWidth = stageRef.width();
+        const viewportHeight = stageRef.height();
+
+        const startX = -stagePos.x / stageScale;
+        const startY = -stagePos.y / stageScale;
+        const endX = startX + viewportWidth / stageScale;
+        const endY = startY + viewportHeight / stageScale;
+
+        // Adjust grid size based on zoom level for better visibility
+        let effectiveGridSize = gridSize;
+        if (stageScale < 0.5) effectiveGridSize = gridSize * 2;
+        if (stageScale < 0.25) effectiveGridSize = gridSize * 4;
+        if (stageScale > 2) effectiveGridSize = gridSize / 2;
+
+        // Calculate grid dot positions
+        const firstX = Math.floor(startX / effectiveGridSize) * effectiveGridSize;
+        const firstY = Math.floor(startY / effectiveGridSize) * effectiveGridSize;
+
+        // Dot size scales inversely with zoom for consistent appearance
+        const dotRadius = Math.max(1, 1.5 / stageScale);
+
+        // Draw all dots in a single path for performance
+        context.beginPath();
+        for (let x = firstX; x <= endX + effectiveGridSize; x += effectiveGridSize) {
+          for (let y = firstY; y <= endY + effectiveGridSize; y += effectiveGridSize) {
+            context.moveTo(x + dotRadius, y);
+            context.arc(x, y, dotRadius, 0, Math.PI * 2);
+          }
+        }
+        context.fillStyle = gridColor;
+        context.fill();
+      },
+      listening: false,
+    });
+
+    gridShapeRef.current = gridShape;
+    layer.add(gridShape);
     layer.batchDraw();
   }, [backgroundColor, gridSize]);
 
@@ -407,12 +421,18 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           });
           break;
         case 'diamond':
-          konvaShape = new Konva.RegularPolygon({
-            ...shapeConfig,
-            x: shape.width / 2,
-            y: shape.height / 2,
-            sides: 4,
-            radius: Math.min(shape.width, shape.height) / 2,
+          // Use Konva.Line for diamond to support non-square dimensions
+          konvaShape = new Konva.Line({
+            points: [
+              shape.width / 2, 0,              // top
+              shape.width, shape.height / 2,   // right
+              shape.width / 2, shape.height,   // bottom
+              0, shape.height / 2,             // left
+            ],
+            closed: true,
+            fill: shape.fill,
+            stroke: shape.stroke,
+            strokeWidth: shape.strokeWidth,
           });
           break;
         default:
@@ -813,6 +833,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     onPaste: pasteShape,
     onDuplicate: duplicateSelected,
     onMove: moveSelected,
+    onSave: exportToJson,
+    onLoad: importFromJson,
   });
 
   // Handle container resize
@@ -976,14 +998,44 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     setCanvasVersion((v) => v + 1);
 
     return () => {
+      // Remove all event listeners from stage
+      stage.off();
+
+      // Destroy transformer first (before layer cleanup)
+      if (transformerRef.current) {
+        transformerRef.current.destroy();
+        transformerRef.current = null;
+      }
+
+      // Destroy all children in each layer to prevent memory leaks
+      if (shapesLayerRef.current) {
+        shapesLayerRef.current.destroyChildren();
+        shapesLayerRef.current = null;
+      }
+      if (connectorsLayerRef.current) {
+        connectorsLayerRef.current.destroyChildren();
+        connectorsLayerRef.current = null;
+      }
+      if (selectionLayerRef.current) {
+        selectionLayerRef.current.destroyChildren();
+        selectionLayerRef.current = null;
+      }
+      if (gridShapeRef.current) {
+        gridShapeRef.current.destroy();
+        gridShapeRef.current = null;
+      }
+      if (gridLayerRef.current) {
+        gridLayerRef.current.destroyChildren();
+        gridLayerRef.current = null;
+      }
+      if (bgLayerRef.current) {
+        bgLayerRef.current.destroyChildren();
+        bgLayerRef.current = null;
+      }
+
+      // Finally destroy the stage
       stage.destroy();
       stageRef.current = null;
-      shapesLayerRef.current = null;
-      connectorsLayerRef.current = null;
-      selectionLayerRef.current = null;
-      transformerRef.current = null;
-      bgLayerRef.current = null;
-      gridLayerRef.current = null;
     };
   }, [backgroundColor, showGrid, gridSize, onReady]);
 
