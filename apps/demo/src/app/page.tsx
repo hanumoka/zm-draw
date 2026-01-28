@@ -435,6 +435,8 @@ export default function Home() {
   const [selectedConnector, setSelectedConnector] = useState<Connector | null>(null);
   const [rightPanelTab, setRightPanelTab] = useState<'design' | 'layers'>('design');
   const [shapes, setShapes] = useState<Shape[]>([]);
+  const [editingLayerName, setEditingLayerName] = useState<string | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState('');
 
   // Tool store for shape panel buttons
   const setTool = useToolStore((s) => s.setTool);
@@ -492,6 +494,30 @@ export default function Home() {
     setShapes(prev => prev.map(s =>
       s.id === shapeId ? { ...s, locked: !s.locked } : s
     ));
+  }, []);
+
+  // Start editing layer name
+  const handleStartEditName = useCallback((shapeId: string, currentName: string) => {
+    setEditingLayerName(shapeId);
+    setEditingNameValue(currentName);
+  }, []);
+
+  // Save layer name
+  const handleSaveLayerName = useCallback(() => {
+    if (editingLayerName && editingNameValue.trim()) {
+      canvasRef.current?.updateShape(editingLayerName, { name: editingNameValue.trim() });
+      setShapes(prev => prev.map(s =>
+        s.id === editingLayerName ? { ...s, name: editingNameValue.trim() } : s
+      ));
+    }
+    setEditingLayerName(null);
+    setEditingNameValue('');
+  }, [editingLayerName, editingNameValue]);
+
+  // Cancel layer name editing
+  const handleCancelEditName = useCallback(() => {
+    setEditingLayerName(null);
+    setEditingNameValue('');
   }, []);
 
   // Handle shape button click - set tool for drawing
@@ -826,7 +852,31 @@ export default function Home() {
                             {shape.locked ? <LockIcon /> : <UnlockIcon />}
                           </button>
                           <span className="zm-layer-icon">{getShapeTypeIcon(shape.type)}</span>
-                          <span className="zm-layer-name">{getShapeDisplayName(shape, realIndex)}</span>
+                          {editingLayerName === shape.id ? (
+                            <input
+                              type="text"
+                              className="zm-layer-name-input"
+                              value={editingNameValue}
+                              onChange={(e) => setEditingNameValue(e.target.value)}
+                              onBlur={handleSaveLayerName}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveLayerName();
+                                if (e.key === 'Escape') handleCancelEditName();
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              autoFocus
+                            />
+                          ) : (
+                            <span
+                              className="zm-layer-name"
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                handleStartEditName(shape.id, getShapeDisplayName(shape, realIndex));
+                              }}
+                            >
+                              {getShapeDisplayName(shape, realIndex)}
+                            </span>
+                          )}
                         </div>
                       );
                     })}
