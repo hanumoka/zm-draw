@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { TooltipProvider, Tooltip } from '../components/Tooltip';
 import { PanelResizer } from '../components/PanelResizer';
 import { ColorPicker } from '../components/ColorPicker';
-import type { DrawCanvasHandle, ToolType } from '@zm-draw/react';
+import type { DrawCanvasHandle, ToolType, Connector } from '@zm-draw/react';
 import { useToolStore, useSelectionStore } from '@zm-draw/react';
 
 // Konva requires window, so we need to dynamically import
@@ -87,6 +87,52 @@ const SearchIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8" />
     <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+// Line style icons
+const LineSolidIcon = () => (
+  <svg width="24" height="16" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="2" y1="8" x2="22" y2="8" />
+  </svg>
+);
+
+const LineDashedIcon = () => (
+  <svg width="24" height="16" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 2">
+    <line x1="2" y1="8" x2="22" y2="8" />
+  </svg>
+);
+
+const LineDottedIcon = () => (
+  <svg width="24" height="16" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="2 2">
+    <line x1="2" y1="8" x2="22" y2="8" />
+  </svg>
+);
+
+// Routing icons
+const RoutingStraightIcon = () => (
+  <svg width="24" height="16" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="2" y1="12" x2="22" y2="4" />
+  </svg>
+);
+
+const RoutingOrthogonalIcon = () => (
+  <svg width="24" height="16" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="2 12 12 12 12 4 22 4" />
+  </svg>
+);
+
+// Arrow type icons
+const ArrowNoneIcon = () => (
+  <svg width="24" height="16" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="4" y1="8" x2="20" y2="8" />
+  </svg>
+);
+
+const ArrowEndIcon = () => (
+  <svg width="24" height="16" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="4" y1="8" x2="18" y2="8" />
+    <polyline points="14 4 18 8 14 12" fill="currentColor" />
   </svg>
 );
 
@@ -349,13 +395,15 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [canvasOffset, setCanvasOffset] = useState({ left: 0, top: 0 });
   const [viewport, setViewport] = useState({ scale: 1, position: { x: 0, y: 0 } });
+  const [selectedConnector, setSelectedConnector] = useState<Connector | null>(null);
 
   // Tool store for shape panel buttons
   const setTool = useToolStore((s) => s.setTool);
   const currentTool = useToolStore((s) => s.tool);
 
-  // Selection store for multi-select count
+  // Selection store for multi-select count and type
   const selectedIds = useSelectionStore((s) => s.selectedIds);
+  const selectionType = useSelectionStore((s) => s.selectionType);
 
   // Handle shape button click - set tool for drawing
   const handleShapeClick = useCallback((toolType: ToolType) => {
@@ -413,7 +461,30 @@ export default function Home() {
 
   const handleSelectionChange = useCallback((shape: SelectedShape | null) => {
     setSelectedShape(shape);
+    // Clear connector selection when shape is selected
+    if (shape) {
+      setSelectedConnector(null);
+    }
   }, []);
+
+  // Track connector selection
+  useEffect(() => {
+    if (selectionType === 'connector' && selectedIds.length > 0 && canvasRef.current) {
+      const connectors = canvasRef.current.getConnectors();
+      const connector = connectors.find(c => c.id === selectedIds[0]);
+      setSelectedConnector(connector || null);
+    } else if (selectionType !== 'connector') {
+      setSelectedConnector(null);
+    }
+  }, [selectionType, selectedIds]);
+
+  // Update connector property via canvas ref
+  const updateConnectorProperty = useCallback((property: string, value: string | number | boolean) => {
+    if (!selectedConnector || !canvasRef.current) return;
+    canvasRef.current.updateConnector(selectedConnector.id, { [property]: value });
+    // Update local state for immediate feedback
+    setSelectedConnector(prev => prev ? { ...prev, [property]: value } : null);
+  }, [selectedConnector]);
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
   const toggleLeftPanel = () => setIsLeftPanelOpen(!isLeftPanelOpen);
@@ -766,6 +837,141 @@ export default function Home() {
                     <span className="zm-draw-panel-label" style={{ minWidth: 'auto' }}>Type:</span>
                     <span style={{ fontSize: 12, color: 'var(--zm-text-secondary)' }}>
                       {selectedShape.type}
+                    </span>
+                  </div>
+                </div>
+              </>
+            ) : selectedConnector ? (
+              <>
+                {/* Connector Properties */}
+                {/* Line Style Section */}
+                <div className="zm-draw-panel-section">
+                  <div className="zm-draw-panel-section-title">Line Style</div>
+                  <div className="zm-draw-panel-row" style={{ gap: 4 }}>
+                    <Tooltip content="Solid">
+                      <button
+                        className={`zm-style-button ${(!selectedConnector.lineStyle || selectedConnector.lineStyle === 'solid') ? 'active' : ''}`}
+                        onClick={() => updateConnectorProperty('lineStyle', 'solid')}
+                      >
+                        <LineSolidIcon />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Dashed">
+                      <button
+                        className={`zm-style-button ${selectedConnector.lineStyle === 'dashed' ? 'active' : ''}`}
+                        onClick={() => updateConnectorProperty('lineStyle', 'dashed')}
+                      >
+                        <LineDashedIcon />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Dotted">
+                      <button
+                        className={`zm-style-button ${selectedConnector.lineStyle === 'dotted' ? 'active' : ''}`}
+                        onClick={() => updateConnectorProperty('lineStyle', 'dotted')}
+                      >
+                        <LineDottedIcon />
+                      </button>
+                    </Tooltip>
+                  </div>
+                </div>
+
+                {/* Routing Section */}
+                <div className="zm-draw-panel-section">
+                  <div className="zm-draw-panel-section-title">Routing</div>
+                  <div className="zm-draw-panel-row" style={{ gap: 4 }}>
+                    <Tooltip content="Straight">
+                      <button
+                        className={`zm-style-button ${(!selectedConnector.routing || selectedConnector.routing === 'straight') ? 'active' : ''}`}
+                        onClick={() => updateConnectorProperty('routing', 'straight')}
+                      >
+                        <RoutingStraightIcon />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Orthogonal (Elbow)">
+                      <button
+                        className={`zm-style-button ${selectedConnector.routing === 'orthogonal' ? 'active' : ''}`}
+                        onClick={() => updateConnectorProperty('routing', 'orthogonal')}
+                      >
+                        <RoutingOrthogonalIcon />
+                      </button>
+                    </Tooltip>
+                  </div>
+                </div>
+
+                {/* Arrow Section */}
+                <div className="zm-draw-panel-section">
+                  <div className="zm-draw-panel-section-title">Arrows</div>
+                  <div className="zm-draw-panel-row">
+                    <span className="zm-draw-panel-label">End</span>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <Tooltip content="No Arrow">
+                        <button
+                          className={`zm-style-button ${!selectedConnector.arrow && selectedConnector.arrowEnd !== 'arrow' ? 'active' : ''}`}
+                          onClick={() => {
+                            updateConnectorProperty('arrow', false);
+                            updateConnectorProperty('arrowEnd', 'none');
+                          }}
+                        >
+                          <ArrowNoneIcon />
+                        </button>
+                      </Tooltip>
+                      <Tooltip content="Arrow">
+                        <button
+                          className={`zm-style-button ${selectedConnector.arrow || selectedConnector.arrowEnd === 'arrow' ? 'active' : ''}`}
+                          onClick={() => {
+                            updateConnectorProperty('arrow', true);
+                            updateConnectorProperty('arrowEnd', 'arrow');
+                          }}
+                        >
+                          <ArrowEndIcon />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stroke Section */}
+                <div className="zm-draw-panel-section">
+                  <div className="zm-draw-panel-section-title">Stroke</div>
+                  <div className="zm-draw-panel-row">
+                    <ColorPicker
+                      color={selectedConnector.stroke}
+                      onChange={(color) => updateConnectorProperty('stroke', color)}
+                      label="Stroke color"
+                    />
+                    <input
+                      type="text"
+                      className="zm-draw-panel-input"
+                      value={selectedConnector.stroke}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
+                          updateConnectorProperty('stroke', value || '#000000');
+                        }
+                      }}
+                      placeholder="#6b7280"
+                    />
+                  </div>
+                  <div className="zm-draw-panel-row">
+                    <span className="zm-draw-panel-label">Width</span>
+                    <input
+                      type="number"
+                      className="zm-draw-panel-input"
+                      value={selectedConnector.strokeWidth}
+                      onChange={(e) => updateConnectorProperty('strokeWidth', Math.max(1, parseFloat(e.target.value) || 1))}
+                      min={1}
+                      step={1}
+                    />
+                  </div>
+                </div>
+
+                {/* Info Section */}
+                <div className="zm-draw-panel-section">
+                  <div className="zm-draw-panel-section-title">Info</div>
+                  <div className="zm-draw-panel-row">
+                    <span className="zm-draw-panel-label" style={{ minWidth: 'auto' }}>Type:</span>
+                    <span style={{ fontSize: 12, color: 'var(--zm-text-secondary)' }}>
+                      Connector
                     </span>
                   </div>
                 </div>

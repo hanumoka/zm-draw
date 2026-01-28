@@ -212,6 +212,33 @@ body {
   border-color: var(--zm-accent);
 }
 
+/* Style Buttons (for connector properties) */
+.zm-style-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+  background: var(--zm-bg-tertiary);
+  border: 1px solid var(--zm-border);
+  border-radius: 4px;
+  color: var(--zm-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.zm-style-button:hover {
+  background: var(--zm-bg-hover);
+  border-color: var(--zm-border-hover);
+  color: var(--zm-text-primary);
+}
+
+.zm-style-button.active {
+  background: var(--zm-accent);
+  border-color: var(--zm-accent);
+  color: white;
+}
+
 /* Toolbar */
 .zm-draw-toolbar {
   display: flex;

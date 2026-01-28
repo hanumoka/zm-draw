@@ -48,6 +48,10 @@ export interface DrawCanvasHandle {
   duplicateSelected: () => void;
   /** Copy selected shape to clipboard */
   copySelected: () => void;
+  /** Get current connectors */
+  getConnectors: () => Connector[];
+  /** Update a connector's properties */
+  updateConnector: (id: string, updates: Partial<Connector>) => void;
 }
 
 export interface DrawCanvasProps {
@@ -976,6 +980,15 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     });
   }, [onShapesChange]);
 
+  // Update connector properties (for external use via ref)
+  const updateConnector = useCallback((id: string, updates: Partial<Connector>) => {
+    setConnectors((prev) =>
+      prev.map((c) =>
+        c.id === id ? { ...c, ...updates } : c
+      )
+    );
+  }, []);
+
   // Expose imperative methods via ref
   useImperativeHandle(ref, () => ({
     updateShape,
@@ -988,7 +1001,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     deleteSelected,
     duplicateSelected,
     copySelected,
-  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected]);
+    getConnectors: () => connectors,
+    updateConnector,
+  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector]);
 
   // Handle escape key
   const handleEscape = useCallback(() => {
