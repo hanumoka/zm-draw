@@ -23,6 +23,7 @@ export interface SelectedShapeInfo {
   fill: string;
   stroke: string;
   strokeWidth: number;
+  cornerRadius: number;
 }
 
 /** Viewport state for positioning overlays */
@@ -439,7 +440,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         default:
           konvaShape = new Konva.Rect({
             ...shapeConfig,
-            cornerRadius: 4,
+            cornerRadius: shape.cornerRadius ?? 0,
           });
       }
 
@@ -1067,6 +1068,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         fill: shape.fill,
         stroke: shape.stroke,
         strokeWidth: shape.strokeWidth,
+        cornerRadius: shape.cornerRadius ?? 0,
       });
     }
   }, [selectedId, shapes, onSelectionChange]);

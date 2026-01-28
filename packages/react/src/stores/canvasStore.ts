@@ -11,6 +11,7 @@ export const defaultShapeProps = {
   fill: '#3b82f6',
   stroke: '#1d4ed8',
   strokeWidth: 2,
+  cornerRadius: 0,
   text: '',
   fontSize: 14,
   fontFamily: 'Arial',

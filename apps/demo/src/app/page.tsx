@@ -25,6 +25,7 @@ interface SelectedShape {
   fill: string;
   stroke: string;
   strokeWidth: number;
+  cornerRadius: number;
 }
 
 // Icons as components
@@ -719,6 +720,24 @@ export default function Home() {
                     />
                   </div>
                 </div>
+
+                {/* Corner Radius Section - Only for rectangles */}
+                {selectedShape.type === 'rectangle' && (
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Corner Radius</div>
+                    <div className="zm-draw-panel-row">
+                      <span className="zm-draw-panel-label">R</span>
+                      <input
+                        type="number"
+                        className="zm-draw-panel-input"
+                        value={selectedShape.cornerRadius}
+                        onChange={(e) => updateShapeProperty('cornerRadius', Math.max(0, parseFloat(e.target.value) || 0))}
+                        min={0}
+                        step={1}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Type Info */}
                 <div className="zm-draw-panel-section">

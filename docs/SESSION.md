@@ -1,22 +1,23 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-28 (코드 품질 개선)
+> 최종 업데이트: 2026-01-28 (Phase 3 완료)
 
 ---
 
 ## 현재 상태
 
-**Phase**: Phase 2.5 완료 → Phase 3 준비
-**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Figma 스타일 55%
+**Phase**: Phase 3 완료 → Phase 2.6/3.5 준비
+**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Figma 스타일 60%
 
 ### 마지막 작업 (2026-01-28)
 
-- **Phase 3: Fill/Stroke 색상 편집** ✅ NEW
+- **Phase 3: 속성 패널 고급 완료** ✅ NEW
   - react-colorful + @radix-ui/react-popover 설치
   - ColorPicker 컴포넌트 생성
   - Fill 색상 편집 (팝업 + 텍스트 입력)
   - Stroke 색상 편집 (팝업 + 텍스트 입력)
   - Stroke Width 편집 추가
+  - **Corner Radius 편집** (rectangle 타입만)
   - packages/core konva 버전 10.0.0으로 통일
 
 - **zm-editor 통합 분석** ✅

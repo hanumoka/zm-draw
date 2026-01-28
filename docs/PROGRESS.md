@@ -227,7 +227,7 @@
 - [x] Position 섹션 (X, Y 입력) ✅ Phase 2.5에서 완료
 - [x] Size 섹션 (Width, Height 입력) ✅ Phase 2.5에서 완료
 - [x] Rotation 섹션 (각도 입력) ✅ Phase 2.5에서 완료
-- [ ] Corner Radius 섹션 (모서리 둥글기)
+- [x] Corner Radius 섹션 (모서리 둥글기) ✅ 2026-01-28
 - [x] Fill 섹션 (Color Picker) ✅ 2026-01-28
 - [x] Stroke 섹션 (색상, 두께) ✅ 2026-01-28
 
