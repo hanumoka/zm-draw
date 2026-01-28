@@ -409,12 +409,16 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     layer.destroyChildren();
 
     shapes.forEach((shape) => {
+      // Skip hidden shapes
+      if (shape.visible === false) return;
+
       const group = new Konva.Group({
         id: shape.id,
         x: shape.x,
         y: shape.y,
-        draggable: true,
+        draggable: !shape.locked, // Locked shapes can't be dragged
         rotation: shape.rotation || 0,
+        opacity: shape.opacity ?? 1,
       });
 
       const shapeConfig = {
@@ -501,6 +505,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       });
 
       group.on('click tap', (e) => {
+        // Locked shapes can't be selected (except for connectors)
+        if (shape.locked && tool !== 'connector') return;
+
         if (tool === 'connector') {
           if (!connectingFrom) {
             setConnectingFrom(shape.id);

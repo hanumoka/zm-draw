@@ -325,6 +325,31 @@ body {
   color: var(--zm-text-secondary);
 }
 
+/* Active states for visibility/lock buttons */
+.zm-layer-visibility.off {
+  color: var(--zm-text-tertiary);
+  opacity: 0.5;
+}
+
+.zm-layer-lock.on {
+  color: var(--zm-accent);
+}
+
+/* Hidden layer styling */
+.zm-layer-item.hidden-layer {
+  opacity: 0.5;
+}
+
+.zm-layer-item.hidden-layer .zm-layer-name {
+  text-decoration: line-through;
+  color: var(--zm-text-muted);
+}
+
+/* Locked layer styling */
+.zm-layer-item.locked-layer .zm-layer-icon {
+  color: var(--zm-text-muted);
+}
+
 .zm-layer-icon {
   font-size: 14px;
   color: var(--zm-text-secondary);

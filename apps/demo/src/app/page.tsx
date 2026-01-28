@@ -476,6 +476,24 @@ export default function Home() {
     return `${typeName} ${index + 1}`;
   }, []);
 
+  // Toggle shape visibility
+  const handleToggleVisibility = useCallback((shapeId: string, currentVisible?: boolean) => {
+    canvasRef.current?.updateShape(shapeId, { visible: currentVisible === false ? true : false });
+    // Update local shapes state for immediate UI feedback
+    setShapes(prev => prev.map(s =>
+      s.id === shapeId ? { ...s, visible: s.visible === false ? true : false } : s
+    ));
+  }, []);
+
+  // Toggle shape lock
+  const handleToggleLock = useCallback((shapeId: string, currentLocked?: boolean) => {
+    canvasRef.current?.updateShape(shapeId, { locked: !currentLocked });
+    // Update local shapes state for immediate UI feedback
+    setShapes(prev => prev.map(s =>
+      s.id === shapeId ? { ...s, locked: !s.locked } : s
+    ));
+  }, []);
+
   // Handle shape button click - set tool for drawing
   const handleShapeClick = useCallback((toolType: ToolType) => {
     setTool(toolType);
@@ -784,14 +802,28 @@ export default function Home() {
                       return (
                         <div
                           key={shape.id}
-                          className={`zm-layer-item ${isSelected ? 'selected' : ''}`}
+                          className={`zm-layer-item ${isSelected ? 'selected' : ''} ${shape.visible === false ? 'hidden-layer' : ''} ${shape.locked ? 'locked-layer' : ''}`}
                           onClick={() => handleLayerClick(shape.id)}
                         >
-                          <button className="zm-layer-visibility" title="Toggle visibility">
-                            <EyeIcon />
+                          <button
+                            className={`zm-layer-visibility ${shape.visible === false ? 'off' : ''}`}
+                            title={shape.visible === false ? "Show layer" : "Hide layer"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleVisibility(shape.id, shape.visible);
+                            }}
+                          >
+                            {shape.visible === false ? <EyeOffIcon /> : <EyeIcon />}
                           </button>
-                          <button className="zm-layer-lock" title="Toggle lock">
-                            <UnlockIcon />
+                          <button
+                            className={`zm-layer-lock ${shape.locked ? 'on' : ''}`}
+                            title={shape.locked ? "Unlock layer" : "Lock layer"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleLock(shape.id, shape.locked);
+                            }}
+                          >
+                            {shape.locked ? <LockIcon /> : <UnlockIcon />}
                           </button>
                           <span className="zm-layer-icon">{getShapeTypeIcon(shape.type)}</span>
                           <span className="zm-layer-name">{getShapeDisplayName(shape, realIndex)}</span>
