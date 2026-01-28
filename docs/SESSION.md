@@ -1,17 +1,41 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-28 (Phase 6 완료)
+> 최종 업데이트: 2026-01-28 (Phase 7 진행중)
 
 ---
 
 ## 현재 상태
 
-**Phase**: Phase 6 (정렬/분배 및 그룹핑) 완료 ✅
-**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Phase 2.6 100% / Phase 3.5 100% / Phase 4 100% / Phase 5 100% / Phase 6 100% / Figma 스타일 92%
+**Phase**: Phase 7 (고급 기능) 완료 ✅
+**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Phase 2.6 100% / Phase 3.5 100% / Phase 4 100% / Phase 5 100% / Phase 6 100% / Phase 7 100% / Figma 스타일 98%
 
 ### 마지막 작업 (2026-01-28)
 
-- **Phase 6: 정렬/분배/그룹핑** ✅ NEW
+- **Phase 7: Zoom Controls** ✅ NEW
+  - `setZoom()` - 줌 레벨 설정 (10%~500%)
+  - `zoomToFit()` - 모든 도형이 보이도록 줌
+  - `zoomTo100()` - 100% 줌 복귀
+  - 헤더에 줌 컨트롤 UI 추가 (+/- 버튼, % 표시)
+
+- **Phase 7: Grid Snap** ✅
+  - `snapToGrid` prop 추가
+  - 드래그 종료 시 그리드에 스냅
+  - 도형 생성 시 그리드에 스냅
+  - 헤더에 Grid Snap 토글 버튼 추가
+
+- **Phase 7: Smart Guides** ✅
+  - `showSmartGuides`, `snapToGuides` props 추가
+  - 드래그 중 다른 도형과 정렬 시 가이드라인 표시
+  - 좌/중/우, 상/중/하 정렬 감지
+  - 가이드에 자동 스냅 기능
+
+- **Phase 7: PNG/SVG Export** ✅
+  - `exportToPNG()` - 캔버스를 PNG로 내보내기
+  - `exportToSVG()` - 캔버스를 SVG로 내보내기
+  - 헤더에 Export 드롭다운 메뉴 추가
+  - 도형, 텍스트, 커넥터 모두 지원
+
+- **Phase 6: 정렬/분배/그룹핑** ✅
   - Select All (Ctrl+A) 키보드 단축키
   - 정렬: left/center/right/top/middle/bottom
   - 분배: horizontal/vertical (3개 이상 선택 시)

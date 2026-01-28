@@ -65,6 +65,10 @@ export interface DrawCanvasHandle {
   getConnectors: () => Connector[];
   /** Update a connector's properties */
   updateConnector: (id: string, updates: Partial<Connector>) => void;
+  /** Export canvas to PNG */
+  exportToPNG: (filename?: string) => void;
+  /** Export canvas to SVG */
+  exportToSVG: (filename?: string) => void;
   /** Align selected shapes */
   alignShapes: (type: AlignType) => void;
   /** Distribute selected shapes evenly */
@@ -73,6 +77,12 @@ export interface DrawCanvasHandle {
   groupSelected: () => void;
   /** Ungroup selected shapes */
   ungroupSelected: () => void;
+  /** Set zoom level (1 = 100%) */
+  setZoom: (scale: number) => void;
+  /** Zoom to fit all shapes in view */
+  zoomToFit: () => void;
+  /** Zoom to 100% */
+  zoomTo100: () => void;
 }
 
 export interface DrawCanvasProps {
@@ -82,6 +92,12 @@ export interface DrawCanvasProps {
   showGrid?: boolean;
   /** Grid size in pixels */
   gridSize?: number;
+  /** Snap shapes to grid */
+  snapToGrid?: boolean;
+  /** Show smart alignment guides when dragging shapes */
+  showSmartGuides?: boolean;
+  /** Snap to smart guides when enabled */
+  snapToGuides?: boolean;
   /** Initial shapes */
   initialShapes?: Shape[];
   /** Callback when shapes change */
@@ -102,6 +118,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   backgroundColor = '#ffffff',
   showGrid = true,
   gridSize = 20,
+  snapToGrid = false,
+  showSmartGuides = true,
+  snapToGuides = true,
   initialShapes = [],
   onShapesChange,
   onReady,
@@ -117,6 +136,12 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const [shapes, setShapes] = useState<Shape[]>(initialShapes);
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+
+  // Snap to grid helper function
+  const snapToGridValue = useCallback((value: number) => {
+    if (!snapToGrid) return value;
+    return Math.round(value / gridSize) * gridSize;
+  }, [snapToGrid, gridSize]);
 
   // Selection state from Zustand store
   const selectedIds = useSelectionStore((s) => s.selectedIds);
@@ -164,6 +189,188 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   // Connection points layer ref
   const connectionPointsLayerRef = useRef<Konva.Layer | null>(null);
   const [hoveredShapeId, setHoveredShapeId] = useState<string | null>(null);
+
+  // Smart guides layer ref and state
+  const guidesLayerRef = useRef<Konva.Layer | null>(null);
+  const [activeGuides, setActiveGuides] = useState<{ horizontal: number[]; vertical: number[] }>({ horizontal: [], vertical: [] });
+
+  // Smart guides threshold (in pixels)
+  const GUIDE_THRESHOLD = 5;
+
+  // Calculate smart guides for a dragging shape
+  const calculateSmartGuides = useCallback((
+    draggingShape: { x: number; y: number; width: number; height: number; id: string }
+  ) => {
+    const horizontal: number[] = [];
+    const vertical: number[] = [];
+    let snapX: number | null = null;
+    let snapY: number | null = null;
+
+    // Dragging shape edges
+    const dragLeft = draggingShape.x;
+    const dragRight = draggingShape.x + draggingShape.width;
+    const dragCenterX = draggingShape.x + draggingShape.width / 2;
+    const dragTop = draggingShape.y;
+    const dragBottom = draggingShape.y + draggingShape.height;
+    const dragCenterY = draggingShape.y + draggingShape.height / 2;
+
+    for (const shape of shapes) {
+      if (shape.id === draggingShape.id || shape.visible === false) continue;
+
+      // Other shape edges
+      const left = shape.x;
+      const right = shape.x + shape.width;
+      const centerX = shape.x + shape.width / 2;
+      const top = shape.y;
+      const bottom = shape.y + shape.height;
+      const centerY = shape.y + shape.height / 2;
+
+      // Vertical alignment (X axis)
+      // Left edge alignment
+      if (Math.abs(dragLeft - left) < GUIDE_THRESHOLD) {
+        vertical.push(left);
+        if (snapToGuides && snapX === null) snapX = left;
+      }
+      if (Math.abs(dragLeft - right) < GUIDE_THRESHOLD) {
+        vertical.push(right);
+        if (snapToGuides && snapX === null) snapX = right;
+      }
+      if (Math.abs(dragLeft - centerX) < GUIDE_THRESHOLD) {
+        vertical.push(centerX);
+        if (snapToGuides && snapX === null) snapX = centerX;
+      }
+      // Right edge alignment
+      if (Math.abs(dragRight - left) < GUIDE_THRESHOLD) {
+        vertical.push(left);
+        if (snapToGuides && snapX === null) snapX = left - draggingShape.width;
+      }
+      if (Math.abs(dragRight - right) < GUIDE_THRESHOLD) {
+        vertical.push(right);
+        if (snapToGuides && snapX === null) snapX = right - draggingShape.width;
+      }
+      if (Math.abs(dragRight - centerX) < GUIDE_THRESHOLD) {
+        vertical.push(centerX);
+        if (snapToGuides && snapX === null) snapX = centerX - draggingShape.width;
+      }
+      // Center alignment
+      if (Math.abs(dragCenterX - centerX) < GUIDE_THRESHOLD) {
+        vertical.push(centerX);
+        if (snapToGuides && snapX === null) snapX = centerX - draggingShape.width / 2;
+      }
+      if (Math.abs(dragCenterX - left) < GUIDE_THRESHOLD) {
+        vertical.push(left);
+        if (snapToGuides && snapX === null) snapX = left - draggingShape.width / 2;
+      }
+      if (Math.abs(dragCenterX - right) < GUIDE_THRESHOLD) {
+        vertical.push(right);
+        if (snapToGuides && snapX === null) snapX = right - draggingShape.width / 2;
+      }
+
+      // Horizontal alignment (Y axis)
+      // Top edge alignment
+      if (Math.abs(dragTop - top) < GUIDE_THRESHOLD) {
+        horizontal.push(top);
+        if (snapToGuides && snapY === null) snapY = top;
+      }
+      if (Math.abs(dragTop - bottom) < GUIDE_THRESHOLD) {
+        horizontal.push(bottom);
+        if (snapToGuides && snapY === null) snapY = bottom;
+      }
+      if (Math.abs(dragTop - centerY) < GUIDE_THRESHOLD) {
+        horizontal.push(centerY);
+        if (snapToGuides && snapY === null) snapY = centerY;
+      }
+      // Bottom edge alignment
+      if (Math.abs(dragBottom - top) < GUIDE_THRESHOLD) {
+        horizontal.push(top);
+        if (snapToGuides && snapY === null) snapY = top - draggingShape.height;
+      }
+      if (Math.abs(dragBottom - bottom) < GUIDE_THRESHOLD) {
+        horizontal.push(bottom);
+        if (snapToGuides && snapY === null) snapY = bottom - draggingShape.height;
+      }
+      if (Math.abs(dragBottom - centerY) < GUIDE_THRESHOLD) {
+        horizontal.push(centerY);
+        if (snapToGuides && snapY === null) snapY = centerY - draggingShape.height;
+      }
+      // Center alignment
+      if (Math.abs(dragCenterY - centerY) < GUIDE_THRESHOLD) {
+        horizontal.push(centerY);
+        if (snapToGuides && snapY === null) snapY = centerY - draggingShape.height / 2;
+      }
+      if (Math.abs(dragCenterY - top) < GUIDE_THRESHOLD) {
+        horizontal.push(top);
+        if (snapToGuides && snapY === null) snapY = top - draggingShape.height / 2;
+      }
+      if (Math.abs(dragCenterY - bottom) < GUIDE_THRESHOLD) {
+        horizontal.push(bottom);
+        if (snapToGuides && snapY === null) snapY = bottom - draggingShape.height / 2;
+      }
+    }
+
+    return {
+      guides: { horizontal: [...new Set(horizontal)], vertical: [...new Set(vertical)] },
+      snap: { x: snapX, y: snapY },
+    };
+  }, [shapes, snapToGuides]);
+
+  // Render smart guide lines
+  const renderGuideLines = useCallback(() => {
+    const layer = guidesLayerRef.current;
+    if (!layer) return;
+
+    layer.destroyChildren();
+
+    if (!showSmartGuides || (activeGuides.horizontal.length === 0 && activeGuides.vertical.length === 0)) {
+      layer.batchDraw();
+      return;
+    }
+
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    // Get viewport bounds for line extent
+    const viewportScale = stage.scaleX();
+    const viewportX = stage.x();
+    const viewportY = stage.y();
+    const width = stage.width();
+    const height = stage.height();
+
+    // Calculate visible area in canvas coordinates
+    const visibleLeft = -viewportX / viewportScale - 1000;
+    const visibleRight = (width - viewportX) / viewportScale + 1000;
+    const visibleTop = -viewportY / viewportScale - 1000;
+    const visibleBottom = (height - viewportY) / viewportScale + 1000;
+
+    // Draw horizontal guide lines
+    activeGuides.horizontal.forEach((y) => {
+      const line = new Konva.Line({
+        points: [visibleLeft, y, visibleRight, y],
+        stroke: '#f43f5e',
+        strokeWidth: 1 / viewportScale,
+        dash: [4 / viewportScale, 4 / viewportScale],
+      });
+      layer.add(line);
+    });
+
+    // Draw vertical guide lines
+    activeGuides.vertical.forEach((x) => {
+      const line = new Konva.Line({
+        points: [x, visibleTop, x, visibleBottom],
+        stroke: '#f43f5e',
+        strokeWidth: 1 / viewportScale,
+        dash: [4 / viewportScale, 4 / viewportScale],
+      });
+      layer.add(line);
+    });
+
+    layer.batchDraw();
+  }, [showSmartGuides, activeGuides]);
+
+  // Update guide lines when activeGuides change
+  useEffect(() => {
+    renderGuideLines();
+  }, [renderGuideLines]);
 
   // Save state to history
   const saveHistory = useCallback((newShapes: Shape[], newConnectors: Connector[]) => {
@@ -547,11 +754,45 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         group.add(text);
       }
 
-      group.on('dragend', (e) => {
+      // Smart guides during drag
+      group.on('dragmove', (e) => {
+        if (!showSmartGuides) return;
         const target = e.target;
+        const result = calculateSmartGuides({
+          id: shape.id,
+          x: target.x(),
+          y: target.y(),
+          width: shape.width,
+          height: shape.height,
+        });
+        setActiveGuides(result.guides);
+
+        // Apply snap if enabled
+        if (snapToGuides) {
+          if (result.snap.x !== null) {
+            target.x(result.snap.x);
+          }
+          if (result.snap.y !== null) {
+            target.y(result.snap.y);
+          }
+        }
+      });
+
+      group.on('dragend', (e) => {
+        // Clear guides on drag end
+        setActiveGuides({ horizontal: [], vertical: [] });
+
+        const target = e.target;
+        const newX = snapToGridValue(target.x());
+        const newY = snapToGridValue(target.y());
+        // Update visual position if snapped
+        if (snapToGrid) {
+          target.x(newX);
+          target.y(newY);
+        }
         setShapes((prev) => {
           const updated = prev.map((s) =>
-            s.id === shape.id ? { ...s, x: target.x(), y: target.y() } : s
+            s.id === shape.id ? { ...s, x: newX, y: newY } : s
           );
           onShapesChange?.(updated);
           return updated;
@@ -616,17 +857,20 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     }
 
     layer.batchDraw();
-  }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection]);
+  }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides]);
 
   // Add shape at position
   const addShape = useCallback((type: ShapeType, x: number, y: number) => {
     // Use different defaults for text shapes
     const props = type === 'text' ? defaultTextShapeProps : defaultShapeProps;
+    // Apply grid snap if enabled
+    const snappedX = snapToGridValue(x - props.width / 2);
+    const snappedY = snapToGridValue(y - props.height / 2);
     const newShape: Shape = {
       id: generateId(),
       type,
-      x: x - props.width / 2,
-      y: y - props.height / 2,
+      x: snappedX,
+      y: snappedY,
       ...props,
     };
 
@@ -643,7 +887,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     }
 
     setTool('select');
-  }, [onShapesChange]);
+  }, [onShapesChange, snapToGridValue]);
 
   // Delete selected shapes or connector
   const deleteSelected = useCallback(() => {
@@ -1186,6 +1430,297 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     });
   }, [selectedIds, shapes, onShapesChange]);
 
+  // Export canvas to PNG
+  const exportToPNG = useCallback((filename: string = 'canvas.png') => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    // Get bounding box of all shapes
+    const layer = shapesLayerRef.current;
+    if (!layer) return;
+
+    // Calculate bounds of all shapes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    shapes.forEach((shape) => {
+      if (shape.visible === false) return;
+      minX = Math.min(minX, shape.x);
+      minY = Math.min(minY, shape.y);
+      maxX = Math.max(maxX, shape.x + shape.width);
+      maxY = Math.max(maxY, shape.y + shape.height);
+    });
+
+    // Add padding
+    const padding = 20;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+
+    // Create a temporary stage for export
+    const exportWidth = maxX - minX;
+    const exportHeight = maxY - minY;
+
+    if (exportWidth <= 0 || exportHeight <= 0) return;
+
+    // Save current transform
+    const currentScale = stage.scaleX();
+    const currentPosition = stage.position();
+
+    // Reset transform for export
+    stage.scale({ x: 1, y: 1 });
+    stage.position({ x: -minX, y: -minY });
+
+    // Hide grid and background layers for export
+    const gridLayer = gridLayerRef.current;
+    const bgLayer = bgLayerRef.current;
+    const guidesLayer = guidesLayerRef.current;
+    const selectionLayer = selectionLayerRef.current;
+    const connectionPointsLayer = connectionPointsLayerRef.current;
+
+    const gridVisible = gridLayer?.visible() ?? false;
+    const bgVisible = bgLayer?.visible() ?? false;
+    const guidesVisible = guidesLayer?.visible() ?? false;
+    const selectionVisible = selectionLayer?.visible() ?? false;
+    const connectionPointsVisible = connectionPointsLayer?.visible() ?? false;
+
+    gridLayer?.visible(false);
+    bgLayer?.visible(false);
+    guidesLayer?.visible(false);
+    selectionLayer?.visible(false);
+    connectionPointsLayer?.visible(false);
+
+    // Redraw
+    stage.batchDraw();
+
+    // Export to data URL
+    const dataURL = stage.toDataURL({
+      x: 0,
+      y: 0,
+      width: exportWidth,
+      height: exportHeight,
+      pixelRatio: 2,
+    });
+
+    // Restore layers visibility
+    gridLayer?.visible(gridVisible);
+    bgLayer?.visible(bgVisible);
+    guidesLayer?.visible(guidesVisible);
+    selectionLayer?.visible(selectionVisible);
+    connectionPointsLayer?.visible(connectionPointsVisible);
+
+    // Restore transform
+    stage.scale({ x: currentScale, y: currentScale });
+    stage.position(currentPosition);
+    stage.batchDraw();
+
+    // Download the image
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = dataURL;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [shapes]);
+
+  // Export canvas to SVG
+  const exportToSVG = useCallback((filename: string = 'canvas.svg') => {
+    // Calculate bounds of all shapes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    shapes.forEach((shape) => {
+      if (shape.visible === false) return;
+      minX = Math.min(minX, shape.x);
+      minY = Math.min(minY, shape.y);
+      maxX = Math.max(maxX, shape.x + shape.width);
+      maxY = Math.max(maxY, shape.y + shape.height);
+    });
+
+    // Add padding
+    const padding = 20;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    if (width <= 0 || height <= 0) return;
+
+    // Build SVG content
+    let svgContent = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    svgContent += `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${minX} ${minY} ${width} ${height}">\n`;
+
+    // Render shapes to SVG
+    shapes.forEach((shape) => {
+      if (shape.visible === false) return;
+
+      const opacity = shape.opacity ?? 1;
+      const transform = shape.rotation ? ` transform="rotate(${shape.rotation} ${shape.x + shape.width / 2} ${shape.y + shape.height / 2})"` : '';
+
+      switch (shape.type) {
+        case 'rectangle':
+          svgContent += `  <rect x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" rx="${shape.cornerRadius ?? 0}" opacity="${opacity}"${transform} />\n`;
+          break;
+        case 'ellipse':
+          svgContent += `  <ellipse cx="${shape.x + shape.width / 2}" cy="${shape.y + shape.height / 2}" rx="${shape.width / 2}" ry="${shape.height / 2}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          break;
+        case 'diamond':
+          const cx = shape.x + shape.width / 2;
+          const cy = shape.y + shape.height / 2;
+          const points = `${cx},${shape.y} ${shape.x + shape.width},${cy} ${cx},${shape.y + shape.height} ${shape.x},${cy}`;
+          svgContent += `  <polygon points="${points}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          break;
+        case 'text':
+          const textContent = shape.text || 'Text';
+          const fontSize = shape.fontSize || 16;
+          const textColor = shape.textColor || shape.fill || '#000000';
+          svgContent += `  <text x="${shape.x}" y="${shape.y + fontSize}" font-size="${fontSize}" font-family="${shape.fontFamily || 'Arial'}" fill="${textColor}" opacity="${opacity}"${transform}>${textContent}</text>\n`;
+          break;
+      }
+
+      // Add text overlay for non-text shapes
+      if (shape.type !== 'text' && shape.text) {
+        const textY = shape.y + shape.height / 2;
+        const textX = shape.x + shape.width / 2;
+        svgContent += `  <text x="${textX}" y="${textY}" font-size="${shape.fontSize || 14}" font-family="${shape.fontFamily || 'Arial'}" fill="${shape.textColor || '#ffffff'}" text-anchor="middle" dominant-baseline="middle" opacity="${opacity}">${shape.text}</text>\n`;
+      }
+    });
+
+    // Render connectors to SVG
+    connectors.forEach((connector) => {
+      const fromShape = shapes.find(s => s.id === connector.fromShapeId);
+      const toShape = shapes.find(s => s.id === connector.toShapeId);
+      if (!fromShape || !toShape) return;
+
+      const fromX = fromShape.x + fromShape.width / 2;
+      const fromY = fromShape.y + fromShape.height / 2;
+      const toX = toShape.x + toShape.width / 2;
+      const toY = toShape.y + toShape.height / 2;
+
+      let strokeDash = '';
+      if (connector.lineStyle === 'dashed') strokeDash = ' stroke-dasharray="8,4"';
+      if (connector.lineStyle === 'dotted') strokeDash = ' stroke-dasharray="2,2"';
+
+      svgContent += `  <line x1="${fromX}" y1="${fromY}" x2="${toX}" y2="${toY}" stroke="${connector.stroke}" stroke-width="${connector.strokeWidth}"${strokeDash} />\n`;
+
+      // Add arrow if enabled
+      if (connector.arrow || connector.arrowEnd === 'arrow' || connector.arrowEnd === 'triangle') {
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+        const arrowSize = 10;
+        const arrowPoints = [
+          toX, toY,
+          toX - arrowSize * Math.cos(angle - Math.PI / 6), toY - arrowSize * Math.sin(angle - Math.PI / 6),
+          toX - arrowSize * Math.cos(angle + Math.PI / 6), toY - arrowSize * Math.sin(angle + Math.PI / 6),
+        ];
+        svgContent += `  <polygon points="${arrowPoints.join(',')}" fill="${connector.stroke}" />\n`;
+      }
+    });
+
+    svgContent += `</svg>`;
+
+    // Download the SVG
+    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [shapes, connectors]);
+
+  // Set zoom level
+  const setZoom = useCallback((newScale: number) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    // Clamp scale between 0.1 and 5
+    const clampedScale = Math.min(Math.max(newScale, 0.1), 5);
+
+    // Zoom to center of stage
+    const stageWidth = stage.width();
+    const stageHeight = stage.height();
+    const centerX = stageWidth / 2;
+    const centerY = stageHeight / 2;
+
+    const oldScale = stage.scaleX();
+    const mousePointTo = {
+      x: (centerX - stage.x()) / oldScale,
+      y: (centerY - stage.y()) / oldScale,
+    };
+
+    const newPos = {
+      x: centerX - mousePointTo.x * clampedScale,
+      y: centerY - mousePointTo.y * clampedScale,
+    };
+
+    stage.scale({ x: clampedScale, y: clampedScale });
+    stage.position(newPos);
+    stage.batchDraw();
+    setScale(clampedScale);
+    onViewportChange?.({
+      scale: clampedScale,
+      position: newPos,
+    });
+  }, [setScale, onViewportChange]);
+
+  // Zoom to fit all shapes
+  const zoomToFit = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage || shapes.length === 0) return;
+
+    // Calculate bounds of all shapes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    shapes.forEach((shape) => {
+      if (shape.visible === false) return;
+      minX = Math.min(minX, shape.x);
+      minY = Math.min(minY, shape.y);
+      maxX = Math.max(maxX, shape.x + shape.width);
+      maxY = Math.max(maxY, shape.y + shape.height);
+    });
+
+    if (minX === Infinity) return;
+
+    // Add padding
+    const padding = 50;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+
+    const stageWidth = stage.width();
+    const stageHeight = stage.height();
+
+    // Calculate scale to fit
+    const scaleX = stageWidth / contentWidth;
+    const scaleY = stageHeight / contentHeight;
+    const newScale = Math.min(scaleX, scaleY, 2); // Max scale 2x
+
+    // Calculate position to center
+    const newPos = {
+      x: (stageWidth - contentWidth * newScale) / 2 - minX * newScale,
+      y: (stageHeight - contentHeight * newScale) / 2 - minY * newScale,
+    };
+
+    stage.scale({ x: newScale, y: newScale });
+    stage.position(newPos);
+    stage.batchDraw();
+    setScale(newScale);
+    onViewportChange?.({
+      scale: newScale,
+      position: newPos,
+    });
+  }, [shapes, setScale, onViewportChange]);
+
+  // Zoom to 100%
+  const zoomTo100 = useCallback(() => {
+    setZoom(1);
+  }, [setZoom]);
+
   // Expose imperative methods via ref
   useImperativeHandle(ref, () => ({
     updateShape,
@@ -1208,7 +1743,12 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     distributeShapes,
     groupSelected,
     ungroupSelected,
-  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, onShapesChange, alignShapes, distributeShapes, groupSelected, ungroupSelected]);
+    exportToPNG,
+    exportToSVG,
+    setZoom,
+    zoomToFit,
+    zoomTo100,
+  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, onShapesChange, alignShapes, distributeShapes, groupSelected, ungroupSelected, exportToPNG, exportToSVG, setZoom, zoomToFit, zoomTo100]);
 
   // Handle escape key
   const handleEscape = useCallback(() => {
@@ -1310,6 +1850,11 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     const connectionPointsLayer = new Konva.Layer();
     stage.add(connectionPointsLayer);
     connectionPointsLayerRef.current = connectionPointsLayer;
+
+    // Smart guides layer (for alignment guides during drag)
+    const guidesLayer = new Konva.Layer({ listening: false });
+    stage.add(guidesLayer);
+    guidesLayerRef.current = guidesLayer;
 
     // Transformer for resize handles
     const transformer = new Konva.Transformer({

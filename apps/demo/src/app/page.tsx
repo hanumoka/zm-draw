@@ -95,6 +95,46 @@ const SearchIcon = () => (
   </svg>
 );
 
+const GridSnapIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7" />
+    <rect x="14" y="3" width="7" height="7" />
+    <rect x="3" y="14" width="7" height="7" />
+    <rect x="14" y="14" width="7" height="7" />
+  </svg>
+);
+
+const DownloadIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
+const ZoomInIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    <line x1="11" y1="8" x2="11" y2="14" />
+    <line x1="8" y1="11" x2="14" y2="11" />
+  </svg>
+);
+
+const ZoomOutIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    <line x1="8" y1="11" x2="14" y2="11" />
+  </svg>
+);
+
+const ZoomFitIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+  </svg>
+);
+
 // Line style icons
 const LineSolidIcon = () => (
   <svg width="24" height="16" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="2">
@@ -551,6 +591,7 @@ export default function Home() {
   const [editingNameValue, setEditingNameValue] = useState('');
   const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [snapToGrid, setSnapToGrid] = useState(false);
 
   // Tool store for shape panel buttons
   const setTool = useToolStore((s) => s.setTool);
@@ -906,6 +947,80 @@ export default function Home() {
               </div>
             </div>
             <div className="zm-draw-header-actions">
+              <Tooltip content={snapToGrid ? 'Disable Grid Snap' : 'Enable Grid Snap'}>
+                <button
+                  className={`zm-draw-icon-button ${snapToGrid ? 'active' : ''}`}
+                  onClick={() => setSnapToGrid(!snapToGrid)}
+                >
+                  <GridSnapIcon />
+                </button>
+              </Tooltip>
+              <div className="zm-draw-export-dropdown">
+                <Tooltip content="Export Canvas">
+                  <button
+                    className="zm-draw-icon-button"
+                    onClick={() => {
+                      const dropdown = document.getElementById('export-dropdown');
+                      if (dropdown) {
+                        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+                      }
+                    }}
+                  >
+                    <DownloadIcon />
+                  </button>
+                </Tooltip>
+                <div id="export-dropdown" className="zm-draw-dropdown-menu" style={{ display: 'none' }}>
+                  <button onClick={() => {
+                    canvasRef.current?.exportToPNG();
+                    const dropdown = document.getElementById('export-dropdown');
+                    if (dropdown) dropdown.style.display = 'none';
+                  }}>
+                    Export as PNG
+                  </button>
+                  <button onClick={() => {
+                    canvasRef.current?.exportToSVG();
+                    const dropdown = document.getElementById('export-dropdown');
+                    if (dropdown) dropdown.style.display = 'none';
+                  }}>
+                    Export as SVG
+                  </button>
+                </div>
+              </div>
+              <div className="zm-draw-zoom-controls">
+                <Tooltip content="Zoom Out">
+                  <button
+                    className="zm-draw-icon-button"
+                    onClick={() => {
+                      const currentScale = viewport.scale;
+                      canvasRef.current?.setZoom(Math.max(0.1, currentScale - 0.25));
+                    }}
+                  >
+                    <ZoomOutIcon />
+                  </button>
+                </Tooltip>
+                <span className="zm-draw-zoom-level" onClick={() => canvasRef.current?.zoomTo100()}>
+                  {Math.round(viewport.scale * 100)}%
+                </span>
+                <Tooltip content="Zoom In">
+                  <button
+                    className="zm-draw-icon-button"
+                    onClick={() => {
+                      const currentScale = viewport.scale;
+                      canvasRef.current?.setZoom(Math.min(5, currentScale + 0.25));
+                    }}
+                  >
+                    <ZoomInIcon />
+                  </button>
+                </Tooltip>
+                <Tooltip content="Zoom to Fit">
+                  <button
+                    className="zm-draw-icon-button"
+                    onClick={() => canvasRef.current?.zoomToFit()}
+                  >
+                    <ZoomFitIcon />
+                  </button>
+                </Tooltip>
+              </div>
               <Tooltip content={isDarkMode ? 'Light Mode' : 'Dark Mode'}>
                 <button
                   className="zm-draw-icon-button"
@@ -931,6 +1046,7 @@ export default function Home() {
           backgroundColor={canvasBgColor}
           showGrid={true}
           gridSize={20}
+          snapToGrid={snapToGrid}
           onSelectionChange={handleSelectionChange}
           onViewportChange={handleViewportChange}
           onShapesChange={handleShapesChange}
