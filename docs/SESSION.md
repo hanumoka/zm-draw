@@ -1,17 +1,23 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-28 (Phase 2.6 버그 수정 완료)
+> 최종 업데이트: 2026-01-28 (Phase 2.6 완료)
 
 ---
 
 ## 현재 상태
 
-**Phase**: Phase 2.6 (다중 선택) 진행 중
-**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Phase 2.6 85% / Figma 스타일 65%
+**Phase**: Phase 2.6 (다중 선택) 완료 ✅
+**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Phase 2.6 100% / Figma 스타일 70%
 
 ### 마지막 작업 (2026-01-28)
 
-- **Phase 2.6: 다중 선택 버그 수정** ✅ NEW
+- **Phase 2.6: Marquee Selection 구현** ✅ NEW
+  - 빈 영역 드래그로 선택 박스 생성
+  - 박스와 교차하는 도형 자동 선택
+  - Shift+드래그로 기존 선택에 추가
+  - 파란색 점선 테두리 + 반투명 배경
+
+- **Phase 2.6: 다중 선택 버그 수정** ✅
   - Zustand getter 패턴 제거 (반응성 문제) → selector 패턴으로 변경
   - 이미 선택된 도형 클릭 시 선택 해제되는 버그 수정
   - transformend 핸들러가 모든 선택된 노드를 처리하도록 수정
@@ -110,7 +116,7 @@
 
 - **브랜치**: main
 - **원격**: origin/main
-- **마지막 커밋**: `00e0b72 fix: Fix multi-selection issues found during review`
+- **마지막 커밋**: `157c6ec feat(phase2.6): Add marquee (drag box) selection`
 
 ---
 
@@ -140,29 +146,25 @@
 
 ---
 
-## 다음 작업: Phase 2.6 완료 (Marquee Selection)
+## 다음 작업: Phase 3.5 (커넥터 고급)
 
-### 목표: 드래그 박스 선택 구현
+### 목표: Connection Points + Elbow 라우팅
 
 ```
-┌────────────────────────────────────────┐
-│                                        │
-│   ┌─────┐    ┌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐      │
-│   │ A   │    ╎                 ╎      │
-│   └─────┘    ╎  ┌─────┐        ╎      │
-│              ╎  │ B   │ ◄──────╎──선택│
-│   ┌─────┐    ╎  └─────┘        ╎      │
-│   │ C   │ ◄──╎─────────────────╎──선택│
-│   └─────┘    └╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┘      │
-│                                        │
-└────────────────────────────────────────┘
+┌─────────────┐            ┌─────────────┐
+│   도형 A    │            │   도형 B    │
+│             ●────────────●             │
+└─────────────┘            └─────────────┘
+       ↑                          ↑
+  Connection Point          Connection Point
 ```
 
 ### 구현 항목
-- [ ] 빈 영역에서 드래그 시작 감지
-- [ ] 선택 박스 시각화 (점선 테두리)
-- [ ] 박스 내부 도형 자동 선택
-- [ ] Shift+드래그로 기존 선택에 추가
+- [ ] Connection Points (4방향: 상/하/좌/우)
+- [ ] 커넥터 드래그 시 스냅
+- [ ] Orthogonal (Elbow) 라우팅
+- [ ] 화살촉 종류 선택
+- [ ] 라인 스타일 (실선/점선)
 
 ---
 
@@ -207,7 +209,7 @@ zm-draw를 zm-editor (Tiptap 기반 Notion 스타일 에디터)에 통합 예정
 - [x] **Shapes 패널** (카테고리별 도형) ✅ NEW
 - [ ] EditorLayout 컴포넌트 분리 (선택적)
 
-### Phase 2.6 체크리스트 (진행 중)
+### Phase 2.6 체크리스트 (완료 ✅)
 
 - [x] selectionStore 다중 선택 API ✅
 - [x] Shift+Click 다중 선택 ✅
@@ -215,7 +217,7 @@ zm-draw를 zm-editor (Tiptap 기반 Notion 스타일 에디터)에 통합 예정
 - [x] 다중 삭제 ✅
 - [x] 속성 패널 "N개 선택됨" ✅
 - [x] 버그 수정 (Zustand getter, toggleSelection, transformend) ✅
-- [ ] Marquee (드래그 박스) 선택 ⏳
+- [x] Marquee (드래그 박스) 선택 ✅
 
 ### Phase 2.5 체크리스트 (완료)
 
