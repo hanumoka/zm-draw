@@ -224,12 +224,12 @@
 
 ### 3.1 Design 탭 섹션
 
-- [ ] Position 섹션 (X, Y 입력)
-- [ ] Size 섹션 (Width, Height 입력)
-- [ ] Rotation 섹션 (각도 입력)
+- [x] Position 섹션 (X, Y 입력) ✅ Phase 2.5에서 완료
+- [x] Size 섹션 (Width, Height 입력) ✅ Phase 2.5에서 완료
+- [x] Rotation 섹션 (각도 입력) ✅ Phase 2.5에서 완료
 - [ ] Corner Radius 섹션 (모서리 둥글기)
-- [ ] Fill 섹션 (Color Picker)
-- [ ] Stroke 섹션 (색상, 두께)
+- [x] Fill 섹션 (Color Picker) ✅ 2026-01-28
+- [x] Stroke 섹션 (색상, 두께) ✅ 2026-01-28
 
 ### 3.2 UI 컴포넌트
 
@@ -539,8 +539,9 @@ export function DrawDiagramNode({ node, updateAttributes }: NodeViewProps) {
 | ~~**History 초기 상태**~~ | ~~첫 Undo 동작 안 함~~ | ~~2026-01-28~~ | ✅ 해결됨 |
 | ~~**그리드 성능**~~ | ~~수천 개 노드 생성~~ | ~~2026-01-28~~ | ✅ 해결됨 |
 | 드래그 레이어 미분리 | 드래그 시 전체 레이어 redraw | Phase 4 | 중 |
-| react-colorful 설치 | Color Picker 필요 | Phase 3 | 높음 |
-| Radix 추가 컴포넌트 | Slider, Dropdown 등 | Phase 3 | 높음 |
+| ~~react-colorful 설치~~ | ~~Color Picker 필요~~ | ~~Phase 3~~ | ✅ 해결됨 |
+| ~~Radix Popover 설치~~ | ~~Color Picker 컨테이너~~ | ~~Phase 3~~ | ✅ 해결됨 |
+| Radix 추가 컴포넌트 | Slider, Dropdown 등 | Phase 3 | 중 |
 | shapes/connectors 마이그레이션 | props 연동 필요 | 선택적 | 낮음 |
 
 ---

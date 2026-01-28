@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { TooltipProvider, Tooltip } from '../components/Tooltip';
 import { PanelResizer } from '../components/PanelResizer';
+import { ColorPicker } from '../components/ColorPicker';
 import type { DrawCanvasHandle, ToolType } from '@zm-draw/react';
 import { useToolStore } from '@zm-draw/react';
 
@@ -23,6 +24,7 @@ interface SelectedShape {
   rotation: number;
   fill: string;
   stroke: string;
+  strokeWidth: number;
 }
 
 // Icons as components
@@ -375,7 +377,7 @@ export default function Home() {
   }, []);
 
   // Update shape property via canvas ref
-  const updateShapeProperty = useCallback((property: string, value: number) => {
+  const updateShapeProperty = useCallback((property: string, value: number | string) => {
     if (!selectedShape || !canvasRef.current) return;
     canvasRef.current.updateShape(selectedShape.id, { [property]: value });
     // Update local state for immediate feedback
@@ -663,20 +665,22 @@ export default function Home() {
                 <div className="zm-draw-panel-section">
                   <div className="zm-draw-panel-section-title">Fill</div>
                   <div className="zm-draw-panel-row">
-                    <div
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: 4,
-                        backgroundColor: selectedShape.fill,
-                        border: '1px solid var(--zm-border)',
-                      }}
+                    <ColorPicker
+                      color={selectedShape.fill}
+                      onChange={(color) => updateShapeProperty('fill', color)}
+                      label="Fill color"
                     />
                     <input
                       type="text"
                       className="zm-draw-panel-input"
                       value={selectedShape.fill}
-                      readOnly
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
+                          updateShapeProperty('fill', value || '#000000');
+                        }
+                      }}
+                      placeholder="#3b82f6"
                     />
                   </div>
                 </div>
@@ -685,20 +689,33 @@ export default function Home() {
                 <div className="zm-draw-panel-section">
                   <div className="zm-draw-panel-section-title">Stroke</div>
                   <div className="zm-draw-panel-row">
-                    <div
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: 4,
-                        backgroundColor: selectedShape.stroke,
-                        border: '1px solid var(--zm-border)',
-                      }}
+                    <ColorPicker
+                      color={selectedShape.stroke}
+                      onChange={(color) => updateShapeProperty('stroke', color)}
+                      label="Stroke color"
                     />
                     <input
                       type="text"
                       className="zm-draw-panel-input"
                       value={selectedShape.stroke}
-                      readOnly
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
+                          updateShapeProperty('stroke', value || '#000000');
+                        }
+                      }}
+                      placeholder="#1d4ed8"
+                    />
+                  </div>
+                  <div className="zm-draw-panel-row">
+                    <span className="zm-draw-panel-label">Width</span>
+                    <input
+                      type="number"
+                      className="zm-draw-panel-input"
+                      value={selectedShape.strokeWidth}
+                      onChange={(e) => updateShapeProperty('strokeWidth', Math.max(0, parseFloat(e.target.value) || 0))}
+                      min={0}
+                      step={1}
                     />
                   </div>
                 </div>

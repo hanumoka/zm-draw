@@ -11,7 +11,15 @@
 
 ### 마지막 작업 (2026-01-28)
 
-- **zm-editor 통합 분석** ✅ NEW
+- **Phase 3: Fill/Stroke 색상 편집** ✅ NEW
+  - react-colorful + @radix-ui/react-popover 설치
+  - ColorPicker 컴포넌트 생성
+  - Fill 색상 편집 (팝업 + 텍스트 입력)
+  - Stroke 색상 편집 (팝업 + 텍스트 입력)
+  - Stroke Width 편집 추가
+  - packages/core konva 버전 10.0.0으로 통일
+
+- **zm-editor 통합 분석** ✅
   - zm-editor 코드베이스 분석 (Tiptap 기반 Notion 스타일 에디터)
   - 28개 커스텀 노드 구조 파악 (MermaidNode 패턴 분석)
   - zm-draw 통합 가능성 확인: ✅ 완전 호환 (동일 기술 스택)

@@ -22,6 +22,7 @@ export interface SelectedShapeInfo {
   rotation: number;
   fill: string;
   stroke: string;
+  strokeWidth: number;
 }
 
 /** Viewport state for positioning overlays */
@@ -1065,6 +1066,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         rotation: shape.rotation || 0,
         fill: shape.fill,
         stroke: shape.stroke,
+        strokeWidth: shape.strokeWidth,
       });
     }
   }, [selectedId, shapes, onSelectionChange]);
