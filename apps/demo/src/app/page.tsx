@@ -592,6 +592,25 @@ export default function Home() {
   const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close export dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target as Node)) {
+        setShowExportDropdown(false);
+      }
+    };
+
+    if (showExportDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showExportDropdown]);
 
   // Tool store for shape panel buttons
   const setTool = useToolStore((s) => s.setTool);
@@ -955,36 +974,31 @@ export default function Home() {
                   <GridSnapIcon />
                 </button>
               </Tooltip>
-              <div className="zm-draw-export-dropdown">
+              <div className="zm-draw-export-dropdown" ref={exportDropdownRef}>
                 <Tooltip content="Export Canvas">
                   <button
                     className="zm-draw-icon-button"
-                    onClick={() => {
-                      const dropdown = document.getElementById('export-dropdown');
-                      if (dropdown) {
-                        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-                      }
-                    }}
+                    onClick={() => setShowExportDropdown(!showExportDropdown)}
                   >
                     <DownloadIcon />
                   </button>
                 </Tooltip>
-                <div id="export-dropdown" className="zm-draw-dropdown-menu" style={{ display: 'none' }}>
-                  <button onClick={() => {
-                    canvasRef.current?.exportToPNG();
-                    const dropdown = document.getElementById('export-dropdown');
-                    if (dropdown) dropdown.style.display = 'none';
-                  }}>
-                    Export as PNG
-                  </button>
-                  <button onClick={() => {
-                    canvasRef.current?.exportToSVG();
-                    const dropdown = document.getElementById('export-dropdown');
-                    if (dropdown) dropdown.style.display = 'none';
-                  }}>
-                    Export as SVG
-                  </button>
-                </div>
+                {showExportDropdown && (
+                  <div className="zm-draw-dropdown-menu">
+                    <button onClick={() => {
+                      canvasRef.current?.exportToPNG();
+                      setShowExportDropdown(false);
+                    }}>
+                      Export as PNG
+                    </button>
+                    <button onClick={() => {
+                      canvasRef.current?.exportToSVG();
+                      setShowExportDropdown(false);
+                    }}>
+                      Export as SVG
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="zm-draw-zoom-controls">
                 <Tooltip content="Zoom Out">

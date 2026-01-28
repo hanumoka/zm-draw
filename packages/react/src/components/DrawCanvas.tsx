@@ -1492,26 +1492,29 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     // Redraw
     stage.batchDraw();
 
-    // Export to data URL
-    const dataURL = stage.toDataURL({
-      x: 0,
-      y: 0,
-      width: exportWidth,
-      height: exportHeight,
-      pixelRatio: 2,
-    });
+    let dataURL: string;
+    try {
+      // Export to data URL
+      dataURL = stage.toDataURL({
+        x: 0,
+        y: 0,
+        width: exportWidth,
+        height: exportHeight,
+        pixelRatio: 2,
+      });
+    } finally {
+      // Restore layers visibility (always runs)
+      gridLayer?.visible(gridVisible);
+      bgLayer?.visible(bgVisible);
+      guidesLayer?.visible(guidesVisible);
+      selectionLayer?.visible(selectionVisible);
+      connectionPointsLayer?.visible(connectionPointsVisible);
 
-    // Restore layers visibility
-    gridLayer?.visible(gridVisible);
-    bgLayer?.visible(bgVisible);
-    guidesLayer?.visible(guidesVisible);
-    selectionLayer?.visible(selectionVisible);
-    connectionPointsLayer?.visible(connectionPointsVisible);
-
-    // Restore transform
-    stage.scale({ x: currentScale, y: currentScale });
-    stage.position(currentPosition);
-    stage.batchDraw();
+      // Restore transform
+      stage.scale({ x: currentScale, y: currentScale });
+      stage.position(currentPosition);
+      stage.batchDraw();
+    }
 
     // Download the image
     const link = document.createElement('a');
@@ -1521,6 +1524,16 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     link.click();
     document.body.removeChild(link);
   }, [shapes]);
+
+  // Helper to escape XML special characters
+  const escapeXml = (text: string): string => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  };
 
   // Export canvas to SVG
   const exportToSVG = useCallback((filename: string = 'canvas.svg') => {
@@ -1571,7 +1584,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           svgContent += `  <polygon points="${points}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
           break;
         case 'text':
-          const textContent = shape.text || 'Text';
+          const textContent = escapeXml(shape.text || 'Text');
           const fontSize = shape.fontSize || 16;
           const textColor = shape.textColor || shape.fill || '#000000';
           svgContent += `  <text x="${shape.x}" y="${shape.y + fontSize}" font-size="${fontSize}" font-family="${shape.fontFamily || 'Arial'}" fill="${textColor}" opacity="${opacity}"${transform}>${textContent}</text>\n`;
@@ -1582,7 +1595,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       if (shape.type !== 'text' && shape.text) {
         const textY = shape.y + shape.height / 2;
         const textX = shape.x + shape.width / 2;
-        svgContent += `  <text x="${textX}" y="${textY}" font-size="${shape.fontSize || 14}" font-family="${shape.fontFamily || 'Arial'}" fill="${shape.textColor || '#ffffff'}" text-anchor="middle" dominant-baseline="middle" opacity="${opacity}">${shape.text}</text>\n`;
+        const escapedText = escapeXml(shape.text);
+        svgContent += `  <text x="${textX}" y="${textY}" font-size="${shape.fontSize || 14}" font-family="${shape.fontFamily || 'Arial'}" fill="${shape.textColor || '#ffffff'}" text-anchor="middle" dominant-baseline="middle" opacity="${opacity}">${escapedText}</text>\n`;
       }
     });
 
