@@ -79,7 +79,7 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
   } = options;
 
   // Store hooks (used as fallbacks when external values not provided)
-  const storeSelectedId = useSelectionStore((s) => s.selectedId);
+  const storeSelectedId = useSelectionStore((s) => s.selectedIds[0] ?? null);
   const clearSelection = useSelectionStore((s) => s.clearSelection);
   const shapes = useCanvasStore((s) => s.shapes);
   const updateShape = useCanvasStore((s) => s.updateShape);

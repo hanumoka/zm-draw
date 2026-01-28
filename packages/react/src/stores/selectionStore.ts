@@ -7,9 +7,6 @@ interface SelectionState {
   selectedIds: string[];
   selectionType: SelectionType;
 
-  // Backward compatibility getter (returns first selected or null)
-  selectedId: string | null;
-
   // Actions - Single selection
   select: (id: string | null) => void;
   selectConnector: (id: string | null) => void;
@@ -26,12 +23,6 @@ interface SelectionState {
 export const useSelectionStore = create<SelectionState>((set, get) => ({
   selectedIds: [],
   selectionType: null,
-
-  // Backward compatibility: returns first selected ID or null
-  get selectedId() {
-    const state = get();
-    return state.selectedIds.length > 0 ? state.selectedIds[0] : null;
-  },
 
   // Single select - replaces current selection
   select: (id) => set({
@@ -88,10 +79,11 @@ export const useSelectionStore = create<SelectionState>((set, get) => ({
         };
       }
     } else {
-      // Normal click: replace selection
+      // Normal click: select only this shape (even if already selected)
+      // This ensures clicking a selected shape doesn't deselect it
       return {
-        selectedIds: isCurrentlySelected ? [] : [id],
-        selectionType: isCurrentlySelected ? null : 'shape',
+        selectedIds: [id],
+        selectionType: 'shape',
       };
     }
   }),

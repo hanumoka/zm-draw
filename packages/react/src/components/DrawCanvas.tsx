@@ -95,7 +95,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
   // Selection state from Zustand store
   const selectedIds = useSelectionStore((s) => s.selectedIds);
-  const selectedId = useSelectionStore((s) => s.selectedId); // Backward compat: first selected
+  const selectedId = useSelectionStore((s) => s.selectedIds[0] ?? null); // First selected for backward compat
   const selectionType = useSelectionStore((s) => s.selectionType);
   const setSelectedId = useSelectionStore((s) => s.select);
   const selectConnector = useSelectionStore((s) => s.selectConnector);
@@ -939,28 +939,43 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     selectionLayer.add(transformer);
     transformerRef.current = transformer;
 
-    // Handle transform end
+    // Handle transform end - supports multiple selected nodes
     transformer.on('transformend', () => {
-      const node = transformer.nodes()[0];
-      if (!node) return;
+      const nodes = transformer.nodes();
+      if (nodes.length === 0) return;
 
-      const id = node.id();
-      const scaleX = node.scaleX();
-      const scaleY = node.scaleY();
+      // Collect updates for all transformed nodes
+      const nodeUpdates = new Map<string, { x: number; y: number; width: number; height: number; rotation: number }>();
 
-      node.scaleX(1);
-      node.scaleY(1);
+      nodes.forEach((node) => {
+        const id = node.id();
+        const scaleX = node.scaleX();
+        const scaleY = node.scaleY();
+
+        // Reset scale on node (Konva accumulates scale)
+        node.scaleX(1);
+        node.scaleY(1);
+
+        nodeUpdates.set(id, {
+          x: node.x(),
+          y: node.y(),
+          width: Math.max(20, (node.width?.() || 100) * scaleX),
+          height: Math.max(20, (node.height?.() || 60) * scaleY),
+          rotation: node.rotation(),
+        });
+      });
 
       setShapes((prev) => {
         const updated = prev.map((s) => {
-          if (s.id === id) {
+          const update = nodeUpdates.get(s.id);
+          if (update) {
             return {
               ...s,
-              x: node.x(),
-              y: node.y(),
-              width: Math.max(20, s.width * scaleX),
-              height: Math.max(20, s.height * scaleY),
-              rotation: node.rotation(),
+              x: update.x,
+              y: update.y,
+              width: update.width,
+              height: update.height,
+              rotation: update.rotation,
             };
           }
           return s;
