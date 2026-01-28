@@ -37,6 +37,12 @@ export interface ViewportInfo {
   position: { x: number; y: number };
 }
 
+/** Alignment type */
+export type AlignType = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom';
+
+/** Distribution type */
+export type DistributeType = 'horizontal' | 'vertical';
+
 /** Imperative handle for DrawCanvas */
 export interface DrawCanvasHandle {
   /** Update a shape's properties */
@@ -59,6 +65,10 @@ export interface DrawCanvasHandle {
   getConnectors: () => Connector[];
   /** Update a connector's properties */
   updateConnector: (id: string, updates: Partial<Connector>) => void;
+  /** Align selected shapes */
+  alignShapes: (type: AlignType) => void;
+  /** Distribute selected shapes evenly */
+  distributeShapes: (type: DistributeType) => void;
 }
 
 export interface DrawCanvasProps {
@@ -1044,6 +1054,101 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     );
   }, []);
 
+  // Align selected shapes
+  const alignShapes = useCallback((type: AlignType) => {
+    if (selectedIds.length < 2) return;
+
+    const selectedShapes = shapes.filter(s => selectedIds.includes(s.id));
+    if (selectedShapes.length < 2) return;
+
+    // Calculate bounds
+    const bounds = {
+      left: Math.min(...selectedShapes.map(s => s.x)),
+      right: Math.max(...selectedShapes.map(s => s.x + s.width)),
+      top: Math.min(...selectedShapes.map(s => s.y)),
+      bottom: Math.max(...selectedShapes.map(s => s.y + s.height)),
+    };
+
+    const updates: Record<string, Partial<Shape>> = {};
+
+    selectedShapes.forEach(shape => {
+      switch (type) {
+        case 'left':
+          updates[shape.id] = { x: bounds.left };
+          break;
+        case 'center':
+          updates[shape.id] = { x: (bounds.left + bounds.right) / 2 - shape.width / 2 };
+          break;
+        case 'right':
+          updates[shape.id] = { x: bounds.right - shape.width };
+          break;
+        case 'top':
+          updates[shape.id] = { y: bounds.top };
+          break;
+        case 'middle':
+          updates[shape.id] = { y: (bounds.top + bounds.bottom) / 2 - shape.height / 2 };
+          break;
+        case 'bottom':
+          updates[shape.id] = { y: bounds.bottom - shape.height };
+          break;
+      }
+    });
+
+    setShapes(prev => {
+      const updated = prev.map(s => updates[s.id] ? { ...s, ...updates[s.id] } : s);
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [selectedIds, shapes, onShapesChange]);
+
+  // Distribute selected shapes evenly
+  const distributeShapes = useCallback((type: DistributeType) => {
+    if (selectedIds.length < 3) return;
+
+    const selectedShapes = shapes.filter(s => selectedIds.includes(s.id));
+    if (selectedShapes.length < 3) return;
+
+    const updates: Record<string, Partial<Shape>> = {};
+
+    if (type === 'horizontal') {
+      // Sort by x position
+      const sorted = [...selectedShapes].sort((a, b) => a.x - b.x);
+      const totalWidth = sorted.reduce((sum, s) => sum + s.width, 0);
+      const left = sorted[0].x;
+      const right = sorted[sorted.length - 1].x + sorted[sorted.length - 1].width;
+      const space = (right - left - totalWidth) / (sorted.length - 1);
+
+      let currentX = left;
+      sorted.forEach((shape, i) => {
+        if (i > 0) {
+          updates[shape.id] = { x: currentX };
+        }
+        currentX += shape.width + space;
+      });
+    } else {
+      // Sort by y position
+      const sorted = [...selectedShapes].sort((a, b) => a.y - b.y);
+      const totalHeight = sorted.reduce((sum, s) => sum + s.height, 0);
+      const top = sorted[0].y;
+      const bottom = sorted[sorted.length - 1].y + sorted[sorted.length - 1].height;
+      const space = (bottom - top - totalHeight) / (sorted.length - 1);
+
+      let currentY = top;
+      sorted.forEach((shape, i) => {
+        if (i > 0) {
+          updates[shape.id] = { y: currentY };
+        }
+        currentY += shape.height + space;
+      });
+    }
+
+    setShapes(prev => {
+      const updated = prev.map(s => updates[s.id] ? { ...s, ...updates[s.id] } : s);
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [selectedIds, shapes, onShapesChange]);
+
   // Expose imperative methods via ref
   useImperativeHandle(ref, () => ({
     updateShape,
@@ -1062,7 +1167,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     copySelected,
     getConnectors: () => connectors,
     updateConnector,
-  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, onShapesChange]);
+    alignShapes,
+    distributeShapes,
+  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, onShapesChange, alignShapes, distributeShapes]);
 
   // Handle escape key
   const handleEscape = useCallback(() => {

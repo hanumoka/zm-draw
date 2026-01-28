@@ -81,6 +81,7 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
   // Store hooks (used as fallbacks when external values not provided)
   const storeSelectedId = useSelectionStore((s) => s.selectedIds[0] ?? null);
   const clearSelection = useSelectionStore((s) => s.clearSelection);
+  const selectMultiple = useSelectionStore((s) => s.selectMultiple);
   const shapes = useCanvasStore((s) => s.shapes);
   const updateShape = useCanvasStore((s) => s.updateShape);
   const addShape = useCanvasStore((s) => s.addShape);
@@ -350,6 +351,19 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
           }
           break;
 
+        case 'a':
+        case 'A':
+          if (modKey) {
+            e.preventDefault();
+            // Select all shapes
+            const allShapes = getShapes?.() ?? shapes;
+            if (allShapes.length > 0) {
+              const allIds = allShapes.map(s => s.id);
+              selectMultiple(allIds);
+            }
+          }
+          break;
+
         // File shortcuts
         case 's':
         case 'S':
@@ -389,6 +403,9 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     onLoad,
     setTool,
     setIsPanning,
+    getShapes,
+    shapes,
+    selectMultiple,
   ]);
 
   return {

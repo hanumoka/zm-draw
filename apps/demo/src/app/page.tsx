@@ -225,6 +225,71 @@ const AlignRightIcon = () => (
   </svg>
 );
 
+// Shape alignment icons
+const AlignShapeLeftIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="4" y1="4" x2="4" y2="20" />
+    <rect x="7" y="6" width="10" height="5" rx="1" />
+    <rect x="7" y="13" width="6" height="5" rx="1" />
+  </svg>
+);
+
+const AlignShapeCenterHIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="12" y1="4" x2="12" y2="20" />
+    <rect x="6" y="6" width="12" height="5" rx="1" />
+    <rect x="8" y="13" width="8" height="5" rx="1" />
+  </svg>
+);
+
+const AlignShapeRightIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="20" y1="4" x2="20" y2="20" />
+    <rect x="7" y="6" width="10" height="5" rx="1" />
+    <rect x="11" y="13" width="6" height="5" rx="1" />
+  </svg>
+);
+
+const AlignShapeTopIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="4" y1="4" x2="20" y2="4" />
+    <rect x="6" y="7" width="5" height="10" rx="1" />
+    <rect x="13" y="7" width="5" height="6" rx="1" />
+  </svg>
+);
+
+const AlignShapeMiddleIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="4" y1="12" x2="20" y2="12" />
+    <rect x="6" y="5" width="5" height="14" rx="1" />
+    <rect x="13" y="8" width="5" height="8" rx="1" />
+  </svg>
+);
+
+const AlignShapeBottomIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="4" y1="20" x2="20" y2="20" />
+    <rect x="6" y="7" width="5" height="10" rx="1" />
+    <rect x="13" y="11" width="5" height="6" rx="1" />
+  </svg>
+);
+
+const DistributeHIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="8" width="4" height="8" rx="1" />
+    <rect x="10" y="8" width="4" height="8" rx="1" />
+    <rect x="17" y="8" width="4" height="8" rx="1" />
+  </svg>
+);
+
+const DistributeVIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="8" y="3" width="8" height="4" rx="1" />
+    <rect x="8" y="10" width="8" height="4" rx="1" />
+    <rect x="8" y="17" width="8" height="4" rx="1" />
+  </svg>
+);
+
 // Shape icons for the Shapes panel
 const ShapeIcons = {
   // Connectors
@@ -982,22 +1047,79 @@ export default function Home() {
               </div>
             ) : (
             selectedIds.length > 1 ? (
-              // Multi-selection: show count
-              <div className="zm-draw-empty-state">
-                <div className="zm-draw-empty-state-icon">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="3" y="3" width="7" height="7" rx="1" />
-                    <rect x="14" y="3" width="7" height="7" rx="1" />
-                    <rect x="3" y="14" width="7" height="7" rx="1" />
-                    <rect x="14" y="14" width="7" height="7" rx="1" />
-                  </svg>
+              // Multi-selection: show alignment options
+              <>
+                <div className="zm-draw-panel-section">
+                  <div className="zm-draw-panel-section-title">
+                    <strong>{selectedIds.length}</strong> items selected
+                  </div>
                 </div>
-                <p><strong>{selectedIds.length}</strong> items selected</p>
-                <p style={{ fontSize: 11, marginTop: 4 }}>
-                  Shift+Click to add/remove<br />
-                  Click empty space to deselect
-                </p>
-              </div>
+
+                {/* Alignment Section */}
+                <div className="zm-draw-panel-section">
+                  <div className="zm-draw-panel-section-title">Align</div>
+                  <div className="zm-draw-panel-row" style={{ gap: 4 }}>
+                    <Tooltip content="Align Left">
+                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('left')}>
+                        <AlignShapeLeftIcon />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Align Center">
+                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('center')}>
+                        <AlignShapeCenterHIcon />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Align Right">
+                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('right')}>
+                        <AlignShapeRightIcon />
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <div className="zm-draw-panel-row" style={{ gap: 4, marginTop: 4 }}>
+                    <Tooltip content="Align Top">
+                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('top')}>
+                        <AlignShapeTopIcon />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Align Middle">
+                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('middle')}>
+                        <AlignShapeMiddleIcon />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Align Bottom">
+                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('bottom')}>
+                        <AlignShapeBottomIcon />
+                      </button>
+                    </Tooltip>
+                  </div>
+                </div>
+
+                {/* Distribution Section - only show for 3+ shapes */}
+                {selectedIds.length >= 3 && (
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Distribute</div>
+                    <div className="zm-draw-panel-row" style={{ gap: 4 }}>
+                      <Tooltip content="Distribute Horizontally">
+                        <button className="zm-style-button" onClick={() => canvasRef.current?.distributeShapes('horizontal')}>
+                          <DistributeHIcon />
+                        </button>
+                      </Tooltip>
+                      <Tooltip content="Distribute Vertically">
+                        <button className="zm-style-button" onClick={() => canvasRef.current?.distributeShapes('vertical')}>
+                          <DistributeVIcon />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  </div>
+                )}
+
+                <div className="zm-draw-panel-section">
+                  <p style={{ fontSize: 11, color: 'var(--zm-text-muted)' }}>
+                    Shift+Click to add/remove<br />
+                    Ctrl+A to select all
+                  </p>
+                </div>
+              </>
             ) : selectedShape ? (
               <>
                 {/* Position Section */}
