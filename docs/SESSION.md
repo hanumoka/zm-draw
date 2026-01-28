@@ -1,6 +1,6 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-28 (Phase 7 진행중)
+> 최종 업데이트: 2026-01-28 (Phase 7 완료)
 
 ---
 
@@ -198,7 +198,7 @@
 
 - **브랜치**: main
 - **원격**: origin/main
-- **마지막 커밋**: `f384857 feat(phase6): Add grouping and ungrouping functionality`
+- **마지막 커밋**: `dadab6d feat: Add Minimap component for canvas navigation`
 
 ---
 
@@ -224,7 +224,7 @@
 | 화살촉 가려짐 | 중심→중심 연결 | ✅ 해결 |
 | 선택 불가 | 클릭 이벤트 없음 | ✅ 해결 |
 | 삭제 불가 | Delete 처리 없음 | ✅ 해결 |
-| 라우팅 없음 | 직선만 지원 | ⏳ Phase 3.5 |
+| 라우팅 없음 | 직선만 지원 | ✅ 해결 (Phase 3.5) |
 
 ---
 
@@ -253,15 +253,23 @@
 
 ---
 
-## 다음 작업: Phase 7 (고급 기능)
+## Phase 7 완료 ✅
 
-### Phase 7: 고급 기능 예정
-- [ ] Grid Snap (그리드 스냅)
-- [ ] Smart Guides (정렬 가이드라인)
-- [ ] PNG/SVG Export
-- [ ] 이미지 도형
-- [ ] 미니맵
-- [ ] 줌 프리셋 (Fit, 100%, 200%)
+### Phase 7: 고급 기능 (완료)
+- [x] Grid Snap (그리드 스냅) ✅
+- [x] Smart Guides (정렬 가이드라인) ✅
+- [x] PNG/SVG Export ✅
+- [x] 미니맵 ✅
+- [x] 줌 프리셋 (Fit, 100%, +/-) ✅
+- [ ] 이미지 도형 (Phase 7.5 예정)
+
+---
+
+## 다음 작업: Phase 7.5 또는 Phase 8 (zm-editor 통합)
+
+### 선택 옵션
+1. **Phase 7.5: 이미지 도형** - 이미지 업로드/드래그앤드롭 지원
+2. **Phase 8: zm-editor 통합** - Tiptap 에디터에 zm-draw 블록 추가
 
 ---
 
