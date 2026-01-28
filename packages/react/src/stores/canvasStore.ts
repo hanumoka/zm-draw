@@ -18,6 +18,21 @@ export const defaultShapeProps = {
   textColor: '#ffffff',
 };
 
+// Default text shape properties
+export const defaultTextShapeProps = {
+  width: 200,
+  height: 30,
+  fill: 'transparent',
+  stroke: 'transparent',
+  strokeWidth: 0,
+  text: 'Text',
+  fontSize: 16,
+  fontFamily: 'Arial',
+  textColor: '#000000',
+  textAlign: 'left' as const,
+  verticalAlign: 'top' as const,
+};
+
 interface CanvasState {
   // Data
   shapes: Shape[];

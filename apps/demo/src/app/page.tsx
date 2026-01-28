@@ -468,6 +468,8 @@ export default function Home() {
         return '◯';
       case 'diamond':
         return '◇';
+      case 'text':
+        return 'T';
       default:
         return '▢';
     }

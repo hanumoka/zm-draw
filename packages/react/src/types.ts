@@ -44,6 +44,10 @@ export interface Shape {
   fontFamily?: string;
   /** Text color (hex or rgba) */
   textColor?: string;
+  /** Text horizontal alignment */
+  textAlign?: 'left' | 'center' | 'right';
+  /** Text vertical alignment */
+  verticalAlign?: 'top' | 'middle' | 'bottom';
   /** Whether the shape is locked (cannot be selected/moved) */
   locked?: boolean;
   /** Whether the shape is visible */

@@ -7,7 +7,7 @@ import { useKeyboard } from '../hooks/useKeyboard';
 import { useToolStore } from '../stores/toolStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useViewportStore } from '../stores/viewportStore';
-import { generateId, defaultShapeProps } from '../stores/canvasStore';
+import { generateId, defaultShapeProps, defaultTextShapeProps } from '../stores/canvasStore';
 import { Toolbar } from './Toolbar';
 import { TextEditor } from './TextEditor';
 
@@ -435,6 +435,21 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
       let konvaShape: Konva.Shape;
       switch (shape.type) {
+        case 'text':
+          // Standalone text shape - no background, just text
+          konvaShape = new Konva.Text({
+            x: 0,
+            y: 0,
+            width: shape.width,
+            height: shape.height,
+            text: shape.text || 'Text',
+            fontSize: shape.fontSize || 16,
+            fontFamily: shape.fontFamily || 'Arial',
+            fill: shape.textColor || shape.fill || '#000000',
+            align: shape.textAlign || 'left',
+            verticalAlign: shape.verticalAlign || 'top',
+          });
+          break;
         case 'ellipse':
           konvaShape = new Konva.Ellipse({
             ...shapeConfig,
@@ -466,9 +481,26 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           });
       }
 
+      // Selection highlight (different for text shapes)
       if (selectedIds.includes(shape.id) && selectionType === 'shape') {
-        konvaShape.stroke('#ef4444');
-        konvaShape.strokeWidth(3);
+        if (shape.type === 'text') {
+          // For text shapes, add a selection border rect behind the text
+          const selectionRect = new Konva.Rect({
+            x: -2,
+            y: -2,
+            width: shape.width + 4,
+            height: shape.height + 4,
+            stroke: '#ef4444',
+            strokeWidth: 1,
+            dash: [4, 4],
+            fill: 'transparent',
+          });
+          group.add(selectionRect);
+          selectionRect.moveToBottom();
+        } else {
+          konvaShape.stroke('#ef4444');
+          konvaShape.strokeWidth(3);
+        }
       }
 
       if (connectingFrom === shape.id) {
@@ -478,7 +510,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
       group.add(konvaShape);
 
-      if (shape.text) {
+      // Add text overlay for non-text shapes that have text content
+      if (shape.type !== 'text' && shape.text) {
         const text = new Konva.Text({
           x: 0,
           y: 0,
@@ -568,12 +601,14 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
   // Add shape at position
   const addShape = useCallback((type: ShapeType, x: number, y: number) => {
+    // Use different defaults for text shapes
+    const props = type === 'text' ? defaultTextShapeProps : defaultShapeProps;
     const newShape: Shape = {
       id: generateId(),
       type,
-      x: x - defaultShapeProps.width / 2,
-      y: y - defaultShapeProps.height / 2,
-      ...defaultShapeProps,
+      x: x - props.width / 2,
+      y: y - props.height / 2,
+      ...props,
     };
 
     setShapes((prev) => {
@@ -582,6 +617,12 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       return updated;
     });
     setSelectedId(newShape.id);
+
+    // For text shapes, immediately open the editor
+    if (type === 'text') {
+      setEditingId(newShape.id);
+    }
+
     setTool('select');
   }, [onShapesChange]);
 

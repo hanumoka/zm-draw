@@ -342,6 +342,14 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
           }
           break;
 
+        case 't':
+        case 'T':
+          if (!modKey) {
+            e.preventDefault();
+            setTool('text');
+          }
+          break;
+
         // File shortcuts
         case 's':
         case 'S':
