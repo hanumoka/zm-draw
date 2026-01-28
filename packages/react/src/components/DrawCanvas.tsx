@@ -38,6 +38,8 @@ export interface DrawCanvasHandle {
   updateShape: (id: string, updates: Partial<Shape>) => void;
   /** Get current shapes */
   getShapes: () => Shape[];
+  /** Set all shapes (for reordering) */
+  setShapes: (shapes: Shape[]) => void;
   /** Get selected shape ID */
   getSelectedId: () => string | null;
   /** Get current viewport info */
@@ -1000,6 +1002,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   useImperativeHandle(ref, () => ({
     updateShape,
     getShapes: () => shapes,
+    setShapes: (newShapes: Shape[]) => {
+      setShapes(newShapes);
+      onShapesChange?.(newShapes);
+    },
     getSelectedId: () => selectedId,
     getViewport: () => ({
       scale: stageRef.current?.scaleX() || 1,
@@ -1010,7 +1016,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     copySelected,
     getConnectors: () => connectors,
     updateConnector,
-  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector]);
+  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, onShapesChange]);
 
   // Handle escape key
   const handleEscape = useCallback(() => {

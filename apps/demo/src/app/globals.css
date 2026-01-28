@@ -350,6 +350,25 @@ body {
   color: var(--zm-text-muted);
 }
 
+/* Dragging states */
+.zm-layer-item.dragging {
+  opacity: 0.4;
+  background: var(--zm-bg-tertiary);
+}
+
+.zm-layer-item.drop-target {
+  border-top: 2px solid var(--zm-accent);
+  margin-top: -2px;
+}
+
+.zm-layer-item[draggable="true"] {
+  cursor: grab;
+}
+
+.zm-layer-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
 .zm-layer-icon {
   font-size: 14px;
   color: var(--zm-text-secondary);

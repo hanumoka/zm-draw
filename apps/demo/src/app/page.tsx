@@ -437,6 +437,8 @@ export default function Home() {
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [editingLayerName, setEditingLayerName] = useState<string | null>(null);
   const [editingNameValue, setEditingNameValue] = useState('');
+  const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   // Tool store for shape panel buttons
   const setTool = useToolStore((s) => s.setTool);
@@ -518,6 +520,63 @@ export default function Home() {
   const handleCancelEditName = useCallback(() => {
     setEditingLayerName(null);
     setEditingNameValue('');
+  }, []);
+
+  // Layer drag and drop handlers
+  const handleLayerDragStart = useCallback((e: React.DragEvent, shapeId: string) => {
+    setDraggingLayerId(shapeId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', shapeId);
+  }, []);
+
+  const handleLayerDragOver = useCallback((e: React.DragEvent, shapeId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (shapeId !== draggingLayerId) {
+      setDropTargetId(shapeId);
+    }
+  }, [draggingLayerId]);
+
+  const handleLayerDragLeave = useCallback(() => {
+    setDropTargetId(null);
+  }, []);
+
+  const handleLayerDrop = useCallback((e: React.DragEvent, targetShapeId: string) => {
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if (!draggedId || draggedId === targetShapeId) {
+      setDraggingLayerId(null);
+      setDropTargetId(null);
+      return;
+    }
+
+    // Calculate new shapes order
+    const newShapes = [...shapes];
+    const draggedIndex = newShapes.findIndex(s => s.id === draggedId);
+    const targetIndex = newShapes.findIndex(s => s.id === targetShapeId);
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggingLayerId(null);
+      setDropTargetId(null);
+      return;
+    }
+
+    // Remove dragged item
+    const [draggedShape] = newShapes.splice(draggedIndex, 1);
+    // Insert at target position (layers panel is reversed, so adjust)
+    const insertIndex = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
+    newShapes.splice(insertIndex, 0, draggedShape);
+
+    // Update both local state and canvas
+    setShapes(newShapes);
+    canvasRef.current?.setShapes(newShapes);
+
+    setDraggingLayerId(null);
+    setDropTargetId(null);
+  }, [shapes]);
+
+  const handleLayerDragEnd = useCallback(() => {
+    setDraggingLayerId(null);
+    setDropTargetId(null);
   }, []);
 
   // Handle shape button click - set tool for drawing
@@ -828,8 +887,14 @@ export default function Home() {
                       return (
                         <div
                           key={shape.id}
-                          className={`zm-layer-item ${isSelected ? 'selected' : ''} ${shape.visible === false ? 'hidden-layer' : ''} ${shape.locked ? 'locked-layer' : ''}`}
+                          className={`zm-layer-item ${isSelected ? 'selected' : ''} ${shape.visible === false ? 'hidden-layer' : ''} ${shape.locked ? 'locked-layer' : ''} ${draggingLayerId === shape.id ? 'dragging' : ''} ${dropTargetId === shape.id ? 'drop-target' : ''}`}
                           onClick={() => handleLayerClick(shape.id)}
+                          draggable
+                          onDragStart={(e) => handleLayerDragStart(e, shape.id)}
+                          onDragOver={(e) => handleLayerDragOver(e, shape.id)}
+                          onDragLeave={handleLayerDragLeave}
+                          onDrop={(e) => handleLayerDrop(e, shape.id)}
+                          onDragEnd={handleLayerDragEnd}
                         >
                           <button
                             className={`zm-layer-visibility ${shape.visible === false ? 'off' : ''}`}
