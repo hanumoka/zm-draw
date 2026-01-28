@@ -136,6 +136,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const [isMarqueeSelecting, setIsMarqueeSelecting] = useState(false);
   const marqueeStartRef = useRef<{ x: number; y: number } | null>(null);
 
+  // Connection points layer ref
+  const connectionPointsLayerRef = useRef<Konva.Layer | null>(null);
+  const [hoveredShapeId, setHoveredShapeId] = useState<string | null>(null);
+
   // Save state to history
   const saveHistory = useCallback((newShapes: Shape[], newConnectors: Connector[]) => {
     if (isUndoRedoRef.current) {
@@ -513,6 +517,19 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         setSelectedId(shape.id);
       });
 
+      // Hover events for connection points in connector mode
+      group.on('mouseenter', () => {
+        if (tool === 'connector') {
+          setHoveredShapeId(shape.id);
+        }
+      });
+
+      group.on('mouseleave', () => {
+        if (tool === 'connector') {
+          setHoveredShapeId(null);
+        }
+      });
+
       layer.add(group);
     });
 
@@ -594,6 +611,87 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       x: shape.x + shape.width / 2,
       y: shape.y + shape.height / 2,
     };
+  }, []);
+
+  // Get connection point coordinates for a shape
+  const getConnectionPoint = useCallback((shape: Shape, point: 'top' | 'right' | 'bottom' | 'left' | 'auto', targetShape?: Shape) => {
+    const center = getShapeCenter(shape);
+
+    if (point === 'auto' && targetShape) {
+      // Auto: use edge point toward target
+      const targetCenter = getShapeCenter(targetShape);
+      return getShapeEdgePoint(shape, targetCenter);
+    }
+
+    // For specific connection points
+    switch (point) {
+      case 'top':
+        return { x: center.x, y: shape.y };
+      case 'right':
+        return { x: shape.x + shape.width, y: center.y };
+      case 'bottom':
+        return { x: center.x, y: shape.y + shape.height };
+      case 'left':
+        return { x: shape.x, y: center.y };
+      default:
+        return center;
+    }
+  }, [getShapeCenter]);
+
+  // Get all 4 connection points for a shape
+  const getConnectionPoints = useCallback((shape: Shape) => {
+    const center = getShapeCenter(shape);
+    return {
+      top: { x: center.x, y: shape.y },
+      right: { x: shape.x + shape.width, y: center.y },
+      bottom: { x: center.x, y: shape.y + shape.height },
+      left: { x: shape.x, y: center.y },
+    };
+  }, [getShapeCenter]);
+
+  // Calculate orthogonal (elbow) path between two points
+  const getOrthogonalPath = useCallback((
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    fromPoint?: 'top' | 'right' | 'bottom' | 'left' | 'auto',
+    toPoint?: 'top' | 'right' | 'bottom' | 'left' | 'auto'
+  ): number[] => {
+    // Simple orthogonal routing with one bend point
+    const midX = (from.x + to.x) / 2;
+    const midY = (from.y + to.y) / 2;
+
+    // Determine routing direction based on connection points
+    if (fromPoint === 'left' || fromPoint === 'right' || toPoint === 'left' || toPoint === 'right') {
+      // Horizontal first, then vertical
+      return [from.x, from.y, midX, from.y, midX, to.y, to.x, to.y];
+    } else if (fromPoint === 'top' || fromPoint === 'bottom' || toPoint === 'top' || toPoint === 'bottom') {
+      // Vertical first, then horizontal
+      return [from.x, from.y, from.x, midY, to.x, midY, to.x, to.y];
+    } else {
+      // Auto: choose based on distance
+      const dx = Math.abs(to.x - from.x);
+      const dy = Math.abs(to.y - from.y);
+
+      if (dx > dy) {
+        // More horizontal distance - go horizontal first
+        return [from.x, from.y, midX, from.y, midX, to.y, to.x, to.y];
+      } else {
+        // More vertical distance - go vertical first
+        return [from.x, from.y, from.x, midY, to.x, midY, to.x, to.y];
+      }
+    }
+  }, []);
+
+  // Get line dash pattern based on style
+  const getLineDash = useCallback((style?: 'solid' | 'dashed' | 'dotted'): number[] => {
+    switch (style) {
+      case 'dashed':
+        return [10, 5];
+      case 'dotted':
+        return [3, 3];
+      default:
+        return [];
+    }
   }, []);
 
   // Get edge intersection point for a shape
@@ -684,34 +782,90 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
       if (!fromShape || !toShape) return;
 
-      const fromCenter = getShapeCenter(fromShape);
-      const toCenter = getShapeCenter(toShape);
-      const from = getShapeEdgePoint(fromShape, toCenter);
-      const to = getShapeEdgePoint(toShape, fromCenter);
+      // Get connection points (use specified points or auto)
+      const fromPoint = connector.fromPoint || 'auto';
+      const toPoint = connector.toPoint || 'auto';
+
+      let from: { x: number; y: number };
+      let to: { x: number; y: number };
+
+      if (fromPoint === 'auto') {
+        const toCenter = getShapeCenter(toShape);
+        from = getShapeEdgePoint(fromShape, toCenter);
+      } else {
+        from = getConnectionPoint(fromShape, fromPoint);
+      }
+
+      if (toPoint === 'auto') {
+        const fromCenter = getShapeCenter(fromShape);
+        to = getShapeEdgePoint(toShape, fromCenter);
+      } else {
+        to = getConnectionPoint(toShape, toPoint);
+      }
 
       const isSelected = selectedId === connector.id && selectionType === 'connector';
+      const strokeColor = isSelected ? '#ef4444' : connector.stroke;
+      const strokeWidth = isSelected ? connector.strokeWidth + 1 : connector.strokeWidth;
 
-      const arrow = new Konva.Arrow({
-        id: connector.id,
-        points: [from.x, from.y, to.x, to.y],
-        stroke: isSelected ? '#ef4444' : connector.stroke,
-        strokeWidth: isSelected ? connector.strokeWidth + 1 : connector.strokeWidth,
-        fill: isSelected ? '#ef4444' : connector.stroke,
-        pointerLength: 10,
-        pointerWidth: 8,
-        hitStrokeWidth: 20,
-      });
+      // Calculate points based on routing type
+      let points: number[];
+      if (connector.routing === 'orthogonal') {
+        points = getOrthogonalPath(from, to, fromPoint, toPoint);
+      } else {
+        points = [from.x, from.y, to.x, to.y];
+      }
 
-      arrow.on('click tap', (e) => {
-        e.cancelBubble = true;
-        selectConnector(connector.id);
-      });
+      // Determine if we need arrow heads
+      const showEndArrow = connector.arrow || connector.arrowEnd === 'arrow' || connector.arrowEnd === 'triangle';
+      const showStartArrow = connector.arrowStart === 'arrow' || connector.arrowStart === 'triangle';
 
-      layer.add(arrow);
+      // Get line dash pattern
+      const dash = getLineDash(connector.lineStyle);
+
+      if (showEndArrow || showStartArrow) {
+        // Use Arrow for connectors with arrowheads
+        const arrow = new Konva.Arrow({
+          id: connector.id,
+          points: points,
+          stroke: strokeColor,
+          strokeWidth: strokeWidth,
+          fill: strokeColor,
+          pointerLength: showEndArrow ? 10 : 0,
+          pointerWidth: showEndArrow ? 8 : 0,
+          pointerAtBeginning: showStartArrow,
+          pointerAtEnding: showEndArrow,
+          hitStrokeWidth: 20,
+          dash: dash,
+        });
+
+        arrow.on('click tap', (e) => {
+          e.cancelBubble = true;
+          selectConnector(connector.id);
+        });
+
+        layer.add(arrow);
+      } else {
+        // Use Line for connectors without arrowheads
+        const line = new Konva.Line({
+          id: connector.id,
+          points: points,
+          stroke: strokeColor,
+          strokeWidth: strokeWidth,
+          hitStrokeWidth: 20,
+          dash: dash,
+        });
+
+        line.on('click tap', (e) => {
+          e.cancelBubble = true;
+          selectConnector(connector.id);
+        });
+
+        layer.add(line);
+      }
     });
 
     layer.batchDraw();
-  }, [connectors, shapes, getShapeCenter, getShapeEdgePoint, selectedId, selectionType, selectConnector]);
+  }, [connectors, shapes, getShapeCenter, getShapeEdgePoint, getConnectionPoint, getOrthogonalPath, getLineDash, selectedId, selectionType, selectConnector]);
 
   // Update shape text
   const updateShapeText = useCallback((id: string, text: string) => {
@@ -930,6 +1084,11 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     stage.add(selectionLayer);
     selectionLayerRef.current = selectionLayer;
 
+    // Connection points layer (for connector mode)
+    const connectionPointsLayer = new Konva.Layer();
+    stage.add(connectionPointsLayer);
+    connectionPointsLayerRef.current = connectionPointsLayer;
+
     // Transformer for resize handles
     const transformer = new Konva.Transformer({
       rotateEnabled: true,
@@ -1061,6 +1220,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         selectionLayerRef.current.destroyChildren();
         selectionLayerRef.current = null;
       }
+      if (connectionPointsLayerRef.current) {
+        connectionPointsLayerRef.current.destroyChildren();
+        connectionPointsLayerRef.current = null;
+      }
       if (gridShapeRef.current) {
         gridShapeRef.current.destroy();
         gridShapeRef.current = null;
@@ -1084,6 +1247,69 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   useEffect(() => {
     renderShapes();
   }, [renderShapes, canvasVersion]);
+
+  // Render connection points when hovering in connector mode
+  useEffect(() => {
+    const layer = connectionPointsLayerRef.current;
+    if (!layer) return;
+
+    layer.destroyChildren();
+
+    // Only show connection points in connector mode when hovering
+    if (tool !== 'connector' || !hoveredShapeId) {
+      layer.batchDraw();
+      return;
+    }
+
+    const shape = shapes.find((s) => s.id === hoveredShapeId);
+    if (!shape) {
+      layer.batchDraw();
+      return;
+    }
+
+    // Get connection points for the hovered shape
+    const points = getConnectionPoints(shape);
+    const pointSize = 8;
+
+    // Draw connection point circles
+    Object.entries(points).forEach(([position, point]) => {
+      const circle = new Konva.Circle({
+        x: point.x,
+        y: point.y,
+        radius: pointSize,
+        fill: '#ffffff',
+        stroke: '#3b82f6',
+        strokeWidth: 2,
+        shadowColor: '#000000',
+        shadowBlur: 4,
+        shadowOpacity: 0.2,
+      });
+
+      // Add hover effect
+      circle.on('mouseenter', () => {
+        circle.fill('#3b82f6');
+        circle.stroke('#1d4ed8');
+        layer.batchDraw();
+      });
+
+      circle.on('mouseleave', () => {
+        circle.fill('#ffffff');
+        circle.stroke('#3b82f6');
+        layer.batchDraw();
+      });
+
+      layer.add(circle);
+    });
+
+    layer.batchDraw();
+  }, [tool, hoveredShapeId, shapes, getConnectionPoints]);
+
+  // Clear hovered shape when tool changes
+  useEffect(() => {
+    if (tool !== 'connector') {
+      setHoveredShapeId(null);
+    }
+  }, [tool]);
 
   // Notify parent of selection changes
   useEffect(() => {

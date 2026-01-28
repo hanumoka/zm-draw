@@ -56,6 +56,15 @@ export interface Shape {
   cornerRadius?: number;
 }
 
+/** Connection point position on a shape */
+export type ConnectionPoint = 'top' | 'right' | 'bottom' | 'left' | 'auto';
+
+/** Arrow head type */
+export type ArrowType = 'none' | 'arrow' | 'triangle' | 'diamond' | 'circle';
+
+/** Connector routing type */
+export type RoutingType = 'straight' | 'orthogonal';
+
 /**
  * Connector object representing a line/arrow between two shapes
  */
@@ -70,12 +79,22 @@ export interface Connector {
   stroke: string;
   /** Line width in pixels */
   strokeWidth: number;
-  /** Whether to show arrowhead */
+  /** Whether to show arrowhead (deprecated: use arrowEnd) */
   arrow: boolean;
-  /** Line style (for future use) */
+  /** Line style */
   lineStyle?: 'solid' | 'dashed' | 'dotted';
-  /** Label text on the connector (for future use) */
+  /** Label text on the connector */
   label?: string;
+  /** Connection point on source shape */
+  fromPoint?: ConnectionPoint;
+  /** Connection point on target shape */
+  toPoint?: ConnectionPoint;
+  /** Arrow type at start */
+  arrowStart?: ArrowType;
+  /** Arrow type at end */
+  arrowEnd?: ArrowType;
+  /** Routing type */
+  routing?: RoutingType;
 }
 
 /**
