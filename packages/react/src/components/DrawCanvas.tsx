@@ -69,6 +69,10 @@ export interface DrawCanvasHandle {
   alignShapes: (type: AlignType) => void;
   /** Distribute selected shapes evenly */
   distributeShapes: (type: DistributeType) => void;
+  /** Group selected shapes */
+  groupSelected: () => void;
+  /** Ungroup selected shapes */
+  ungroupSelected: () => void;
 }
 
 export interface DrawCanvasProps {
@@ -1149,6 +1153,39 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     });
   }, [selectedIds, shapes, onShapesChange]);
 
+  // Group selected shapes
+  const groupSelected = useCallback(() => {
+    if (selectedIds.length < 2) return;
+
+    const groupId = generateId();
+    setShapes(prev => {
+      const updated = prev.map(s =>
+        selectedIds.includes(s.id) ? { ...s, groupId } : s
+      );
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [selectedIds, onShapesChange]);
+
+  // Ungroup selected shapes
+  const ungroupSelected = useCallback(() => {
+    if (selectedIds.length === 0) return;
+
+    // Find all group IDs from selected shapes
+    const selectedShapes = shapes.filter(s => selectedIds.includes(s.id));
+    const groupIds = new Set(selectedShapes.map(s => s.groupId).filter(Boolean));
+
+    if (groupIds.size === 0) return;
+
+    setShapes(prev => {
+      const updated = prev.map(s =>
+        s.groupId && groupIds.has(s.groupId) ? { ...s, groupId: undefined } : s
+      );
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [selectedIds, shapes, onShapesChange]);
+
   // Expose imperative methods via ref
   useImperativeHandle(ref, () => ({
     updateShape,
@@ -1169,7 +1206,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     updateConnector,
     alignShapes,
     distributeShapes,
-  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, onShapesChange, alignShapes, distributeShapes]);
+    groupSelected,
+    ungroupSelected,
+  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, onShapesChange, alignShapes, distributeShapes, groupSelected, ungroupSelected]);
 
   // Handle escape key
   const handleEscape = useCallback(() => {
@@ -1192,6 +1231,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     onMove: moveSelected,
     onSave: exportToJson,
     onLoad: importFromJson,
+    onGroup: groupSelected,
+    onUngroup: ungroupSelected,
   });
 
   // Handle container resize

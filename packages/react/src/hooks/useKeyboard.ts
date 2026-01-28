@@ -43,6 +43,10 @@ interface UseKeyboardOptions {
   onSave?: () => void;
   /** External load function */
   onLoad?: () => void;
+  /** External group function */
+  onGroup?: () => void;
+  /** External ungroup function */
+  onUngroup?: () => void;
   /** Whether keyboard handling is enabled */
   enabled?: boolean;
 }
@@ -75,6 +79,8 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     onMove,
     onSave,
     onLoad,
+    onGroup,
+    onUngroup,
     enabled = true,
   } = options;
 
@@ -364,6 +370,20 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
           }
           break;
 
+        case 'g':
+        case 'G':
+          if (modKey) {
+            e.preventDefault();
+            if (e.shiftKey) {
+              // Ctrl+Shift+G: Ungroup
+              onUngroup?.();
+            } else {
+              // Ctrl+G: Group
+              onGroup?.();
+            }
+          }
+          break;
+
         // File shortcuts
         case 's':
         case 'S':
@@ -406,6 +426,8 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     getShapes,
     shapes,
     selectMultiple,
+    onGroup,
+    onUngroup,
   ]);
 
   return {

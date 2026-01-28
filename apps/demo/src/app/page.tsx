@@ -290,6 +290,23 @@ const DistributeVIcon = () => (
   </svg>
 );
 
+const GroupIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="8" height="8" rx="1" />
+    <rect x="13" y="13" width="8" height="8" rx="1" />
+    <path d="M11 6h3M14 6v3M10 18h-3M7 18v-3" />
+  </svg>
+);
+
+const UngroupIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="8" height="8" rx="1" />
+    <rect x="13" y="13" width="8" height="8" rx="1" />
+    <line x1="11" y1="6" x2="14" y2="6" strokeDasharray="2 2" />
+    <line x1="10" y1="18" x2="7" y2="18" strokeDasharray="2 2" />
+  </svg>
+);
+
 // Shape icons for the Shapes panel
 const ShapeIcons = {
   // Connectors
@@ -1112,6 +1129,23 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+
+                {/* Group Section */}
+                <div className="zm-draw-panel-section">
+                  <div className="zm-draw-panel-section-title">Group</div>
+                  <div className="zm-draw-panel-row" style={{ gap: 4 }}>
+                    <Tooltip content="Group (Ctrl+G)">
+                      <button className="zm-style-button" onClick={() => canvasRef.current?.groupSelected()}>
+                        <GroupIcon />
+                      </button>
+                    </Tooltip>
+                    <Tooltip content="Ungroup (Ctrl+Shift+G)">
+                      <button className="zm-style-button" onClick={() => canvasRef.current?.ungroupSelected()}>
+                        <UngroupIcon />
+                      </button>
+                    </Tooltip>
+                  </div>
+                </div>
 
                 <div className="zm-draw-panel-section">
                   <p style={{ fontSize: 11, color: 'var(--zm-text-muted)' }}>

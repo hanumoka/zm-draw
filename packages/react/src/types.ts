@@ -58,6 +58,8 @@ export interface Shape {
   opacity?: number;
   /** Corner radius for rectangles */
   cornerRadius?: number;
+  /** Group ID if shape belongs to a group */
+  groupId?: string;
 }
 
 /** Connection point position on a shape */
