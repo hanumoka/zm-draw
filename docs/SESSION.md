@@ -1,17 +1,24 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-28 (Phase 2.6 완료)
+> 최종 업데이트: 2026-01-28 (Phase 3.5 진행 중)
 
 ---
 
 ## 현재 상태
 
-**Phase**: Phase 2.6 (다중 선택) 완료 ✅
-**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Phase 2.6 100% / Figma 스타일 70%
+**Phase**: Phase 3.5 (커넥터 고급) 진행 중
+**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Phase 2.6 100% / Phase 3.5 60% / Figma 스타일 75%
 
 ### 마지막 작업 (2026-01-28)
 
-- **Phase 2.6: Marquee Selection 구현** ✅ NEW
+- **Phase 3.5: 커넥터 고급 기능 Part 1** ✅ NEW
+  - ConnectionPoint, ArrowType, RoutingType 타입 추가
+  - Connector 인터페이스 확장 (fromPoint, toPoint, routing, arrowStart, arrowEnd)
+  - 커넥터 모드에서 도형 hover 시 Connection Points 시각화
+  - 라인 스타일 지원: solid, dashed, dotted
+  - Orthogonal (elbow) 라우팅 구현
+
+- **Phase 2.6: Marquee Selection 구현** ✅
   - 빈 영역 드래그로 선택 박스 생성
   - 박스와 교차하는 도형 자동 선택
   - Shift+드래그로 기존 선택에 추가
@@ -116,7 +123,7 @@
 
 - **브랜치**: main
 - **원격**: origin/main
-- **마지막 커밋**: `157c6ec feat(phase2.6): Add marquee (drag box) selection`
+- **마지막 커밋**: `d8e005a feat(phase3.5): Add connection points and advanced connector features`
 
 ---
 
@@ -146,25 +153,37 @@
 
 ---
 
-## 다음 작업: Phase 3.5 (커넥터 고급)
+## 다음 작업: Phase 3.5 완료 (커넥터 UI)
 
-### 목표: Connection Points + Elbow 라우팅
+### 목표: 커넥터 속성 패널 UI
 
 ```
-┌─────────────┐            ┌─────────────┐
-│   도형 A    │            │   도형 B    │
-│             ●────────────●             │
-└─────────────┘            └─────────────┘
-       ↑                          ↑
-  Connection Point          Connection Point
+┌─────────────────────────────┐
+│ Connector                   │
+├─────────────────────────────┤
+│ Line Style                  │
+│ [━━━] [┄┄┄] [···]          │
+├─────────────────────────────┤
+│ Routing                     │
+│ [↙↗ Straight] [└─ Elbow]   │
+├─────────────────────────────┤
+│ Arrow                       │
+│ Start: [None ▼]             │
+│ End:   [Arrow ▼]            │
+└─────────────────────────────┘
 ```
 
-### 구현 항목
-- [ ] Connection Points (4방향: 상/하/좌/우)
-- [ ] 커넥터 드래그 시 스냅
-- [ ] Orthogonal (Elbow) 라우팅
-- [ ] 화살촉 종류 선택
-- [ ] 라인 스타일 (실선/점선)
+### 구현 완료 항목 ✅
+- [x] Connection Points (4방향: 상/하/좌/우) ✅
+- [x] Connection Points 시각화 (hover) ✅
+- [x] Orthogonal (Elbow) 라우팅 ✅
+- [x] 라인 스타일 (실선/점선) ✅
+
+### 남은 항목
+- [ ] 커넥터 선택 시 속성 패널 표시
+- [ ] 라인 스타일 UI (버튼 그룹)
+- [ ] 라우팅 타입 UI (straight/orthogonal)
+- [ ] 화살촉 종류 선택 UI
 
 ---
 
@@ -208,6 +227,16 @@ zm-draw를 zm-editor (Tiptap 기반 Notion 스타일 에디터)에 통합 예정
 - [x] **점선 그리드** (Figma 스타일) ✅ NEW
 - [x] **Shapes 패널** (카테고리별 도형) ✅ NEW
 - [ ] EditorLayout 컴포넌트 분리 (선택적)
+
+### Phase 3.5 체크리스트 (진행 중)
+
+- [x] ConnectionPoint, ArrowType, RoutingType 타입 ✅
+- [x] Connection Points 시각화 (hover) ✅
+- [x] 라인 스타일 지원 (solid/dashed/dotted) ✅
+- [x] Orthogonal 라우팅 ✅
+- [ ] 커넥터 속성 패널 UI ⏳
+- [ ] 라우팅 타입 선택 UI ⏳
+- [ ] 화살촉 종류 선택 UI ⏳
 
 ### Phase 2.6 체크리스트 (완료 ✅)
 
