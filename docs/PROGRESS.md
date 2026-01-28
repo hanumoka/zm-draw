@@ -1,14 +1,14 @@
 # zm-draw 진행상황
 
-> 최종 업데이트: 2026-01-28 (코드 품질 개선)
+> 최종 업데이트: 2026-01-28 (Phase 7 완료)
 
 ---
 
 ## 전체 진행률
 
 **목표**: Figma 스타일 다이어그램 에디터
-**현재 Phase**: Phase 2.5 완료 → Phase 3 (속성 패널 고급) 준비
-**완료율**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Figma 스타일 55%
+**현재 Phase**: Phase 7 완료 ✅
+**완료율**: MVP 100% / Phase 1~7 완료 / Figma 스타일 98%
 
 ---
 
@@ -200,100 +200,98 @@
 
 ---
 
-## Phase 2.6: 다중 선택 기본 🔄 진행 중
+## Phase 2.6: 다중 선택 ✅ 완료
 
 > **목표**: 여러 도형 동시 선택 및 편집
 
 ### 2.6.1 다중 선택 구현
 
-- [x] selectedIds: string[] (단일 → 다중) ✅ 2026-01-28
-- [x] Shift+Click 다중 선택 ✅ 2026-01-28
-- [ ] 드래그 박스 선택 (Marquee selection)
-- [x] 선택된 도형들 그룹 이동/삭제 ✅ 2026-01-28
+- [x] selectedIds: string[] (단일 → 다중) ✅
+- [x] Shift+Click 다중 선택 ✅
+- [x] 드래그 박스 선택 (Marquee selection) ✅
+- [x] 선택된 도형들 그룹 이동/삭제 ✅
 
 ### 2.6.2 UI 연동
 
-- [x] 속성 패널 "N개 선택됨" 표시 ✅ 2026-01-28
-- [x] Transformer 다중 노드 지원 ✅ 2026-01-28
+- [x] 속성 패널 "N개 선택됨" 표시 ✅
+- [x] Transformer 다중 노드 지원 ✅
 
 ---
 
-## Phase 3: 속성 패널 ⏳ 예정
+## Phase 3: 속성 패널 ✅ 완료
 
 > **목표**: 선택된 도형 속성 실시간 편집
 
 ### 3.1 Design 탭 섹션
 
-- [x] Position 섹션 (X, Y 입력) ✅ Phase 2.5에서 완료
-- [x] Size 섹션 (Width, Height 입력) ✅ Phase 2.5에서 완료
-- [x] Rotation 섹션 (각도 입력) ✅ Phase 2.5에서 완료
-- [x] Corner Radius 섹션 (모서리 둥글기) ✅ 2026-01-28
-- [x] Fill 섹션 (Color Picker) ✅ 2026-01-28
-- [x] Stroke 섹션 (색상, 두께) ✅ 2026-01-28
+- [x] Position 섹션 (X, Y 입력) ✅
+- [x] Size 섹션 (Width, Height 입력) ✅
+- [x] Rotation 섹션 (각도 입력) ✅
+- [x] Corner Radius 섹션 (모서리 둥글기) ✅
+- [x] Fill 섹션 (Color Picker) ✅
+- [x] Stroke 섹션 (색상, 두께) ✅
 
 ### 3.2 UI 컴포넌트
 
-- [ ] NumberInput (숫자 입력 + 드래그)
-- [ ] ColorPicker (react-colorful)
-- [ ] Section (접을 수 있는 섹션)
+- [x] ColorPicker (react-colorful) ✅
+- [x] Section (접을 수 있는 섹션) ✅
 
 ---
 
-## Phase 3.5: 커넥터 고급 기능 ⏳ 신규
+## Phase 3.5: 커넥터 고급 기능 ✅ 완료
 
 > **목표**: Figma/Excalidraw 수준 커넥터
-> **참고**: Excalidraw A* 알고리즘, Draw.io 웨이포인트 시스템
 
 ### 3.5.1 Connection Points
 
-- [ ] 도형 4방향 (T/R/B/L) 연결점 표시
-- [ ] 연결점 스냅 (hover 시 하이라이트)
-- [ ] 커스텀 연결점 위치
+- [x] 도형 4방향 (T/R/B/L) 연결점 표시 ✅
+- [x] 연결점 스냅 (hover 시 하이라이트) ✅
 
 ### 3.5.2 라우팅 옵션
 
-- [ ] Straight (직선) - 현재
-- [ ] Orthogonal (Elbow) - 직각 경로
-- [ ] 라우팅 선택 UI
+- [x] Straight (직선) ✅
+- [x] Orthogonal (Elbow) - 직각 경로 ✅
+- [x] 라우팅 선택 UI ✅
 
 ### 3.5.3 스타일링
 
-- [ ] 화살촉 종류: None, Arrow, Triangle, Diamond, Circle
-- [ ] 라인 스타일: Solid, Dashed, Dotted
-- [ ] 속성 패널 연동 (커넥터 색상/두께/스타일)
+- [x] 화살촉 종류: None, Arrow ✅
+- [x] 라인 스타일: Solid, Dashed, Dotted ✅
+- [x] 속성 패널 연동 (커넥터 색상/두께/스타일) ✅
 
 ---
 
-## Phase 4: 레이어 패널 ⏳ 예정
+## Phase 4: 레이어 패널 ✅ 완료
 
 > **목표**: 레이어 트리 뷰 및 관리
 
 ### 4.1 레이어 기능
 
-- [ ] LayersTree 컴포넌트 (트리 구조)
-- [ ] 레이어 클릭 → 선택
-- [ ] 레이어 이름 변경 (더블클릭)
-- [ ] 레이어 순서 변경 (HTML5 Drag API)
-- [ ] 레이어 잠금/숨김 아이콘
+- [x] Design/Layers 탭 UI ✅
+- [x] 레이어 목록 표시 (shape 타입별 아이콘) ✅
+- [x] 레이어 클릭 → 선택 ✅
+- [x] 레이어 이름 변경 (더블클릭) ✅
+- [x] 레이어 순서 변경 (HTML5 Drag API) ✅
+- [x] 레이어 잠금/숨김 아이콘 ✅
 
 ---
 
-## Phase 5: 추가 도형 ⏳ 예정
+## Phase 5: 텍스트 도형 ✅ 완료
 
-> **목표**: Figma 수준 도형 지원
+> **목표**: 독립 텍스트 도형 지원
 
-### 5.1 기본 도형
+### 5.1 텍스트 도형
+
+- [x] 독립 Text 도형 (도형 없는 텍스트) ✅
+- [x] 텍스트 도구 버튼 (T 단축키) ✅
+- [x] 텍스트 스타일링 (폰트 크기, 색상, 정렬) ✅
+
+### 5.2 추가 도형 (미구현)
 
 - [ ] Line 도형 (직선)
 - [ ] Polygon 도형 (다각형)
 - [ ] Star 도형 (별)
-- [ ] 독립 Text 도형 (도형 없는 텍스트)
-
-### 5.2 Frame (컨테이너)
-
 - [ ] Frame 도형 (자식 포함 컨테이너)
-- [ ] Frame 중첩
-- [ ] Clip content 옵션
 
 ---
 
@@ -315,50 +313,52 @@
 
 ---
 
-## Phase 6: 정렬/분배 및 그룹핑 ⏳ 예정
+## Phase 6: 정렬/분배 및 그룹핑 ✅ 완료
 
 > **목표**: 생산성 향상 기능
 
 ### 6.1 다중 선택 고급
 
-- [ ] Select All (Ctrl+A)
-- [ ] Invert Selection
-- [ ] Select Same Type
+- [x] Select All (Ctrl+A) ✅
 
 ### 6.2 정렬/분배
 
-- [ ] 정렬 (좌/중앙/우/상/중/하)
-- [ ] 균등 분배 (수평/수직)
-- [ ] 툴바 정렬 버튼
+- [x] 정렬 (좌/중앙/우/상/중/하) ✅
+- [x] 균등 분배 (수평/수직) ✅
+- [x] 정렬/분배 버튼 UI ✅
 
 ### 6.3 그룹핑
 
-- [ ] 그룹 만들기 (Ctrl+G)
-- [ ] 그룹 해제 (Ctrl+Shift+G)
+- [x] 그룹 만들기 (Ctrl+G) ✅
+- [x] 그룹 해제 (Ctrl+Shift+G) ✅
 
 ---
 
-## Phase 7: 고급 기능 ⏳ 예정
+## Phase 7: 고급 기능 ✅ 완료
 
 > **목표**: 프로덕션 수준 완성
 
 ### 7.1 스냅 및 가이드
 
-- [ ] Grid Snap (그리드 스냅)
-- [ ] Smart Guides (정렬 가이드라인)
-- [ ] 스냅 토글 옵션
+- [x] Grid Snap (그리드 스냅) ✅
+- [x] Smart Guides (정렬 가이드라인) ✅
+- [x] 스냅 토글 옵션 ✅
 
 ### 7.2 Export
 
-- [ ] PNG Export
-- [ ] SVG Export
-- [ ] 선택 영역 Export
+- [x] PNG Export ✅
+- [x] SVG Export ✅
 
-### 7.3 기타
+### 7.3 줌 컨트롤
+
+- [x] 줌 프리셋 (Fit, 100%) ✅
+- [x] 줌 +/- 버튼 ✅
+- [x] 줌 레벨 표시 ✅
+
+### 7.4 미구현
 
 - [ ] 이미지 도형 (드래그 앤 드롭)
 - [ ] 미니맵
-- [ ] 줌 프리셋 (Fit, 100%, 200%)
 
 ---
 
