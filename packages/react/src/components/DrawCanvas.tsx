@@ -94,11 +94,14 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
   // Selection state from Zustand store
-  const selectedId = useSelectionStore((s) => s.selectedId);
+  const selectedIds = useSelectionStore((s) => s.selectedIds);
+  const selectedId = useSelectionStore((s) => s.selectedId); // Backward compat: first selected
   const selectionType = useSelectionStore((s) => s.selectionType);
   const setSelectedId = useSelectionStore((s) => s.select);
   const selectConnector = useSelectionStore((s) => s.selectConnector);
   const clearSelection = useSelectionStore((s) => s.clearSelection);
+  const toggleSelection = useSelectionStore((s) => s.toggleSelection);
+  const selectMultiple = useSelectionStore((s) => s.selectMultiple);
 
   // Viewport state from Zustand store
   const scale = useViewportStore((s) => s.scale);
@@ -444,7 +447,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           });
       }
 
-      if (shape.id === selectedId && selectionType === 'shape') {
+      if (selectedIds.includes(shape.id) && selectionType === 'shape') {
         konvaShape.stroke('#ef4444');
         konvaShape.strokeWidth(3);
       }
@@ -484,7 +487,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         });
       });
 
-      group.on('click tap', () => {
+      group.on('click tap', (e) => {
         if (tool === 'connector') {
           if (!connectingFrom) {
             setConnectingFrom(shape.id);
@@ -493,7 +496,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             setConnectingFrom(null);
           }
         } else {
-          setSelectedId(shape.id);
+          // Support Shift+Click for multi-select
+          const evt = e.evt as MouseEvent | TouchEvent;
+          const shiftKey = 'shiftKey' in evt ? evt.shiftKey : false;
+          toggleSelection(shape.id, shiftKey);
         }
       });
 
@@ -506,10 +512,14 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     });
 
     const transformer = transformerRef.current;
-    if (transformer && selectedId && selectionType === 'shape') {
-      const selectedNode = layer.findOne(`#${selectedId}`);
-      if (selectedNode) {
-        transformer.nodes([selectedNode]);
+    if (transformer && selectedIds.length > 0 && selectionType === 'shape') {
+      // Find all selected nodes
+      const selectedNodes = selectedIds
+        .map((id) => layer.findOne(`#${id}`))
+        .filter((node): node is Konva.Node => node !== undefined);
+
+      if (selectedNodes.length > 0) {
+        transformer.nodes(selectedNodes);
         transformer.getLayer()?.batchDraw();
       } else {
         transformer.nodes([]);
@@ -519,7 +529,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     }
 
     layer.batchDraw();
-  }, [shapes, selectedId, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId]);
+  }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection]);
 
   // Add shape at position
   const addShape = useCallback((type: ShapeType, x: number, y: number) => {
@@ -540,25 +550,30 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     setTool('select');
   }, [onShapesChange]);
 
-  // Delete selected shape or connector
+  // Delete selected shapes or connector
   const deleteSelected = useCallback(() => {
-    if (!selectedId) return;
+    if (selectedIds.length === 0) return;
 
     if (selectionType === 'connector') {
+      // Delete single connector
       setConnectors((prev) => prev.filter((c) => c.id !== selectedId));
       clearSelection();
     } else {
+      // Delete all selected shapes
       setShapes((prev) => {
-        const updated = prev.filter((s) => s.id !== selectedId);
+        const updated = prev.filter((s) => !selectedIds.includes(s.id));
         onShapesChange?.(updated);
         return updated;
       });
+      // Delete connectors connected to any deleted shape
       setConnectors((prev) =>
-        prev.filter((c) => c.fromShapeId !== selectedId && c.toShapeId !== selectedId)
+        prev.filter((c) =>
+          !selectedIds.includes(c.fromShapeId) && !selectedIds.includes(c.toShapeId)
+        )
       );
       clearSelection();
     }
-  }, [selectedId, selectionType, onShapesChange, clearSelection]);
+  }, [selectedIds, selectedId, selectionType, onShapesChange, clearSelection]);
 
   // Clear all shapes
   const clearAll = useCallback(() => {
@@ -1107,11 +1122,11 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             addShape(tool as ShapeType, adjustedPos.x, adjustedPos.y);
           }
         } else {
-          setSelectedId(null);
+          clearSelection();
         }
       }
     });
-  }, [tool, addShape, isPanning]);
+  }, [tool, addShape, isPanning, clearSelection]);
 
   // Pan with space + drag (infinite canvas)
   useEffect(() => {

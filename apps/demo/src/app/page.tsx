@@ -6,7 +6,7 @@ import { TooltipProvider, Tooltip } from '../components/Tooltip';
 import { PanelResizer } from '../components/PanelResizer';
 import { ColorPicker } from '../components/ColorPicker';
 import type { DrawCanvasHandle, ToolType } from '@zm-draw/react';
-import { useToolStore } from '@zm-draw/react';
+import { useToolStore, useSelectionStore } from '@zm-draw/react';
 
 // Konva requires window, so we need to dynamically import
 const DrawCanvas = dynamic(
@@ -354,6 +354,9 @@ export default function Home() {
   const setTool = useToolStore((s) => s.setTool);
   const currentTool = useToolStore((s) => s.tool);
 
+  // Selection store for multi-select count
+  const selectedIds = useSelectionStore((s) => s.selectedIds);
+
   // Handle shape button click - set tool for drawing
   const handleShapeClick = useCallback((toolType: ToolType) => {
     setTool(toolType);
@@ -601,7 +604,24 @@ export default function Home() {
               Design
             </div>
           <div className="zm-draw-panel-content">
-            {selectedShape ? (
+            {selectedIds.length > 1 ? (
+              // Multi-selection: show count
+              <div className="zm-draw-empty-state">
+                <div className="zm-draw-empty-state-icon">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                </div>
+                <p><strong>{selectedIds.length}</strong> items selected</p>
+                <p style={{ fontSize: 11, marginTop: 4 }}>
+                  Shift+Click to add/remove<br />
+                  Click empty space to deselect
+                </p>
+              </div>
+            ) : selectedShape ? (
               <>
                 {/* Position Section */}
                 <div className="zm-draw-panel-section">

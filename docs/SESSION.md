@@ -6,12 +6,20 @@
 
 ## 현재 상태
 
-**Phase**: Phase 3 완료 → Phase 2.6/3.5 준비
-**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Figma 스타일 60%
+**Phase**: Phase 2.6 (다중 선택) 진행 중
+**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Phase 2.6 80% / Figma 스타일 65%
 
 ### 마지막 작업 (2026-01-28)
 
-- **Phase 3: 속성 패널 고급 완료** ✅ NEW
+- **Phase 2.6: 다중 선택 기본 구현** ✅ NEW
+  - `selectionStore` 다중 선택 API 추가 (selectedIds, toggleSelection, selectMultiple)
+  - **Shift+Click** 다중 선택 지원
+  - Transformer 다중 노드 지원
+  - 선택된 모든 도형 하이라이트
+  - 다중 삭제 지원
+  - 속성 패널 "N개 선택됨" 표시
+
+- **Phase 3: 속성 패널 고급 완료** ✅
   - react-colorful + @radix-ui/react-popover 설치
   - ColorPicker 컴포넌트 생성
   - Fill 색상 편집 (팝업 + 텍스트 입력)
