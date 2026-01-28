@@ -11,7 +11,11 @@
 
 ### 마지막 작업 (2026-01-28)
 
-- **Phase 3.5: 커넥터 속성 패널 UI** ✅ NEW
+- **코드 리뷰 및 버그 수정** ✅ NEW
+  - `getConnectionPoint`가 `getShapeEdgePoint` 의존성 누락 → 수정
+  - 함수 정의 순서 변경 (getShapeEdgePoint를 먼저 정의)
+
+- **Phase 3.5: 커넥터 속성 패널 UI** ✅
   - DrawCanvasHandle에 getConnectors(), updateConnector() 메서드 추가
   - 커넥터 선택 시 속성 패널 표시
   - 라인 스타일 선택 UI (solid/dashed/dotted)
@@ -131,7 +135,7 @@
 
 - **브랜치**: main
 - **원격**: origin/main
-- **마지막 커밋**: `8f5cac2 feat(phase3.5): Add connector property panel UI`
+- **마지막 커밋**: `7570926 fix: Fix getConnectionPoint dependency on getShapeEdgePoint`
 
 ---
 
