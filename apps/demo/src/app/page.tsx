@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { TooltipProvider, Tooltip } from '../components/Tooltip';
 import { PanelResizer } from '../components/PanelResizer';
 import { ColorPicker } from '../components/ColorPicker';
-import type { DrawCanvasHandle, ToolType, Connector } from '@zm-draw/react';
+import type { DrawCanvasHandle, ToolType, Connector, Shape } from '@zm-draw/react';
 import { useToolStore, useSelectionStore } from '@zm-draw/react';
 
 // Konva requires window, so we need to dynamically import
@@ -155,6 +155,43 @@ const TrashIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="3 6 5 6 21 6" />
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </svg>
+);
+
+// Layer panel icons
+const EyeIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const EyeOffIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+    <line x1="1" y1="1" x2="23" y2="23" />
+  </svg>
+);
+
+const LockIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const UnlockIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+  </svg>
+);
+
+const LayersIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+    <polyline points="2 17 12 22 22 17" />
+    <polyline points="2 12 12 17 22 12" />
   </svg>
 );
 
@@ -396,6 +433,8 @@ export default function Home() {
   const [canvasOffset, setCanvasOffset] = useState({ left: 0, top: 0 });
   const [viewport, setViewport] = useState({ scale: 1, position: { x: 0, y: 0 } });
   const [selectedConnector, setSelectedConnector] = useState<Connector | null>(null);
+  const [rightPanelTab, setRightPanelTab] = useState<'design' | 'layers'>('design');
+  const [shapes, setShapes] = useState<Shape[]>([]);
 
   // Tool store for shape panel buttons
   const setTool = useToolStore((s) => s.setTool);
@@ -404,6 +443,38 @@ export default function Home() {
   // Selection store for multi-select count and type
   const selectedIds = useSelectionStore((s) => s.selectedIds);
   const selectionType = useSelectionStore((s) => s.selectionType);
+  const selectShape = useSelectionStore((s) => s.select);
+
+  // Handle shapes change from canvas
+  const handleShapesChange = useCallback((newShapes: Shape[]) => {
+    setShapes(newShapes);
+  }, []);
+
+  // Handle layer click - select shape
+  const handleLayerClick = useCallback((shapeId: string) => {
+    selectShape(shapeId);
+  }, [selectShape]);
+
+  // Get shape type icon
+  const getShapeTypeIcon = useCallback((type: string) => {
+    switch (type) {
+      case 'rectangle':
+        return '▢';
+      case 'ellipse':
+        return '◯';
+      case 'diamond':
+        return '◇';
+      default:
+        return '▢';
+    }
+  }, []);
+
+  // Get shape display name
+  const getShapeDisplayName = useCallback((shape: Shape, index: number) => {
+    if (shape.name) return shape.name;
+    const typeName = shape.type.charAt(0).toUpperCase() + shape.type.slice(1);
+    return `${typeName} ${index + 1}`;
+  }, []);
 
   // Handle shape button click - set tool for drawing
   const handleShapeClick = useCallback((toolType: ToolType) => {
@@ -645,6 +716,7 @@ export default function Home() {
           gridSize={20}
           onSelectionChange={handleSelectionChange}
           onViewportChange={handleViewportChange}
+          onShapesChange={handleShapesChange}
         />
 
         {/* Selection Context Menu */}
@@ -671,11 +743,66 @@ export default function Home() {
             onWidthChange={setRightPanelWidth}
           />
           <aside className="zm-draw-right-panel" style={{ width: rightPanelWidth, minWidth: rightPanelWidth }}>
-            <div className="zm-draw-panel-header">
-              Design
+            {/* Tab Header */}
+            <div className="zm-draw-panel-tabs">
+              <button
+                className={`zm-draw-panel-tab ${rightPanelTab === 'design' ? 'active' : ''}`}
+                onClick={() => setRightPanelTab('design')}
+              >
+                Design
+              </button>
+              <button
+                className={`zm-draw-panel-tab ${rightPanelTab === 'layers' ? 'active' : ''}`}
+                onClick={() => setRightPanelTab('layers')}
+              >
+                <LayersIcon /> Layers
+              </button>
             </div>
           <div className="zm-draw-panel-content">
-            {selectedIds.length > 1 ? (
+            {/* Layers Panel */}
+            {rightPanelTab === 'layers' ? (
+              <div className="zm-layers-panel">
+                {shapes.length === 0 ? (
+                  <div className="zm-draw-empty-state">
+                    <div className="zm-draw-empty-state-icon">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                        <polyline points="2 17 12 22 22 17" />
+                        <polyline points="2 12 12 17 22 12" />
+                      </svg>
+                    </div>
+                    <p>No layers yet</p>
+                    <p style={{ fontSize: 11, marginTop: 4 }}>
+                      Add shapes to see them here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="zm-layers-list">
+                    {[...shapes].reverse().map((shape, index) => {
+                      const isSelected = selectedIds.includes(shape.id);
+                      const realIndex = shapes.length - 1 - index;
+                      return (
+                        <div
+                          key={shape.id}
+                          className={`zm-layer-item ${isSelected ? 'selected' : ''}`}
+                          onClick={() => handleLayerClick(shape.id)}
+                        >
+                          <button className="zm-layer-visibility" title="Toggle visibility">
+                            <EyeIcon />
+                          </button>
+                          <button className="zm-layer-lock" title="Toggle lock">
+                            <UnlockIcon />
+                          </button>
+                          <span className="zm-layer-icon">{getShapeTypeIcon(shape.type)}</span>
+                          <span className="zm-layer-name">{getShapeDisplayName(shape, realIndex)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+            selectedIds.length > 1 ? (
               // Multi-selection: show count
               <div className="zm-draw-empty-state">
                 <div className="zm-draw-empty-state-icon">
@@ -987,7 +1114,7 @@ export default function Home() {
                 </div>
                 <p>Select a shape to view<br />its properties</p>
               </div>
-            )}
+            ))}
           </div>
         </aside>
         </>
