@@ -1,17 +1,31 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-28 (Phase 4 완료)
+> 최종 업데이트: 2026-01-28 (Phase 5 진행 중)
 
 ---
 
 ## 현재 상태
 
-**Phase**: Phase 4 (레이어 패널) 완료 ✅
-**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Phase 2.6 100% / Phase 3.5 100% / Phase 4 100% / Figma 스타일 85%
+**Phase**: Phase 5 (텍스트 개선) 진행 중
+**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Phase 2.6 100% / Phase 3.5 100% / Phase 4 100% / Phase 5 50% / Figma 스타일 88%
 
 ### 마지막 작업 (2026-01-28)
 
-- **Phase 4: 레이어 패널 완료** ✅ NEW
+- **Phase 5: 독립 텍스트 도형** ✅ NEW
+  - 'text' shape type 추가 (도형 없이 텍스트만)
+  - 툴바에 Text 도구 버튼 (T 단축키) 추가
+  - 텍스트 전용 기본 속성 (투명 배경, 왼쪽 정렬)
+  - 텍스트 도형 선택 시 점선 테두리
+  - 생성 시 자동 편집 모드 진입
+  - 레이어 패널에 텍스트 아이콘 (T)
+
+- **Phase 5: 텍스트 스타일링** ✅ NEW
+  - 폰트 크기 조절
+  - 텍스트 색상 피커
+  - 텍스트 정렬 버튼 (왼쪽/가운데/오른쪽)
+  - SelectedShapeInfo에 텍스트 속성 추가
+
+- **Phase 4: 레이어 패널 완료** ✅
   - 우측 패널에 Design/Layers 탭 UI 추가
   - 레이어 목록 표시 (shape 타입별 아이콘)
   - **가시성 토글** (👁): hidden shape은 렌더링 안됨
@@ -145,7 +159,7 @@
 
 - **브랜치**: main
 - **원격**: origin/main
-- **마지막 커밋**: `95e0500 feat(phase4): Add layer drag-and-drop reordering`
+- **마지막 커밋**: `2e512b1 feat(phase5): Add text styling in property panel`
 
 ---
 
@@ -200,7 +214,13 @@
 
 ---
 
-## 다음 작업: Phase 5 (텍스트 개선)
+## 다음 작업: Phase 5 남은 작업 / Phase 6
+
+### Phase 5 남은 작업
+- [ ] 폰트 패밀리 선택 (선택적)
+- [ ] 텍스트 굵기/기울임 (선택적)
+
+### Phase 6: 정렬/분배 및 그룹핑
 
 ---
 
