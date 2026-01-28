@@ -26,6 +26,11 @@ interface SelectedShape {
   stroke: string;
   strokeWidth: number;
   cornerRadius: number;
+  // Text properties
+  text?: string;
+  fontSize?: number;
+  textColor?: string;
+  textAlign?: 'left' | 'center' | 'right';
 }
 
 // Icons as components
@@ -192,6 +197,31 @@ const LayersIcon = () => (
     <polygon points="12 2 2 7 12 12 22 7 12 2" />
     <polyline points="2 17 12 22 22 17" />
     <polyline points="2 12 12 17 22 12" />
+  </svg>
+);
+
+// Text alignment icons
+const AlignLeftIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="15" y2="12" />
+    <line x1="3" y1="18" x2="18" y2="18" />
+  </svg>
+);
+
+const AlignCenterIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="6" y1="12" x2="18" y2="12" />
+    <line x1="4" y1="18" x2="20" y2="18" />
+  </svg>
+);
+
+const AlignRightIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="9" y1="12" x2="21" y2="12" />
+    <line x1="6" y1="18" x2="21" y2="18" />
   </svg>
 );
 
@@ -1104,6 +1134,71 @@ export default function Home() {
                       />
                     </div>
                   </div>
+                )}
+
+                {/* Text Section - Only for text shapes */}
+                {selectedShape.type === 'text' && (
+                  <>
+                    <div className="zm-draw-panel-section">
+                      <div className="zm-draw-panel-section-title">Text</div>
+                      <div className="zm-draw-panel-row">
+                        <span className="zm-draw-panel-label">Size</span>
+                        <input
+                          type="number"
+                          className="zm-draw-panel-input"
+                          value={selectedShape.fontSize || 16}
+                          onChange={(e) => updateShapeProperty('fontSize', Math.max(8, parseFloat(e.target.value) || 16))}
+                          min={8}
+                          step={1}
+                        />
+                      </div>
+                      <div className="zm-draw-panel-row">
+                        <ColorPicker
+                          color={selectedShape.textColor || '#000000'}
+                          onChange={(color) => updateShapeProperty('textColor', color)}
+                          label="Text color"
+                        />
+                        <input
+                          type="text"
+                          className="zm-draw-panel-input"
+                          value={selectedShape.textColor || '#000000'}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
+                              updateShapeProperty('textColor', value || '#000000');
+                            }
+                          }}
+                          placeholder="#000000"
+                        />
+                      </div>
+                      <div className="zm-draw-panel-row" style={{ gap: 4 }}>
+                        <Tooltip content="Align Left">
+                          <button
+                            className={`zm-style-button ${(!selectedShape.textAlign || selectedShape.textAlign === 'left') ? 'active' : ''}`}
+                            onClick={() => updateShapeProperty('textAlign', 'left')}
+                          >
+                            <AlignLeftIcon />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Align Center">
+                          <button
+                            className={`zm-style-button ${selectedShape.textAlign === 'center' ? 'active' : ''}`}
+                            onClick={() => updateShapeProperty('textAlign', 'center')}
+                          >
+                            <AlignCenterIcon />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Align Right">
+                          <button
+                            className={`zm-style-button ${selectedShape.textAlign === 'right' ? 'active' : ''}`}
+                            onClick={() => updateShapeProperty('textAlign', 'right')}
+                          >
+                            <AlignRightIcon />
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 {/* Type Info */}

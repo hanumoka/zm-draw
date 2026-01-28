@@ -24,6 +24,11 @@ export interface SelectedShapeInfo {
   stroke: string;
   strokeWidth: number;
   cornerRadius: number;
+  // Text properties
+  text?: string;
+  fontSize?: number;
+  textColor?: string;
+  textAlign?: 'left' | 'center' | 'right';
 }
 
 /** Viewport state for positioning overlays */
@@ -1403,6 +1408,11 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         stroke: shape.stroke,
         strokeWidth: shape.strokeWidth,
         cornerRadius: shape.cornerRadius ?? 0,
+        // Text properties
+        text: shape.text,
+        fontSize: shape.fontSize,
+        textColor: shape.textColor,
+        textAlign: shape.textAlign,
       });
     }
   }, [selectedId, shapes, onSelectionChange]);
