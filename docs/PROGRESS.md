@@ -362,6 +362,137 @@
 
 ---
 
+## Phase 8: zm-editor 통합 ⏳ 예정
+
+> **목표**: zm-draw를 zm-editor (Tiptap 기반 리치 텍스트 에디터)에 통합
+> **선행 조건**: zm-draw Phase 7 완료 후 진행
+> **예상 작업량**: 400~500줄 통합 코드
+
+### 8.1 zm-editor 분석 결과
+
+**zm-editor 개요**:
+- Tiptap/ProseMirror 기반 Notion 스타일 에디터
+- 28개 커스텀 노드 (MermaidNode, ImageNode 등)
+- React 19, TypeScript 5.7, ESM, pnpm (zm-draw와 동일 스택)
+
+**통합 가능성**: ✅ 완전 호환
+
+| 항목 | zm-draw | zm-editor | 호환성 |
+|------|---------|-----------|--------|
+| React | 19 | 19 | ✅ |
+| TypeScript | 5.7+ | 5.7+ | ✅ |
+| 모듈 | ESM | ESM | ✅ |
+| 패키지 매니저 | pnpm | pnpm | ✅ |
+
+### 8.2 통합 아키텍처
+
+**참고 패턴**: MermaidNode 확장 구조
+- `mermaid-extension.ts`: Tiptap Node.create() 정의
+- `MermaidNode.tsx`: ReactNodeViewRenderer 컴포넌트
+
+**zm-draw 통합 파일 구조**:
+```
+zm-editor/packages/react/src/components/
+└── DrawDiagramNode/
+    ├── draw-diagram-extension.ts  (~100줄)
+    └── DrawDiagramNode.tsx        (~200줄)
+```
+
+### 8.3 확장 정의 (draw-diagram-extension.ts)
+
+```typescript
+import { Node } from '@tiptap/core';
+import { ReactNodeViewRenderer } from '@tiptap/react';
+import { DrawDiagramNode } from './DrawDiagramNode';
+
+export const DrawDiagram = Node.create({
+  name: 'drawDiagram',
+  group: 'block',
+  atom: true,
+  draggable: true,
+
+  addAttributes() {
+    return {
+      diagramData: {
+        default: { shapes: [], connectors: [] },
+        parseHTML: (el) => JSON.parse(el.getAttribute('data-diagram') || '{}'),
+        renderHTML: (attrs) => ({ 'data-diagram': JSON.stringify(attrs.diagramData) }),
+      },
+      width: { default: 600 },
+      height: { default: 400 },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: 'div[data-type="draw-diagram"]' }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ['div', { ...HTMLAttributes, 'data-type': 'draw-diagram' }];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(DrawDiagramNode);
+  },
+});
+```
+
+### 8.4 React 컴포넌트 (DrawDiagramNode.tsx)
+
+```typescript
+import { NodeViewWrapper, NodeViewProps } from '@tiptap/react';
+import { DrawCanvas, Shape, Connector } from '@zm-draw/react';
+
+export function DrawDiagramNode({ node, updateAttributes }: NodeViewProps) {
+  const { diagramData, width, height } = node.attrs;
+
+  const handleChange = (shapes: Shape[], connectors: Connector[]) => {
+    updateAttributes({ diagramData: { shapes, connectors } });
+  };
+
+  return (
+    <NodeViewWrapper>
+      <DrawCanvas
+        width={width}
+        height={height}
+        shapes={diagramData.shapes}
+        connectors={diagramData.connectors}
+        onChange={handleChange}
+      />
+    </NodeViewWrapper>
+  );
+}
+```
+
+### 8.5 Slash Command 통합
+
+```typescript
+// 기존 zm-editor 슬래시 메뉴에 추가
+{
+  title: 'Draw Diagram',
+  description: 'Insert a diagram editor',
+  icon: DiagramIcon,
+  command: ({ editor }) => {
+    editor.chain().focus().insertContent({
+      type: 'drawDiagram',
+      attrs: { diagramData: { shapes: [], connectors: [] } }
+    }).run();
+  },
+}
+```
+
+### 8.6 통합 체크리스트
+
+- [ ] @zm-draw/react 패키지 npm 배포
+- [ ] draw-diagram-extension.ts 생성
+- [ ] DrawDiagramNode.tsx 생성
+- [ ] Slash command 등록
+- [ ] 스타일 통합 (다크모드 등)
+- [ ] 리사이즈 핸들 추가 (선택)
+- [ ] 전체화면 편집 모드 (선택)
+
+---
+
 ## 기술 스택 검토 (2026-01-25)
 
 ### 현재 스택
