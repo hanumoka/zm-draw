@@ -1,17 +1,25 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-28 (Phase 5 진행 중)
+> 최종 업데이트: 2026-01-28 (Phase 6 완료)
 
 ---
 
 ## 현재 상태
 
-**Phase**: Phase 5 (텍스트 개선) 진행 중
-**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Phase 2.6 100% / Phase 3.5 100% / Phase 4 100% / Phase 5 50% / Figma 스타일 88%
+**Phase**: Phase 6 (정렬/분배 및 그룹핑) 완료 ✅
+**진행률**: MVP 100% / Phase 1 90% / Phase 1.5 100% / Phase 2 95% / Phase 2.5 100% / Phase 3 100% / Phase 2.6 100% / Phase 3.5 100% / Phase 4 100% / Phase 5 100% / Phase 6 100% / Figma 스타일 92%
 
 ### 마지막 작업 (2026-01-28)
 
-- **Phase 5: 독립 텍스트 도형** ✅ NEW
+- **Phase 6: 정렬/분배/그룹핑** ✅ NEW
+  - Select All (Ctrl+A) 키보드 단축키
+  - 정렬: left/center/right/top/middle/bottom
+  - 분배: horizontal/vertical (3개 이상 선택 시)
+  - 그룹: Ctrl+G로 그룹 만들기
+  - 언그룹: Ctrl+Shift+G로 그룹 해제
+  - 다중 선택 시 정렬/분배/그룹 버튼 표시
+
+- **Phase 5: 독립 텍스트 도형** ✅
   - 'text' shape type 추가 (도형 없이 텍스트만)
   - 툴바에 Text 도구 버튼 (T 단축키) 추가
   - 텍스트 전용 기본 속성 (투명 배경, 왼쪽 정렬)
@@ -159,7 +167,7 @@
 
 - **브랜치**: main
 - **원격**: origin/main
-- **마지막 커밋**: `2e512b1 feat(phase5): Add text styling in property panel`
+- **마지막 커밋**: `f384857 feat(phase6): Add grouping and ungrouping functionality`
 
 ---
 
@@ -214,13 +222,15 @@
 
 ---
 
-## 다음 작업: Phase 5 남은 작업 / Phase 6
+## 다음 작업: Phase 7 (고급 기능)
 
-### Phase 5 남은 작업
-- [ ] 폰트 패밀리 선택 (선택적)
-- [ ] 텍스트 굵기/기울임 (선택적)
-
-### Phase 6: 정렬/분배 및 그룹핑
+### Phase 7: 고급 기능 예정
+- [ ] Grid Snap (그리드 스냅)
+- [ ] Smart Guides (정렬 가이드라인)
+- [ ] PNG/SVG Export
+- [ ] 이미지 도형
+- [ ] 미니맵
+- [ ] 줌 프리셋 (Fit, 100%, 200%)
 
 ---
 
