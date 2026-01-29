@@ -8,7 +8,13 @@ import { useKeyboard } from '../hooks/useKeyboard';
 import { useToolStore } from '../stores/toolStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useViewportStore } from '../stores/viewportStore';
-import { generateId, defaultShapeProps, defaultTextShapeProps, defaultStickyNoteProps, defaultFreeDrawProps } from '../stores/canvasStore';
+import { generateId, defaultShapeProps, defaultTextShapeProps, defaultStickyNoteProps, defaultFreeDrawProps, defaultImageShapeProps } from '../stores/canvasStore';
+
+// Module-level image cache for performance
+const imageCache = new Map<string, HTMLImageElement>();
+
+// Maximum image dimensions (auto-resize if exceeded)
+const MAX_IMAGE_SIZE = 4000;
 import { Toolbar } from './Toolbar';
 import { TextEditor } from './TextEditor';
 
@@ -752,6 +758,56 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             });
           }
           break;
+        case 'image':
+          // Image shape using Konva.Image
+          {
+            const cachedImg = imageCache.get(shape.src || '');
+            if (cachedImg && cachedImg.complete) {
+              konvaShape = new Konva.Image({
+                x: 0,
+                y: 0,
+                width: shape.width,
+                height: shape.height,
+                image: cachedImg,
+              });
+            } else {
+              // Placeholder while loading
+              konvaShape = new Konva.Rect({
+                x: 0,
+                y: 0,
+                width: shape.width,
+                height: shape.height,
+                fill: '#f3f4f6',
+                stroke: '#d1d5db',
+                strokeWidth: 1,
+                dash: [4, 4],
+              });
+              // Add loading text
+              const loadingText = new Konva.Text({
+                x: 0,
+                y: shape.height / 2 - 8,
+                width: shape.width,
+                text: 'Loading...',
+                fontSize: 12,
+                fill: '#9ca3af',
+                align: 'center',
+              });
+              group.add(loadingText);
+
+              // Load image asynchronously
+              if (shape.src) {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                  imageCache.set(shape.src!, img);
+                  // Re-render shapes to show loaded image
+                  renderShapes();
+                };
+                img.src = shape.src;
+              }
+            }
+          }
+          break;
         default:
           konvaShape = new Konva.Rect({
             ...shapeConfig,
@@ -759,10 +815,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           });
       }
 
-      // Selection highlight (different for text and freedraw shapes)
+      // Selection highlight (different for text, freedraw, and image shapes)
       if (selectedIds.includes(shape.id) && selectionType === 'shape') {
-        if (shape.type === 'text' || shape.type === 'freedraw') {
-          // For text/freedraw shapes, add a selection border rect (don't modify stroke)
+        if (shape.type === 'text' || shape.type === 'freedraw' || shape.type === 'image') {
+          // For text/freedraw/image shapes, add a selection border rect (don't modify stroke)
           const selectionRect = new Konva.Rect({
             x: -2,
             y: -2,
@@ -917,6 +973,13 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         .filter((node): node is Konva.Node => node !== undefined);
 
       if (selectedNodes.length > 0) {
+        // Check if any selected shape requires aspect ratio preservation
+        const selectedShapes = shapes.filter(s => selectedIds.includes(s.id));
+        const shouldKeepRatio = selectedShapes.some(s =>
+          s.type === 'image' && s.preserveAspectRatio !== false
+        );
+
+        transformer.keepRatio(shouldKeepRatio);
         transformer.nodes(selectedNodes);
         transformer.getLayer()?.batchDraw();
       } else {
@@ -969,6 +1032,231 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     setTool('select');
   }, [onShapesChange, snapToGridValue, currentStickyColor]);
+
+  // Load image from src and cache it
+  const loadImage = useCallback((src: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      // Check cache first
+      const cached = imageCache.get(src);
+      if (cached && cached.complete) {
+        resolve(cached);
+        return;
+      }
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        imageCache.set(src, img);
+        resolve(img);
+      };
+      img.onerror = () => {
+        reject(new Error(`Failed to load image: ${src.substring(0, 50)}...`));
+      };
+      img.src = src;
+    });
+  }, []);
+
+  // Add image shape at position
+  const addImageShape = useCallback((src: string, x: number, y: number, naturalWidth: number, naturalHeight: number) => {
+    // Calculate size - fit within max dimensions while preserving aspect ratio
+    let width = naturalWidth;
+    let height = naturalHeight;
+
+    if (width > MAX_IMAGE_SIZE || height > MAX_IMAGE_SIZE) {
+      const scale = Math.min(MAX_IMAGE_SIZE / width, MAX_IMAGE_SIZE / height);
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+
+    // Limit initial display size for usability (max 400px)
+    const maxDisplaySize = 400;
+    if (width > maxDisplaySize || height > maxDisplaySize) {
+      const displayScale = Math.min(maxDisplaySize / width, maxDisplaySize / height);
+      width = Math.round(width * displayScale);
+      height = Math.round(height * displayScale);
+    }
+
+    const snappedX = snapToGridValue(x - width / 2);
+    const snappedY = snapToGridValue(y - height / 2);
+
+    const newShape: Shape = {
+      id: generateId(),
+      type: 'image',
+      x: snappedX,
+      y: snappedY,
+      ...defaultImageShapeProps,
+      width,
+      height,
+      src,
+      naturalWidth,
+      naturalHeight,
+    };
+
+    setShapes((prev) => {
+      const updated = [...prev, newShape];
+      onShapesChange?.(updated);
+      return updated;
+    });
+    setSelectedId(newShape.id);
+    setTool('select');
+  }, [onShapesChange, snapToGridValue]);
+
+  // Process dropped or pasted image file
+  const processImageFile = useCallback(async (file: File, x: number, y: number) => {
+    return new Promise<void>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const dataUrl = e.target?.result as string;
+        if (!dataUrl) {
+          reject(new Error('Failed to read file'));
+          return;
+        }
+
+        // Load image to get dimensions
+        const img = new Image();
+        img.onload = () => {
+          // Cache the image
+          imageCache.set(dataUrl, img);
+          addImageShape(dataUrl, x, y, img.naturalWidth, img.naturalHeight);
+          resolve();
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = dataUrl;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  }, [addImageShape]);
+
+  // Handle drag over (prevent default to allow drop)
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  // Handle file drop on canvas
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length === 0) return;
+
+    // Get drop position relative to canvas
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    const stagePos = stage.position();
+    const stageScale = stage.scaleX();
+
+    // Convert screen position to canvas position
+    const dropX = (e.clientX - containerRect.left - stagePos.x) / stageScale;
+    const dropY = (e.clientY - containerRect.top - stagePos.y) / stageScale;
+
+    // Process each image file
+    for (const file of imageFiles) {
+      try {
+        await processImageFile(file, dropX, dropY);
+      } catch (error) {
+        console.error('Failed to process dropped image:', error);
+      }
+    }
+  }, [processImageFile]);
+
+  // Handle clipboard paste (for images)
+  const handlePasteImage = useCallback(async (e: ClipboardEvent) => {
+    // Check for image data in clipboard
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const imageItems = Array.from(items).filter(item => item.type.startsWith('image/'));
+    if (imageItems.length === 0) return;
+
+    // Prevent default paste behavior for images
+    e.preventDefault();
+
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    // Get center of current viewport
+    const stagePos = stage.position();
+    const stageScale = stage.scaleX();
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    const centerX = (containerRect.width / 2 - stagePos.x) / stageScale;
+    const centerY = (containerRect.height / 2 - stagePos.y) / stageScale;
+
+    for (const item of imageItems) {
+      const file = item.getAsFile();
+      if (file) {
+        try {
+          await processImageFile(file, centerX, centerY);
+        } catch (error) {
+          console.error('Failed to paste image:', error);
+        }
+      }
+    }
+  }, [processImageFile]);
+
+  // Set up clipboard paste listener for images
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      // Check if there are any image items
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const hasImage = Array.from(items).some(item => item.type.startsWith('image/'));
+      if (hasImage) {
+        handlePasteImage(e);
+      }
+      // Let normal paste (Ctrl+V for shapes) continue if no image
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [handlePasteImage]);
+
+  // Open file dialog to add image
+  const openImageDialog = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.onchange = async (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (!files || files.length === 0) return;
+
+      const stage = stageRef.current;
+      if (!stage) return;
+
+      // Get center of current viewport
+      const stagePos = stage.position();
+      const stageScale = stage.scaleX();
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+
+      const centerX = (containerRect.width / 2 - stagePos.x) / stageScale;
+      const centerY = (containerRect.height / 2 - stagePos.y) / stageScale;
+
+      for (const file of Array.from(files)) {
+        if (file.type.startsWith('image/')) {
+          try {
+            await processImageFile(file, centerX, centerY);
+          } catch (error) {
+            console.error('Failed to add image:', error);
+          }
+        }
+      }
+    };
+    input.click();
+  }, [processImageFile]);
 
   // Delete selected shapes or connector
   const deleteSelected = useCallback(() => {
@@ -1670,6 +1958,12 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           const textColor = shape.textColor || shape.fill || '#000000';
           svgContent += `  <text x="${shape.x}" y="${shape.y + fontSize}" font-size="${fontSize}" font-family="${shape.fontFamily || 'Arial'}" fill="${textColor}" opacity="${opacity}"${transform}>${textContent}</text>\n`;
           break;
+        case 'image':
+          // Embed image as base64 data URL
+          if (shape.src) {
+            svgContent += `  <image x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" href="${shape.src}" preserveAspectRatio="${shape.preserveAspectRatio ? 'xMidYMid meet' : 'none'}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
       }
 
       // Add text overlay for non-text shapes
@@ -1883,6 +2177,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     onLoad: importFromJson,
     onGroup: groupSelected,
     onUngroup: ungroupSelected,
+    onAddImage: openImageDialog,
   });
 
   // Handle container resize
@@ -2693,6 +2988,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         <div
           ref={containerRef}
           className="zm-draw-canvas-container"
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
           style={{
             width: '100%',
             height: '100%',
@@ -2729,6 +3026,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             onResetZoom={resetZoom}
             onSave={exportToJson}
             onLoad={importFromJson}
+            onAddImage={openImageDialog}
           />
         </div>
 

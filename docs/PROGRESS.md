@@ -403,13 +403,26 @@
 
 ---
 
-## Phase 9: 이미지 및 미디어 ⏳ 예정
+## Phase 9: 이미지 및 미디어 🔄 진행 중
 
 > **예상 기간**: 4일
 
-- [ ] 드래그 앤 드롭 이미지 삽입
-- [ ] 클립보드 붙여넣기
+### 9.1 이미지 삽입 ✅
+
+- [x] `image` 도형 타입 추가 ✅
+- [x] Shape에 `src`, `naturalWidth`, `naturalHeight`, `preserveAspectRatio` 속성 ✅
+- [x] Konva.Image 기반 렌더링 ✅
+- [x] 이미지 캐싱 (imageCache Map) ✅
+- [x] 비율 유지 Transformer ✅
+- [x] 드래그 앤 드롭 이미지 삽입 ✅
+- [x] 클립보드 붙여넣기 (Ctrl+V) ✅
+- [x] 툴바 버튼 + 파일 선택 다이얼로그 (단축키: I) ✅
+- [x] SVG export에 이미지 포함 ✅
+
+### 9.2 미디어 ⏳
+
 - [ ] 링크 프리뷰
+- [ ] 웹 링크 임베드
 
 ---
 

@@ -1,7 +1,7 @@
 // Shape types for zm-draw
 
 /** Basic shape types */
-export type ShapeType = 'rectangle' | 'ellipse' | 'diamond' | 'text' | 'sticky' | 'freedraw';
+export type ShapeType = 'rectangle' | 'ellipse' | 'diamond' | 'text' | 'sticky' | 'freedraw' | 'image';
 
 /** Extended shape types for future use */
 export type ExtendedShapeType = ShapeType | 'line' | 'polygon' | 'frame';
@@ -90,6 +90,14 @@ export interface Shape {
   lineCap?: 'round' | 'square' | 'butt';
   /** Author name (for sticky notes) */
   author?: string;
+  /** Image source - base64 data URL or external URL (for image shapes) */
+  src?: string;
+  /** Original image width in pixels (for image shapes) */
+  naturalWidth?: number;
+  /** Original image height in pixels (for image shapes) */
+  naturalHeight?: number;
+  /** Whether to preserve aspect ratio when resizing (for image shapes) */
+  preserveAspectRatio?: boolean;
 }
 
 /** Connection point position on a shape */

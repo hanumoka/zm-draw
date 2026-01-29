@@ -51,6 +51,16 @@ export const defaultStickyNoteProps = {
   opacity: 1,
 };
 
+// Default image shape properties
+export const defaultImageShapeProps = {
+  width: 200,
+  height: 200,
+  fill: 'transparent',
+  stroke: 'transparent',
+  strokeWidth: 0,
+  preserveAspectRatio: true,
+};
+
 // Default freedraw properties for each tool
 export const defaultFreeDrawProps = {
   pen: {

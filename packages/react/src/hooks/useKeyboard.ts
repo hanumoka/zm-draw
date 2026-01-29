@@ -47,6 +47,8 @@ interface UseKeyboardOptions {
   onGroup?: () => void;
   /** External ungroup function */
   onUngroup?: () => void;
+  /** External add image function */
+  onAddImage?: () => void;
   /** Whether keyboard handling is enabled */
   enabled?: boolean;
 }
@@ -81,6 +83,7 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     onLoad,
     onGroup,
     onUngroup,
+    onAddImage,
     enabled = true,
   } = options;
 
@@ -429,6 +432,14 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
             setTool('eraser');
           }
           break;
+
+        case 'i':
+        case 'I':
+          if (!modKey) {
+            e.preventDefault();
+            onAddImage?.();
+          }
+          break;
       }
     };
 
@@ -465,6 +476,7 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     selectMultiple,
     onGroup,
     onUngroup,
+    onAddImage,
   ]);
 
   return {
