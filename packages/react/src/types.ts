@@ -1,7 +1,7 @@
 // Shape types for zm-draw
 
 /** Basic shape types */
-export type ShapeType = 'rectangle' | 'ellipse' | 'diamond' | 'text' | 'sticky' | 'freedraw' | 'image';
+export type ShapeType = 'rectangle' | 'ellipse' | 'diamond' | 'text' | 'sticky' | 'freedraw' | 'image' | 'stamp';
 
 /** Extended shape types for future use */
 export type ExtendedShapeType = ShapeType | 'line' | 'polygon' | 'frame';
@@ -33,6 +33,21 @@ export interface FreeDrawPoint {
 
 /** Drawing tool type */
 export type DrawingToolType = 'pen' | 'marker' | 'highlighter';
+
+/** Stamp types (FigJam style reactions) */
+export type StampType = 'thumbsUp' | 'thumbsDown' | 'heart' | 'star' | 'check' | 'question' | 'exclamation' | 'celebration';
+
+/** Stamp emoji mapping */
+export const STAMP_EMOJIS: Record<StampType, string> = {
+  thumbsUp: '👍',
+  thumbsDown: '👎',
+  heart: '❤️',
+  star: '⭐',
+  check: '✅',
+  question: '❓',
+  exclamation: '❗',
+  celebration: '🎉',
+};
 
 /**
  * Shape object representing a drawable element on the canvas
@@ -98,6 +113,8 @@ export interface Shape {
   naturalHeight?: number;
   /** Whether to preserve aspect ratio when resizing (for image shapes) */
   preserveAspectRatio?: boolean;
+  /** Stamp type for stamp shapes */
+  stampType?: StampType;
 }
 
 /** Connection point position on a shape */

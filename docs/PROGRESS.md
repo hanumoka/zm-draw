@@ -426,12 +426,29 @@
 
 ---
 
-## Phase 10: 스탬프 및 이모지 ⏳ 예정
+## Phase 10: 스탬프 ✅ 완료
 
-> **예상 기간**: 4일
+> **완료일**: 2026-01-29
 
-- [ ] 스탬프 휠 UI
-- [ ] 이모지 버스트 애니메이션
+### 10.1 스탬프 도형 ✅
+
+- [x] `stamp` 도형 타입 추가 ✅
+- [x] `StampType`: 8가지 (thumbsUp, thumbsDown, heart, star, check, question, exclamation, celebration) ✅
+- [x] `STAMP_EMOJIS` 상수 (이모지 매핑) ✅
+- [x] Shape에 `stampType` 속성 ✅
+- [x] `defaultStampProps` 기본 속성 ✅
+- [x] Konva.Text 기반 이모지 렌더링 ✅
+- [x] SVG export 지원 ✅
+
+### 10.2 UI ✅
+
+- [x] 툴바 스탬프 버튼 + 팝오버 선택기 ✅
+- [x] 현재 선택된 스탬프 표시 ✅
+- [x] 숫자 1-8 단축키 (빠른 선택 및 추가) ✅
+
+### 10.3 미구현 (선택적)
+
+- [ ] 이모지 버스트 애니메이션 (임시 효과)
 - [ ] 커스텀 이모지 지원
 
 ---

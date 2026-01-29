@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Shape, Connector, StickyNoteColor } from '../types';
+import type { Shape, Connector, StickyNoteColor, StampType } from '../types';
 
 // Generate unique ID
 export const generateId = () => `shape-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -59,6 +59,16 @@ export const defaultImageShapeProps = {
   stroke: 'transparent',
   strokeWidth: 0,
   preserveAspectRatio: true,
+};
+
+// Default stamp properties (FigJam style reactions)
+export const defaultStampProps = {
+  width: 48,
+  height: 48,
+  fill: 'transparent',
+  stroke: 'transparent',
+  strokeWidth: 0,
+  stampType: 'thumbsUp' as StampType,
 };
 
 // Default freedraw properties for each tool

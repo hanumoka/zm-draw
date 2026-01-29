@@ -1,6 +1,8 @@
 'use client';
 
-import type { ToolType } from '../types';
+import { useState } from 'react';
+import type { ToolType, StampType } from '../types';
+import { STAMP_EMOJIS } from '../types';
 
 export interface ToolbarProps {
   /** Current selected tool */
@@ -37,6 +39,12 @@ export interface ToolbarProps {
   onLoad: () => void;
   /** Add image from file */
   onAddImage?: () => void;
+  /** Current stamp type */
+  currentStampType?: StampType;
+  /** Callback when stamp type changes */
+  onStampTypeChange?: (type: StampType) => void;
+  /** Add stamp at center of viewport */
+  onAddStamp?: () => void;
 }
 
 // Icons
@@ -146,7 +154,18 @@ export function Toolbar({
   onSave,
   onLoad,
   onAddImage,
+  currentStampType = 'thumbsUp',
+  onStampTypeChange,
+  onAddStamp,
 }: ToolbarProps) {
+  const [showStampPicker, setShowStampPicker] = useState(false);
+
+  const handleStampSelect = (type: StampType) => {
+    onStampTypeChange?.(type);
+    setShowStampPicker(false);
+    onAddStamp?.();
+  };
+
   return (
     <div className="zm-toolbar" style={{
       display: 'flex',
@@ -208,6 +227,87 @@ export function Toolbar({
           active={tool === 'connector'}
           onClick={() => { setTool('connector'); cancelConnecting(); }}
         />
+        {/* Stamp button with picker */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setShowStampPicker(!showStampPicker)}
+            title="Stamp (1-8)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              padding: 0,
+              backgroundColor: tool === 'stamp' ? 'var(--zm-accent, #0d99ff)' : 'transparent',
+              border: 'none',
+              borderRadius: 4,
+              fontSize: 18,
+              cursor: 'pointer',
+              transition: 'all 0.12s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (tool !== 'stamp') {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (tool !== 'stamp') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
+          >
+            {STAMP_EMOJIS[currentStampType]}
+          </button>
+          {showStampPicker && (
+            <div style={{
+              position: 'absolute',
+              bottom: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              marginBottom: 8,
+              padding: 8,
+              backgroundColor: 'var(--zm-bg-secondary, #2c2c2c)',
+              borderRadius: 8,
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: 4,
+              zIndex: 1000,
+            }}>
+              {(Object.keys(STAMP_EMOJIS) as StampType[]).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => handleStampSelect(type)}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    padding: 0,
+                    backgroundColor: currentStampType === type ? 'var(--zm-accent, #0d99ff)' : 'transparent',
+                    border: 'none',
+                    borderRadius: 4,
+                    fontSize: 20,
+                    cursor: 'pointer',
+                    transition: 'background-color 0.1s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentStampType !== type) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentStampType !== type) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                  title={type}
+                >
+                  {STAMP_EMOJIS[type]}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </ToolGroup>
 
       <Divider />

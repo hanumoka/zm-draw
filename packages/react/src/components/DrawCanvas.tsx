@@ -2,13 +2,13 @@
 
 import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import Konva from 'konva';
-import type { Shape, ShapeType, Connector, FreeDrawPoint, StickyNoteColor } from '../types';
-import { STICKY_COLORS } from '../types';
+import type { Shape, ShapeType, Connector, FreeDrawPoint, StickyNoteColor, StampType } from '../types';
+import { STICKY_COLORS, STAMP_EMOJIS } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { useToolStore } from '../stores/toolStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useViewportStore } from '../stores/viewportStore';
-import { generateId, defaultShapeProps, defaultTextShapeProps, defaultStickyNoteProps, defaultFreeDrawProps, defaultImageShapeProps } from '../stores/canvasStore';
+import { generateId, defaultShapeProps, defaultTextShapeProps, defaultStickyNoteProps, defaultFreeDrawProps, defaultImageShapeProps, defaultStampProps } from '../stores/canvasStore';
 
 // Module-level image cache for performance
 const imageCache = new Map<string, HTMLImageElement>();
@@ -187,6 +187,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const currentStrokeOpacity = useToolStore((s) => s.currentStrokeOpacity);
   const currentDrawingTool = useToolStore((s) => s.currentDrawingTool);
   const currentStickyColor = useToolStore((s) => s.currentStickyColor);
+  const currentStampType = useToolStore((s) => s.currentStampType);
+  const setStampType = useToolStore((s) => s.setStampType);
 
   // History for undo/redo
   const historyRef = useRef<{ shapes: Shape[]; connectors: Connector[] }[]>([]);
@@ -808,6 +810,23 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             }
           }
           break;
+        case 'stamp':
+          // Stamp shape using emoji text
+          {
+            const emoji = STAMP_EMOJIS[shape.stampType || 'thumbsUp'];
+            konvaShape = new Konva.Text({
+              x: 0,
+              y: 0,
+              width: shape.width,
+              height: shape.height,
+              text: emoji,
+              fontSize: Math.min(shape.width, shape.height) * 0.8,
+              fontFamily: 'Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif',
+              align: 'center',
+              verticalAlign: 'middle',
+            });
+          }
+          break;
         default:
           konvaShape = new Konva.Rect({
             ...shapeConfig,
@@ -993,7 +1012,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides]);
 
   // Add shape at position
-  const addShape = useCallback((type: ShapeType, x: number, y: number) => {
+  const addShape = useCallback((type: ShapeType, x: number, y: number, options?: { stampType?: StampType }) => {
     // Use different defaults based on shape type
     let props;
     if (type === 'text') {
@@ -1003,6 +1022,11 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         ...defaultStickyNoteProps,
         fill: STICKY_COLORS[currentStickyColor],
         stickyColor: currentStickyColor,
+      };
+    } else if (type === 'stamp') {
+      props = {
+        ...defaultStampProps,
+        stampType: options?.stampType || currentStampType,
       };
     } else {
       props = defaultShapeProps;
@@ -1031,7 +1055,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     }
 
     setTool('select');
-  }, [onShapesChange, snapToGridValue, currentStickyColor]);
+  }, [onShapesChange, snapToGridValue, currentStickyColor, currentStampType]);
 
   // Load image from src and cache it
   const loadImage = useCallback((src: string): Promise<HTMLImageElement> => {
@@ -1257,6 +1281,39 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     };
     input.click();
   }, [processImageFile]);
+
+  // Add stamp at center of viewport
+  const addStampAtCenter = useCallback(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const stagePos = stage.position();
+    const stageScale = stage.scaleX();
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    const centerX = (containerRect.width / 2 - stagePos.x) / stageScale;
+    const centerY = (containerRect.height / 2 - stagePos.y) / stageScale;
+
+    addShape('stamp', centerX, centerY);
+  }, [addShape]);
+
+  // Handle stamp shortcut (select stamp type and add)
+  const handleStampShortcut = useCallback((type: StampType) => {
+    setStampType(type);
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const stagePos = stage.position();
+    const stageScale = stage.scaleX();
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    const centerX = (containerRect.width / 2 - stagePos.x) / stageScale;
+    const centerY = (containerRect.height / 2 - stagePos.y) / stageScale;
+
+    addShape('stamp', centerX, centerY, { stampType: type });
+  }, [setStampType, addShape]);
 
   // Delete selected shapes or connector
   const deleteSelected = useCallback(() => {
@@ -1964,6 +2021,16 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             svgContent += `  <image x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" href="${shape.src}" preserveAspectRatio="${shape.preserveAspectRatio ? 'xMidYMid meet' : 'none'}" opacity="${opacity}"${transform} />\n`;
           }
           break;
+        case 'stamp':
+          // Render stamp as emoji text
+          {
+            const emoji = STAMP_EMOJIS[shape.stampType || 'thumbsUp'];
+            const fontSize = Math.min(shape.width, shape.height) * 0.8;
+            const centerX = shape.x + shape.width / 2;
+            const centerY = shape.y + shape.height / 2;
+            svgContent += `  <text x="${centerX}" y="${centerY}" font-size="${fontSize}" text-anchor="middle" dominant-baseline="central" opacity="${opacity}"${transform}>${emoji}</text>\n`;
+          }
+          break;
       }
 
       // Add text overlay for non-text shapes
@@ -2178,6 +2245,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     onGroup: groupSelected,
     onUngroup: ungroupSelected,
     onAddImage: openImageDialog,
+    onStampSelect: handleStampShortcut,
   });
 
   // Handle container resize
@@ -3027,6 +3095,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             onSave={exportToJson}
             onLoad={importFromJson}
             onAddImage={openImageDialog}
+            currentStampType={currentStampType}
+            onStampTypeChange={setStampType}
+            onAddStamp={addStampAtCenter}
           />
         </div>
 

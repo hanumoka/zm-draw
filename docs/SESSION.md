@@ -1,18 +1,36 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-29 (Phase 9 이미지 기능 구현 중)
+> 최종 업데이트: 2026-01-29 (Phase 10 스탬프 기능 완료)
 
 ---
 
 ## 현재 상태
 
-**Phase**: **Phase 9 진행 중** (이미지 기능)
+**Phase**: **Phase 10 완료** ✅ (스탬프 기능)
 **목표**: FigJam 스타일 실시간 협업 화이트보드
-**진행률**: Phase 1-8 완료, Phase 9 진행 중 / Phase 10-17 예정
+**진행률**: Phase 1-10 완료 / Phase 11-17 예정
 
 ### 마지막 작업 (2026-01-29)
 
-- **Phase 9: 이미지 기능** 🔄 진행 중
+- **Phase 10: 스탬프 기능** ✅ 완료
+  - **스탬프 도형** 구현 ✅
+    - `stamp` 도형 타입 추가
+    - `StampType`: thumbsUp, thumbsDown, heart, star, check, question, exclamation, celebration
+    - `STAMP_EMOJIS` 상수 (이모지 매핑)
+    - Shape에 `stampType` 속성 추가
+    - `defaultStampProps` 기본 속성
+  - **스탬프 렌더링** ✅
+    - Konva.Text 기반 이모지 렌더링
+    - SVG export 지원
+  - **툴바 UI** ✅
+    - 스탬프 버튼 + 팝오버 선택기 (8가지 이모지)
+    - 현재 선택된 스탬프 표시
+  - **단축키** ✅
+    - 숫자 1-8: 스탬프 빠른 선택 및 추가
+  - **Store 확장** ✅
+    - `toolStore`: currentStampType, setStampType
+
+- **Phase 9: 이미지 기능** ✅ 완료
   - **이미지 도형** 구현 ✅
     - `image` 도형 타입 추가
     - Shape에 `src`, `naturalWidth`, `naturalHeight`, `preserveAspectRatio` 속성 추가
@@ -32,7 +50,7 @@
   - **Export 지원** ✅
     - SVG export에 이미지 포함
 
-### 이전 작업 (2026-01-29)
+### 이전 작업 (2026-01-28)
 
 - **Phase 8: 스티키 노트 + 펜 도구** ✅
   - **스티키 노트** 구현 ✅

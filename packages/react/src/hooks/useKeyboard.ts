@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import type { Shape } from '../types';
+import type { Shape, StampType } from '../types';
 import {
   useCanvasStore,
   useSelectionStore,
@@ -49,6 +49,8 @@ interface UseKeyboardOptions {
   onUngroup?: () => void;
   /** External add image function */
   onAddImage?: () => void;
+  /** External stamp select function (receives stamp type) */
+  onStampSelect?: (type: StampType) => void;
   /** Whether keyboard handling is enabled */
   enabled?: boolean;
 }
@@ -84,6 +86,7 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     onGroup,
     onUngroup,
     onAddImage,
+    onStampSelect,
     enabled = true,
   } = options;
 
@@ -440,6 +443,56 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
             onAddImage?.();
           }
           break;
+
+        // Stamp shortcuts (1-8)
+        case '1':
+          if (!modKey) {
+            e.preventDefault();
+            onStampSelect?.('thumbsUp');
+          }
+          break;
+        case '2':
+          if (!modKey) {
+            e.preventDefault();
+            onStampSelect?.('thumbsDown');
+          }
+          break;
+        case '3':
+          if (!modKey) {
+            e.preventDefault();
+            onStampSelect?.('heart');
+          }
+          break;
+        case '4':
+          if (!modKey) {
+            e.preventDefault();
+            onStampSelect?.('star');
+          }
+          break;
+        case '5':
+          if (!modKey) {
+            e.preventDefault();
+            onStampSelect?.('check');
+          }
+          break;
+        case '6':
+          if (!modKey) {
+            e.preventDefault();
+            onStampSelect?.('question');
+          }
+          break;
+        case '7':
+          if (!modKey) {
+            e.preventDefault();
+            onStampSelect?.('exclamation');
+          }
+          break;
+        case '8':
+          if (!modKey) {
+            e.preventDefault();
+            onStampSelect?.('celebration');
+          }
+          break;
       }
     };
 
@@ -477,6 +530,7 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     onGroup,
     onUngroup,
     onAddImage,
+    onStampSelect,
   ]);
 
   return {

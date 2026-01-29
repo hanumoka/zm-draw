@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ToolType, StickyNoteColor, DrawingToolType } from '../types';
+import type { ToolType, StickyNoteColor, DrawingToolType, StampType } from '../types';
 import { defaultFreeDrawProps } from './canvasStore';
 
 interface ToolState {
@@ -21,6 +21,9 @@ interface ToolState {
 
   // Sticky note state
   currentStickyColor: StickyNoteColor;
+
+  // Stamp state
+  currentStampType: StampType;
 
   // Actions
   setTool: (tool: ToolType) => void;
@@ -45,6 +48,9 @@ interface ToolState {
 
   // Sticky note actions
   setStickyColor: (color: StickyNoteColor) => void;
+
+  // Stamp actions
+  setStampType: (type: StampType) => void;
 }
 
 export const useToolStore = create<ToolState>((set) => ({
@@ -57,6 +63,7 @@ export const useToolStore = create<ToolState>((set) => ({
   currentStrokeOpacity: defaultFreeDrawProps.pen.opacity,
   currentDrawingTool: 'pen',
   currentStickyColor: 'yellow',
+  currentStampType: 'thumbsUp',
 
   setTool: (tool) => {
     // When setting to a drawing tool, update stroke properties
@@ -116,4 +123,6 @@ export const useToolStore = create<ToolState>((set) => ({
   },
 
   setStickyColor: (color) => set({ currentStickyColor: color }),
+
+  setStampType: (type) => set({ currentStampType: type }),
 }));
