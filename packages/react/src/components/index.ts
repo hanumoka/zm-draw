@@ -13,3 +13,6 @@ export type { TextEditorProps } from './TextEditor';
 // Minimap
 export { Minimap } from './Minimap';
 export type { MinimapProps } from './Minimap';
+
+// CommentPanel
+export { CommentPanel } from './CommentPanel';

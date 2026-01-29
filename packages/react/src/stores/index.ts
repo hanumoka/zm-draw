@@ -8,3 +8,4 @@ export { useViewportStore } from './viewportStore';
 export { useClipboardStore } from './clipboardStore';
 export { useCollaborationStore } from './collaborationStore';
 export type { UserPresence, ConnectionStatus } from './collaborationStore';
+export { useCommentStore } from './commentStore';

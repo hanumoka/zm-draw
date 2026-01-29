@@ -18,6 +18,8 @@ const imageCache = new Map<string, HTMLImageElement>();
 const MAX_IMAGE_SIZE = 4000;
 import { Toolbar } from './Toolbar';
 import { TextEditor } from './TextEditor';
+import { CommentPanel } from './CommentPanel';
+import { useCommentStore } from '../stores/commentStore';
 
 /** Selected shape info for external consumption */
 export interface SelectedShapeInfo {
@@ -240,6 +242,46 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     onShapesChange: handleRemoteShapesChange,
     onConnectorsChange: handleRemoteConnectorsChange,
   });
+
+  // Comment store
+  const isPanelOpen = useCommentStore((s) => s.isPanelOpen);
+  const togglePanel = useCommentStore((s) => s.togglePanel);
+  const getThreads = useCommentStore((s) => s.getThreads);
+  const getThreadForShape = useCommentStore((s) => s.getThreadForShape);
+  const addComment = useCommentStore((s) => s.addComment);
+  const openThread = useCommentStore((s) => s.openThread);
+  const setCurrentUser = useCommentStore((s) => s.setCurrentUser);
+
+  // Set current user for comments when collaboration is enabled
+  useEffect(() => {
+    if (collaborationEnabled && userName) {
+      setCurrentUser({
+        id: `user-${Date.now()}`,
+        name: userName,
+        color: '#3b82f6',
+      });
+    } else {
+      // Default user for non-collaboration mode
+      setCurrentUser({
+        id: 'local-user',
+        name: 'You',
+        color: '#3b82f6',
+      });
+    }
+  }, [collaborationEnabled, userName, setCurrentUser]);
+
+  // Add comment to selected shape
+  const addCommentToSelected = useCallback(() => {
+    if (selectedId) {
+      const comment = addComment({
+        shapeId: selectedId,
+        content: '',
+      });
+      if (comment) {
+        openThread(comment.id);
+      }
+    }
+  }, [selectedId, addComment, openThread]);
 
   const connectorsLayerRef = useRef<Konva.Layer | null>(null);
   const selectionLayerRef = useRef<Konva.Layer | null>(null);
@@ -951,6 +993,39 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         group.add(badge);
       }
 
+      // Comment indicator
+      const thread = getThreadForShape(shape.id);
+      if (thread && !thread.resolved) {
+        const commentBadge = new Konva.Group({
+          x: shape.width - 8,
+          y: -8,
+          listening: true,
+        });
+        // Badge background
+        commentBadge.add(new Konva.Circle({
+          radius: 12,
+          fill: '#3b82f6',
+          stroke: '#ffffff',
+          strokeWidth: 2,
+        }));
+        // Comment icon (speech bubble shape simplified)
+        commentBadge.add(new Konva.Text({
+          x: -5,
+          y: -6,
+          text: thread.replies.length > 0 ? String(thread.replies.length + 1) : '1',
+          fontSize: 10,
+          fontStyle: 'bold',
+          fill: '#ffffff',
+          fontFamily: 'sans-serif',
+        }));
+        // Click handler to open thread
+        commentBadge.on('click tap', (e) => {
+          e.cancelBubble = true;
+          openThread(thread.id);
+        });
+        group.add(commentBadge);
+      }
+
       group.add(konvaShape);
 
       // Add text overlay for non-text shapes that have text content
@@ -1099,7 +1174,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     }
 
     layer.batchDraw();
-  }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides, remoteUsers]);
+  }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides, remoteUsers, getThreadForShape, openThread]);
 
   // Add shape at position
   const addShape = useCallback((type: ShapeType, x: number, y: number, options?: { stampType?: StampType }) => {
@@ -3376,8 +3451,14 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             currentStampType={currentStampType}
             onStampTypeChange={setStampType}
             onAddStamp={addStampAtCenter}
+            onToggleComments={togglePanel}
+            isCommentPanelOpen={isPanelOpen}
+            commentCount={getThreads().filter(t => !t.resolved).length}
           />
         </div>
+
+        {/* Comment Panel */}
+        <CommentPanel />
 
         {/* Text editing overlay */}
         {editingId && (() => {

@@ -45,6 +45,12 @@ export interface ToolbarProps {
   onStampTypeChange?: (type: StampType) => void;
   /** Add stamp at center of viewport */
   onAddStamp?: () => void;
+  /** Toggle comment panel */
+  onToggleComments?: () => void;
+  /** Whether comment panel is open */
+  isCommentPanelOpen?: boolean;
+  /** Number of unresolved comments */
+  commentCount?: number;
 }
 
 // Icons
@@ -131,6 +137,11 @@ const Icons = {
       <polyline points="21 15 16 10 5 21" />
     </svg>
   ),
+  comment: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  ),
 };
 
 /**
@@ -157,6 +168,9 @@ export function Toolbar({
   currentStampType = 'thumbsUp',
   onStampTypeChange,
   onAddStamp,
+  onToggleComments,
+  isCommentPanelOpen,
+  commentCount = 0,
 }: ToolbarProps) {
   const [showStampPicker, setShowStampPicker] = useState(false);
 
@@ -394,6 +408,38 @@ export function Toolbar({
           onClick={onLoad}
         />
       </ToolGroup>
+
+      <Divider />
+
+      {/* Comments */}
+      <div style={{ position: 'relative' }}>
+        <ToolButton
+          icon={Icons.comment}
+          label="Comments"
+          active={isCommentPanelOpen}
+          onClick={() => onToggleComments?.()}
+        />
+        {commentCount > 0 && (
+          <div style={{
+            position: 'absolute',
+            top: 2,
+            right: 2,
+            width: 16,
+            height: 16,
+            backgroundColor: '#ef4444',
+            borderRadius: '50%',
+            fontSize: 10,
+            fontWeight: 600,
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}>
+            {commentCount > 9 ? '9+' : commentCount}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
