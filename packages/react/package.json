@@ -12,13 +12,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
-    }
+    },
+    "./styles.css": "./dist/styles.css",
+    "./styles/variables.css": "./dist/variables.css"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && npm run copy-styles",
+    "copy-styles": "node -e \"const fs=require('fs');const path=require('path');fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('src/styles/index.css','dist/styles.css');fs.copyFileSync('src/styles/variables.css','dist/variables.css');console.log('Copied CSS files to dist/')\"",
     "dev": "tsup --watch",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist"

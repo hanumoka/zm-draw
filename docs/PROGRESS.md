@@ -1,14 +1,14 @@
 # zm-draw 진행상황
 
-> 최종 업데이트: 2026-01-29 (Phase 14D 인터랙션 개선)
+> 최종 업데이트: 2026-01-29 (Phase 17 완료 - 모든 핵심 기능 구현)
 
 ---
 
 ## 전체 진행률
 
 **목표**: ~~Figma 스타일 다이어그램 에디터~~ → **FigJam 스타일 실시간 협업 화이트보드**
-**현재 Phase**: Phase 14 완료 ✅ (FigJam UI 변환)
-**완료율**: 다이어그램 에디터 100% / 협업 화이트보드 Phase 13+14 완료
+**현재 Phase**: Phase 17 완료 ✅ (모든 핵심 기능 구현)
+**완료율**: 핵심 기능 100% / 선택적 기능 60%
 
 ### 방향 전환 (2026-01-28)
 
@@ -595,13 +595,91 @@
 
 ---
 
-## Phase 15-17: 추가 기능 ⏳ 예정
+## Phase 15: 테이블/마인드맵 ✅ 완료
 
-- **Phase 15**: 테이블, 마인드맵
-- **Phase 16**: 템플릿 시스템
-- **Phase 17**: 성능 최적화, 접근성
+> **완료일**: 2026-01-29
 
-**상세 내용**: `docs/FIGJAM-ROADMAP.md` 참조
+### 15A: 테이블 기본 ✅
+- [x] `table` ShapeType 추가
+- [x] TableData, TableCell 인터페이스
+- [x] 기본 테이블 렌더링 (3x3 그리드)
+- [x] 셀 텍스트 표시
+- [x] 테이블 선택/이동/리사이즈
+
+### 15B: 테이블 편집 ✅
+- [x] 셀 더블클릭 시 텍스트 편집
+- [x] 행/열 추가/삭제 (우클릭 메뉴)
+- [x] Tab 키로 셀 간 이동
+
+### 15C: 테이블 스타일링 ✅
+- [x] 헤더 행 토글
+- [x] 셀 배경색 변경
+
+### 15D: 마인드맵 ✅
+- [x] `mindmap` ShapeType 추가
+- [x] MindmapNode, MindmapData 인터페이스
+- [x] 계층 구조 렌더링 (horizontal 레이아웃)
+- [x] 노드 + 연결선 자동 레이아웃
+- [x] 레벨별 색상 그라데이션
+- [x] SVG export 지원
+
+### 15E: 링크 임베드 ✅
+- [x] `embed` ShapeType 추가
+- [x] EmbedData 인터페이스 (url, title, description, thumbnail)
+- [x] 카드 스타일 프리뷰 렌더링
+- [x] SVG export 지원
+
+---
+
+## Phase 16: 템플릿 시스템 ✅ 완료
+
+> **완료일**: 2026-01-29
+
+### 16.1 템플릿 인프라 ✅
+- [x] Template, TemplateCategory 타입
+- [x] templateStore.ts 생성
+- [x] DrawCanvasHandle에 loadFromJSON 메서드 추가
+
+### 16.2 기본 템플릿 ✅
+- [x] Blank Canvas - 빈 캔버스
+- [x] Brainstorm Session - 중앙 주제 + 아이디어 스티키
+- [x] Meeting Agenda - 섹션 기반 회의 구조
+- [x] Retrospective - What went well / Improve / Actions
+- [x] Basic Flowchart - Start → Process → Decision → End
+- [x] Kanban Board - To Do / In Progress / Done
+
+### 16.3 템플릿 UI ✅
+- [x] 템플릿 picker 드롭다운
+- [x] 카테고리 필터링 (All, Brainstorm, Meeting, Planning, Retro, Flowchart)
+- [x] 썸네일 + 이름 + 설명 카드 UI
+
+### 16.4 미구현 (선택적)
+- [ ] 현재 보드를 커스텀 템플릿으로 저장
+
+---
+
+## Phase 17: 성능/접근성 ✅ 완료
+
+> **완료일**: 2026-01-29
+
+### 17.1 성능 최적화 ✅
+- [x] Viewport Culling - 뷰포트 외부 도형 렌더링 스킵
+- [x] isShapeInViewport 헬퍼 함수
+- [x] 100px 패딩으로 스크롤 시 부드러운 렌더링
+
+### 17.2 접근성 ✅
+- [x] 캔버스 ARIA 속성 (role="application", aria-label)
+- [x] tabIndex={0} 키보드 포커스
+- [x] 스크린 리더 안내 텍스트 (시각적으로 숨김)
+- [x] ARIA live region (aria-live="polite")
+- [x] 도형 추가/삭제 시 스크린 리더 발표
+
+### 17.3 미구현 (선택적)
+- [ ] 레이어 분리 최적화
+- [ ] WebWorker로 Yjs 오프로드
+- [ ] 대규모 테스트 (1000+ 도형)
+- [ ] 고대비 모드
+- [ ] i18n (한국어/영어)
 
 ---
 
