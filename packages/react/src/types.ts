@@ -1,16 +1,38 @@
 // Shape types for zm-draw
 
 /** Basic shape types */
-export type ShapeType = 'rectangle' | 'ellipse' | 'diamond' | 'text';
+export type ShapeType = 'rectangle' | 'ellipse' | 'diamond' | 'text' | 'sticky' | 'freedraw';
 
 /** Extended shape types for future use */
 export type ExtendedShapeType = ShapeType | 'line' | 'polygon' | 'frame';
 
 /** Tool types available in the editor */
-export type ToolType = 'select' | 'connector' | ShapeType;
+export type ToolType = 'select' | 'connector' | 'pen' | 'marker' | 'highlighter' | 'eraser' | ShapeType;
 
 /** Extended tool types for future use */
-export type ExtendedToolType = 'select' | 'connector' | ExtendedShapeType;
+export type ExtendedToolType = 'select' | 'connector' | 'pen' | 'marker' | 'highlighter' | 'eraser' | ExtendedShapeType;
+
+/** Sticky note color presets (FigJam style) */
+export type StickyNoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'purple' | 'orange';
+
+/** Sticky note color hex values */
+export const STICKY_COLORS: Record<StickyNoteColor, string> = {
+  yellow: '#fef08a',
+  pink: '#fda4af',
+  blue: '#93c5fd',
+  green: '#86efac',
+  purple: '#c4b5fd',
+  orange: '#fed7aa',
+};
+
+/** Point in a free-draw path */
+export interface FreeDrawPoint {
+  x: number;
+  y: number;
+}
+
+/** Drawing tool type */
+export type DrawingToolType = 'pen' | 'marker' | 'highlighter';
 
 /**
  * Shape object representing a drawable element on the canvas
@@ -60,6 +82,14 @@ export interface Shape {
   cornerRadius?: number;
   /** Group ID if shape belongs to a group */
   groupId?: string;
+  /** Points for freedraw shapes */
+  points?: FreeDrawPoint[];
+  /** Sticky note specific color name */
+  stickyColor?: StickyNoteColor;
+  /** Line cap style for freedraw */
+  lineCap?: 'round' | 'square' | 'butt';
+  /** Author name (for sticky notes) */
+  author?: string;
 }
 
 /** Connection point position on a shape */

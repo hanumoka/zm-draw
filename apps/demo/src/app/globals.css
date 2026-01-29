@@ -949,3 +949,130 @@ body {
 .zm-color-picker-arrow {
   fill: var(--zm-bg-secondary);
 }
+
+/* ========================================
+   FigJam Styles (Sticky Notes, Drawing Tools)
+   ======================================== */
+
+/* FigJam Subsection */
+.zm-figjam-subsection {
+  margin-bottom: 12px;
+}
+
+.zm-figjam-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.zm-figjam-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--zm-text-muted);
+  margin-bottom: 6px;
+}
+
+/* Sticky Note Colors */
+.zm-sticky-colors {
+  display: flex;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.zm-sticky-color-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.zm-sticky-color-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.zm-sticky-color-btn.active {
+  border-color: var(--zm-accent);
+  box-shadow: 0 0 0 2px var(--zm-accent-light);
+}
+
+/* Drawing Tool Active Indicator */
+.zm-shape-button.drawing-active {
+  position: relative;
+}
+
+.zm-shape-button.drawing-active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background: var(--zm-accent);
+  border-radius: 50%;
+}
+
+/* Stroke Width Selector */
+.zm-stroke-widths {
+  display: flex;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.zm-stroke-width-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  border: 1px solid var(--zm-border);
+  border-radius: 4px;
+  background: var(--zm-bg-tertiary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.zm-stroke-width-btn:hover {
+  border-color: var(--zm-border-hover);
+  background: var(--zm-bg-hover);
+}
+
+.zm-stroke-width-btn.active {
+  border-color: var(--zm-accent);
+  background: var(--zm-accent-light);
+}
+
+.zm-stroke-width-btn span {
+  display: block;
+  background: var(--zm-text-primary);
+  border-radius: 2px;
+}
+
+/* Stroke width visual indicators */
+.zm-stroke-thin span {
+  width: 16px;
+  height: 2px;
+}
+
+.zm-stroke-medium span {
+  width: 16px;
+  height: 4px;
+}
+
+.zm-stroke-thick span {
+  width: 16px;
+  height: 8px;
+}
+
+/* Drawing cursor indicators */
+.zm-draw-canvas-container.drawing-mode {
+  cursor: crosshair !important;
+}
+
+.zm-draw-canvas-container.eraser-mode {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='8' y1='8' x2='16' y2='16'/%3E%3C/svg%3E") 12 12, not-allowed !important;
+}

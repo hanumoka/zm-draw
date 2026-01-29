@@ -1,14 +1,14 @@
 # zm-draw 진행상황
 
-> 최종 업데이트: 2026-01-28 (방향 전환: FigJam 스타일 협업 화이트보드)
+> 최종 업데이트: 2026-01-29 (Phase 8 스티키 노트 + 펜 도구 완료)
 
 ---
 
 ## 전체 진행률
 
 **목표**: ~~Figma 스타일 다이어그램 에디터~~ → **FigJam 스타일 실시간 협업 화이트보드**
-**현재 Phase**: Phase 7 완료 ✅ → Phase 8 준비 중
-**완료율**: 다이어그램 에디터 100% / 협업 화이트보드 0%
+**현재 Phase**: Phase 8 완료 ✅ → Phase 9 준비 중
+**완료율**: 다이어그램 에디터 100% / 협업 화이트보드 Phase 8/17
 
 ### 방향 전환 (2026-01-28)
 
@@ -371,26 +371,35 @@
 
 ---
 
-## Phase 8: 화이트보드 기본 도구 ⏳ 신규
+## Phase 8: 화이트보드 기본 도구 ✅ 완료
 
 > **목표**: FigJam 핵심 기능 - 스티키 노트, 펜 도구
-> **예상 기간**: 1주
+> **완료일**: 2026-01-29
 
-### 8.1 스티키 노트
+### 8.1 스티키 노트 ✅
 
-- [ ] StickyNote 도형 타입 추가
-- [ ] 6가지 색상 프리셋
-- [ ] 자동 크기 조절 (텍스트에 따라)
-- [ ] 작성자 표시 옵션
-- [ ] 툴바 스티키 노트 버튼 (단축키: S)
+- [x] StickyNote 도형 타입 추가 (`sticky`) ✅
+- [x] 6가지 색상 프리셋 (yellow, pink, blue, green, purple, orange) ✅
+- [x] 150x150 기본 크기, 그림자 효과 ✅
+- [x] 텍스트 자동 편집 모드 (더블클릭) ✅
+- [x] 좌측 패널 스티키 색상 선택 UI ✅
+- [x] 툴바 스티키 노트 버튼 (단축키: S) ✅
 
-### 8.2 펜/마커 도구
+### 8.2 펜/마커 도구 ✅
 
-- [ ] Konva.Line 기반 프리핸드 드로잉
-- [ ] 펜 도구 (단축키: P)
-- [ ] 마커 도구 (단축키: M)
-- [ ] 하이라이터 도구 (단축키: H)
-- [ ] 지우개 도구 (단축키: E)
+- [x] Konva.Line 기반 프리핸드 드로잉 (`freedraw`) ✅
+- [x] 펜 도구 (단축키: P) - 2px, 부드러운 곡선 ✅
+- [x] 마커 도구 (단축키: M) - 8px ✅
+- [x] 하이라이터 도구 (단축키: H) - 20px, opacity 0.5 ✅
+- [x] 지우개 도구 (단축키: E) - freedraw 삭제 ✅
+
+### 8.3 타입/스토어 확장 ✅
+
+- [x] `StickyNoteColor`, `DrawingToolType`, `FreeDrawPoint` 타입 ✅
+- [x] `STICKY_COLORS` 상수 export ✅
+- [x] Shape에 `points`, `stickyColor`, `lineCap`, `author` 속성 ✅
+- [x] toolStore: isDrawing, currentStrokeWidth/Color/Opacity 상태 ✅
+- [x] canvasStore: defaultStickyNoteProps, defaultFreeDrawProps ✅
 
 ---
 

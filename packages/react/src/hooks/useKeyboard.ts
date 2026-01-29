@@ -390,6 +390,43 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
           if (modKey) {
             e.preventDefault();
             onSave?.();
+          } else {
+            // S without modifier: sticky note tool
+            e.preventDefault();
+            setTool('sticky');
+          }
+          break;
+
+        // FigJam drawing tools
+        case 'p':
+        case 'P':
+          if (!modKey) {
+            e.preventDefault();
+            setTool('pen');
+          }
+          break;
+
+        case 'm':
+        case 'M':
+          if (!modKey) {
+            e.preventDefault();
+            setTool('marker');
+          }
+          break;
+
+        case 'h':
+        case 'H':
+          if (!modKey) {
+            e.preventDefault();
+            setTool('highlighter');
+          }
+          break;
+
+        case 'e':
+        case 'E':
+          if (!modKey) {
+            e.preventDefault();
+            setTool('eraser');
           }
           break;
       }

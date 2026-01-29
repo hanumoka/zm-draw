@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Shape, Connector } from '../types';
+import type { Shape, Connector, StickyNoteColor } from '../types';
 
 // Generate unique ID
 export const generateId = () => `shape-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -31,6 +31,46 @@ export const defaultTextShapeProps = {
   textColor: '#000000',
   textAlign: 'left' as const,
   verticalAlign: 'top' as const,
+};
+
+// Default sticky note properties (FigJam style)
+export const defaultStickyNoteProps = {
+  width: 150,
+  height: 150,
+  fill: '#fef08a', // Yellow
+  stroke: 'transparent',
+  strokeWidth: 0,
+  cornerRadius: 2,
+  text: '',
+  fontSize: 14,
+  fontFamily: 'Arial',
+  textColor: '#1a1a1a',
+  textAlign: 'left' as const,
+  verticalAlign: 'top' as const,
+  stickyColor: 'yellow' as StickyNoteColor,
+  opacity: 1,
+};
+
+// Default freedraw properties for each tool
+export const defaultFreeDrawProps = {
+  pen: {
+    stroke: '#1a1a1a',
+    strokeWidth: 2,
+    opacity: 1,
+    lineCap: 'round' as const,
+  },
+  marker: {
+    stroke: '#1a1a1a',
+    strokeWidth: 8,
+    opacity: 1,
+    lineCap: 'round' as const,
+  },
+  highlighter: {
+    stroke: '#facc15', // Yellow highlighter
+    strokeWidth: 20,
+    opacity: 0.5,
+    lineCap: 'square' as const,
+  },
 };
 
 interface CanvasState {

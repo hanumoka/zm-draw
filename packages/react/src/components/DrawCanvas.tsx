@@ -2,12 +2,13 @@
 
 import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import Konva from 'konva';
-import type { Shape, ShapeType, Connector } from '../types';
+import type { Shape, ShapeType, Connector, FreeDrawPoint, StickyNoteColor } from '../types';
+import { STICKY_COLORS } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { useToolStore } from '../stores/toolStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useViewportStore } from '../stores/viewportStore';
-import { generateId, defaultShapeProps, defaultTextShapeProps } from '../stores/canvasStore';
+import { generateId, defaultShapeProps, defaultTextShapeProps, defaultStickyNoteProps, defaultFreeDrawProps } from '../stores/canvasStore';
 import { Toolbar } from './Toolbar';
 import { TextEditor } from './TextEditor';
 
@@ -172,6 +173,15 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const setEditingId = useToolStore((s) => s.setEditingId);
   const resetTool = useToolStore((s) => s.resetTool);
 
+  // Drawing tool state from Zustand store
+  const isDrawing = useToolStore((s) => s.isDrawing);
+  const setIsDrawing = useToolStore((s) => s.setIsDrawing);
+  const currentStrokeWidth = useToolStore((s) => s.currentStrokeWidth);
+  const currentStrokeColor = useToolStore((s) => s.currentStrokeColor);
+  const currentStrokeOpacity = useToolStore((s) => s.currentStrokeOpacity);
+  const currentDrawingTool = useToolStore((s) => s.currentDrawingTool);
+  const currentStickyColor = useToolStore((s) => s.currentStickyColor);
+
   // History for undo/redo
   const historyRef = useRef<{ shapes: Shape[]; connectors: Connector[] }[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -189,6 +199,11 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   // Marquee selection state
   const [isMarqueeSelecting, setIsMarqueeSelecting] = useState(false);
   const marqueeStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Freedraw state
+  const drawingLayerRef = useRef<Konva.Layer | null>(null);
+  const currentDrawingRef = useRef<FreeDrawPoint[]>([]);
+  const currentDrawingLineRef = useRef<Konva.Line | null>(null);
 
   // Connection points layer ref
   const connectionPointsLayerRef = useRef<Konva.Layer | null>(null);
@@ -704,6 +719,39 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             strokeWidth: shape.strokeWidth,
           });
           break;
+        case 'sticky':
+          // FigJam-style sticky note with shadow
+          konvaShape = new Konva.Rect({
+            ...shapeConfig,
+            cornerRadius: shape.cornerRadius ?? 2,
+            shadowColor: '#000000',
+            shadowBlur: 8,
+            shadowOffset: { x: 2, y: 3 },
+            shadowOpacity: 0.15,
+          });
+          break;
+        case 'freedraw':
+          // Freedraw path using Line with tension
+          {
+            const points = shape.points || [];
+            const flatPoints: number[] = [];
+            points.forEach((p) => {
+              flatPoints.push(p.x, p.y);
+            });
+            konvaShape = new Konva.Line({
+              x: 0,
+              y: 0,
+              points: flatPoints,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+              opacity: shape.opacity ?? 1,
+              lineCap: shape.lineCap || 'round',
+              lineJoin: 'round',
+              tension: 0.5, // Smooth curves
+              globalCompositeOperation: 'source-over',
+            });
+          }
+          break;
         default:
           konvaShape = new Konva.Rect({
             ...shapeConfig,
@@ -711,10 +759,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           });
       }
 
-      // Selection highlight (different for text shapes)
+      // Selection highlight (different for text and freedraw shapes)
       if (selectedIds.includes(shape.id) && selectionType === 'shape') {
-        if (shape.type === 'text') {
-          // For text shapes, add a selection border rect behind the text
+        if (shape.type === 'text' || shape.type === 'freedraw') {
+          // For text/freedraw shapes, add a selection border rect (don't modify stroke)
           const selectionRect = new Konva.Rect({
             x: -2,
             y: -2,
@@ -741,21 +789,39 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       group.add(konvaShape);
 
       // Add text overlay for non-text shapes that have text content
-      if (shape.type !== 'text' && shape.text) {
-        const text = new Konva.Text({
-          x: 0,
-          y: 0,
-          width: shape.width,
-          height: shape.height,
-          text: shape.text,
-          fontSize: shape.fontSize || 14,
-          fontFamily: shape.fontFamily || 'Arial',
-          fill: shape.textColor || '#ffffff',
-          align: 'center',
-          verticalAlign: 'middle',
-          listening: false,
-        });
-        group.add(text);
+      if (shape.type !== 'text' && shape.type !== 'freedraw' && shape.text) {
+        // Sticky notes have special text styling
+        if (shape.type === 'sticky') {
+          const text = new Konva.Text({
+            x: 12, // padding
+            y: 12, // padding
+            width: shape.width - 24,
+            height: shape.height - 24,
+            text: shape.text,
+            fontSize: shape.fontSize || 14,
+            fontFamily: shape.fontFamily || 'Arial',
+            fill: shape.textColor || '#1a1a1a',
+            align: shape.textAlign || 'left',
+            verticalAlign: shape.verticalAlign || 'top',
+            listening: false,
+          });
+          group.add(text);
+        } else {
+          const text = new Konva.Text({
+            x: 0,
+            y: 0,
+            width: shape.width,
+            height: shape.height,
+            text: shape.text,
+            fontSize: shape.fontSize || 14,
+            fontFamily: shape.fontFamily || 'Arial',
+            fill: shape.textColor || '#ffffff',
+            align: 'center',
+            verticalAlign: 'middle',
+            listening: false,
+          });
+          group.add(text);
+        }
       }
 
       // Smart guides during drag
@@ -865,8 +931,19 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
   // Add shape at position
   const addShape = useCallback((type: ShapeType, x: number, y: number) => {
-    // Use different defaults for text shapes
-    const props = type === 'text' ? defaultTextShapeProps : defaultShapeProps;
+    // Use different defaults based on shape type
+    let props;
+    if (type === 'text') {
+      props = defaultTextShapeProps;
+    } else if (type === 'sticky') {
+      props = {
+        ...defaultStickyNoteProps,
+        fill: STICKY_COLORS[currentStickyColor],
+        stickyColor: currentStickyColor,
+      };
+    } else {
+      props = defaultShapeProps;
+    }
     // Apply grid snap if enabled
     const snappedX = snapToGridValue(x - props.width / 2);
     const snappedY = snapToGridValue(y - props.height / 2);
@@ -885,13 +962,13 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     });
     setSelectedId(newShape.id);
 
-    // For text shapes, immediately open the editor
-    if (type === 'text') {
+    // For text and sticky shapes, immediately open the editor
+    if (type === 'text' || type === 'sticky') {
       setEditingId(newShape.id);
     }
 
     setTool('select');
-  }, [onShapesChange, snapToGridValue]);
+  }, [onShapesChange, snapToGridValue, currentStickyColor]);
 
   // Delete selected shapes or connector
   const deleteSelected = useCallback(() => {
@@ -1889,6 +1966,11 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     stage.add(guidesLayer);
     guidesLayerRef.current = guidesLayer;
 
+    // Drawing layer (for active freedraw lines)
+    const drawingLayer = new Konva.Layer();
+    stage.add(drawingLayer);
+    drawingLayerRef.current = drawingLayer;
+
     // Transformer for resize handles
     const transformer = new Konva.Transformer({
       rotateEnabled: true,
@@ -2036,6 +2118,14 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         bgLayerRef.current.destroyChildren();
         bgLayerRef.current = null;
       }
+      if (drawingLayerRef.current) {
+        drawingLayerRef.current.destroyChildren();
+        drawingLayerRef.current = null;
+      }
+      if (currentDrawingLineRef.current) {
+        currentDrawingLineRef.current.destroy();
+        currentDrawingLineRef.current = null;
+      }
 
       // Finally destroy the stage
       stage.destroy();
@@ -2158,9 +2248,13 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     const stage = stageRef.current;
     if (!stage) return;
 
+    // Skip click handler for drawing tools (they use mousedown/mousemove/mouseup)
+    const isDrawingTool = tool === 'pen' || tool === 'marker' || tool === 'highlighter' || tool === 'eraser';
+
     stage.off('click tap');
     stage.on('click tap', (e) => {
       if (isPanning) return;
+      if (isDrawingTool) return; // Drawing tools handle their own events
 
       const bgLayer = bgLayerRef.current;
       const gridLayer = gridLayerRef.current;
@@ -2193,7 +2287,18 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       stage.container().style.cursor = 'grab';
     } else {
       stage.draggable(false);
-      stage.container().style.cursor = tool === 'select' ? 'default' : 'crosshair';
+      // Set appropriate cursor based on tool
+      const isDrawingTool = tool === 'pen' || tool === 'marker' || tool === 'highlighter';
+      const isEraser = tool === 'eraser';
+      if (tool === 'select') {
+        stage.container().style.cursor = 'default';
+      } else if (isDrawingTool) {
+        stage.container().style.cursor = 'crosshair';
+      } else if (isEraser) {
+        stage.container().style.cursor = 'not-allowed';
+      } else {
+        stage.container().style.cursor = 'crosshair';
+      }
     }
 
     const handleDragStart = () => {
@@ -2228,6 +2333,192 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
   // Cancel connecting - use store action directly
   const cancelConnecting = useToolStore((s) => s.cancelConnecting);
+
+  // Freedraw handlers
+  useEffect(() => {
+    const stage = stageRef.current;
+    const drawingLayer = drawingLayerRef.current;
+    if (!stage || !drawingLayer) return;
+
+    // Only handle drawing tools
+    const isDrawingTool = tool === 'pen' || tool === 'marker' || tool === 'highlighter';
+    const isEraserTool = tool === 'eraser';
+
+    if (!isDrawingTool && !isEraserTool) return;
+
+    const getDrawingProps = () => {
+      if (tool === 'pen') return defaultFreeDrawProps.pen;
+      if (tool === 'marker') return defaultFreeDrawProps.marker;
+      if (tool === 'highlighter') return defaultFreeDrawProps.highlighter;
+      return defaultFreeDrawProps.pen;
+    };
+
+    const handleDrawStart = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+      // Don't draw when panning
+      if (isPanning) return;
+
+      // Don't start on shapes
+      const target = e.target;
+      if (target !== stage && target.getLayer() !== bgLayerRef.current && target.getLayer() !== gridLayerRef.current) {
+        // Check if eraser is clicking on a freedraw shape
+        if (isEraserTool) {
+          const clickedShape = shapes.find(s => {
+            const node = shapesLayerRef.current?.findOne(`#${s.id}`);
+            if (!node) return false;
+            // Check if target is inside this node's group
+            let parent: Konva.Node | null = target;
+            while (parent) {
+              if (parent === node) return true;
+              parent = parent.getParent();
+            }
+            return false;
+          });
+          if (clickedShape && clickedShape.type === 'freedraw') {
+            // Delete the freedraw shape
+            setShapes(prev => {
+              const updated = prev.filter(s => s.id !== clickedShape.id);
+              onShapesChange?.(updated);
+              return updated;
+            });
+          }
+        }
+        return;
+      }
+
+      if (isEraserTool) return; // Eraser only works on existing shapes
+
+      setIsDrawing(true);
+
+      const pos = stage.getPointerPosition();
+      if (!pos) return;
+
+      // Convert to canvas coordinates
+      const transform = stage.getAbsoluteTransform().copy().invert();
+      const canvasPos = transform.point(pos);
+
+      // Start new drawing
+      currentDrawingRef.current = [{ x: canvasPos.x, y: canvasPos.y }];
+
+      // Create visual line
+      const props = getDrawingProps();
+      const line = new Konva.Line({
+        points: [canvasPos.x, canvasPos.y],
+        stroke: currentStrokeColor,
+        strokeWidth: props.strokeWidth,
+        opacity: props.opacity,
+        lineCap: props.lineCap,
+        lineJoin: 'round',
+        tension: 0.5,
+      });
+
+      currentDrawingLineRef.current = line;
+      drawingLayer.add(line);
+      drawingLayer.batchDraw();
+    };
+
+    const handleDrawMove = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+      if (!isDrawing || !currentDrawingLineRef.current) return;
+
+      const pos = stage.getPointerPosition();
+      if (!pos) return;
+
+      // Convert to canvas coordinates
+      const transform = stage.getAbsoluteTransform().copy().invert();
+      const canvasPos = transform.point(pos);
+
+      // Add point
+      currentDrawingRef.current.push({ x: canvasPos.x, y: canvasPos.y });
+
+      // Update visual line
+      const flatPoints: number[] = [];
+      currentDrawingRef.current.forEach(p => {
+        flatPoints.push(p.x, p.y);
+      });
+      currentDrawingLineRef.current.points(flatPoints);
+      drawingLayer.batchDraw();
+    };
+
+    const handleDrawEnd = () => {
+      if (!isDrawing || currentDrawingRef.current.length < 2) {
+        // Clear incomplete drawing
+        if (currentDrawingLineRef.current) {
+          currentDrawingLineRef.current.destroy();
+          currentDrawingLineRef.current = null;
+        }
+        currentDrawingRef.current = [];
+        setIsDrawing(false);
+        return;
+      }
+
+      // Simplify points if there are too many (performance optimization)
+      let finalPoints = currentDrawingRef.current;
+      if (finalPoints.length > 100) {
+        // Keep every nth point
+        const step = Math.ceil(finalPoints.length / 100);
+        finalPoints = finalPoints.filter((_, i) => i % step === 0 || i === finalPoints.length - 1);
+      }
+
+      // Calculate bounding box
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      finalPoints.forEach(p => {
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
+      });
+
+      // Normalize points relative to shape position
+      const normalizedPoints = finalPoints.map(p => ({
+        x: p.x - minX,
+        y: p.y - minY,
+      }));
+
+      const props = getDrawingProps();
+
+      // Create shape
+      const newShape: Shape = {
+        id: generateId(),
+        type: 'freedraw',
+        x: minX,
+        y: minY,
+        width: maxX - minX || 1,
+        height: maxY - minY || 1,
+        fill: 'transparent',
+        stroke: currentStrokeColor,
+        strokeWidth: props.strokeWidth,
+        opacity: props.opacity,
+        lineCap: props.lineCap,
+        points: normalizedPoints,
+      };
+
+      // Remove visual line
+      if (currentDrawingLineRef.current) {
+        currentDrawingLineRef.current.destroy();
+        currentDrawingLineRef.current = null;
+      }
+      currentDrawingRef.current = [];
+      drawingLayer.batchDraw();
+
+      // Add shape
+      setShapes(prev => {
+        const updated = [...prev, newShape];
+        onShapesChange?.(updated);
+        return updated;
+      });
+
+      setIsDrawing(false);
+    };
+
+    stage.on('mousedown touchstart', handleDrawStart);
+    stage.on('mousemove touchmove', handleDrawMove);
+    stage.on('mouseup touchend', handleDrawEnd);
+
+    return () => {
+      stage.off('mousedown touchstart', handleDrawStart);
+      stage.off('mousemove touchmove', handleDrawMove);
+      stage.off('mouseup touchend', handleDrawEnd);
+    };
+  }, [tool, isPanning, isDrawing, setIsDrawing, currentStrokeColor, shapes, onShapesChange]);
 
   // Marquee selection handlers
   useEffect(() => {
