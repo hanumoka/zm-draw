@@ -1,6 +1,6 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-29 (Phase 14D 인터랙션 개선)
+> 최종 업데이트: 2026-01-29 (도구 스토어 동기화 버그 수정)
 
 ---
 
@@ -11,6 +11,15 @@
 **진행률**: Phase 1-14 완료
 
 ### 마지막 작업 (2026-01-29)
+
+- **버그 수정: 도구 스토어 동기화** ✅ 완료
+  - **문제**: 데모 페이지와 DrawCanvas 간 zustand 스토어 인스턴스 분리
+    - Next.js `transpilePackages` 설정과 번들링된 zustand로 인해 발생
+    - 도구 선택 시 캔버스에 반영되지 않는 문제
+  - **해결책**:
+    - `packages/react/tsup.config.ts`: zustand를 external 배열에 추가
+    - `apps/demo/package.json`: zustand 직접 의존성 추가
+  - **결과**: 데모 페이지와 DrawCanvas가 동일한 zustand 인스턴스 공유
 
 - **Phase 14D: 인터랙션 개선** ✅ 완료
   - **D1: CSS 변수 추가** ✅
