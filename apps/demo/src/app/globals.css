@@ -72,6 +72,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  position: relative;
 }
 
 /* Header Bar */
@@ -83,6 +84,61 @@ body {
   background: var(--zm-bg-secondary);
   border-bottom: 1px solid var(--zm-border);
   min-height: 48px;
+}
+
+/* FigJam-style minimal header */
+.zm-draw-header-figjam {
+  background: transparent;
+  border-bottom: none;
+  padding: 8px 12px;
+  min-height: 40px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.zm-draw-header-figjam > * {
+  pointer-events: auto;
+}
+
+.zm-draw-header-figjam .zm-draw-header-left {
+  background: var(--zm-bg-primary);
+  padding: 6px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.zm-draw-header-figjam .zm-draw-header-actions {
+  background: var(--zm-bg-primary);
+  padding: 4px 8px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.zm-draw-header-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zm-draw-zoom-badge {
+  background: var(--zm-bg-primary);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--zm-text-secondary);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.15s;
+}
+
+.zm-draw-zoom-badge:hover {
+  background: var(--zm-bg-hover);
+  color: var(--zm-text-primary);
 }
 
 .zm-draw-header-left {

@@ -1065,8 +1065,8 @@ export default function Home() {
 
         {/* Canvas Area */}
         <div ref={canvasAreaRef} className="zm-draw-canvas-area">
-          {/* Top Header Bar */}
-          <div className="zm-draw-header">
+          {/* FigJam-style Top Header Bar - Minimal */}
+          <div className="zm-draw-header zm-draw-header-figjam">
             <div className="zm-draw-header-left">
               {!isLeftPanelOpen && (
                 <Tooltip content="Show Shapes">
@@ -1085,8 +1085,13 @@ export default function Home() {
               )}
               <div className="zm-draw-header-title">
                 <span className="zm-draw-logo">zm-draw</span>
-                <span className="zm-draw-version">v0.1.0</span>
               </div>
+            </div>
+            <div className="zm-draw-header-center">
+              {/* Zoom display - compact */}
+              <span className="zm-draw-zoom-badge" onClick={() => canvasRef.current?.zoomTo100()}>
+                {Math.round(viewport.scale * 100)}%
+              </span>
             </div>
             <div className="zm-draw-header-actions">
               <Tooltip content={snapToGrid ? 'Disable Grid Snap' : 'Enable Grid Snap'}>
@@ -1098,7 +1103,7 @@ export default function Home() {
                 </button>
               </Tooltip>
               <div className="zm-draw-export-dropdown" ref={exportDropdownRef}>
-                <Tooltip content="Export Canvas">
+                <Tooltip content="Export">
                   <button
                     className="zm-draw-icon-button"
                     onClick={() => setShowExportDropdown(!showExportDropdown)}
@@ -1122,41 +1127,6 @@ export default function Home() {
                     </button>
                   </div>
                 )}
-              </div>
-              <div className="zm-draw-zoom-controls">
-                <Tooltip content="Zoom Out">
-                  <button
-                    className="zm-draw-icon-button"
-                    onClick={() => {
-                      const currentScale = viewport.scale;
-                      canvasRef.current?.setZoom(Math.max(0.1, currentScale - 0.25));
-                    }}
-                  >
-                    <ZoomOutIcon />
-                  </button>
-                </Tooltip>
-                <span className="zm-draw-zoom-level" onClick={() => canvasRef.current?.zoomTo100()}>
-                  {Math.round(viewport.scale * 100)}%
-                </span>
-                <Tooltip content="Zoom In">
-                  <button
-                    className="zm-draw-icon-button"
-                    onClick={() => {
-                      const currentScale = viewport.scale;
-                      canvasRef.current?.setZoom(Math.min(5, currentScale + 0.25));
-                    }}
-                  >
-                    <ZoomInIcon />
-                  </button>
-                </Tooltip>
-                <Tooltip content="Zoom to Fit">
-                  <button
-                    className="zm-draw-icon-button"
-                    onClick={() => canvasRef.current?.zoomToFit()}
-                  >
-                    <ZoomFitIcon />
-                  </button>
-                </Tooltip>
               </div>
               <Tooltip content={isDarkMode ? 'Light Mode' : 'Dark Mode'}>
                 <button
