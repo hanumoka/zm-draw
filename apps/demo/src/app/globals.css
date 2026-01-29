@@ -292,34 +292,40 @@ body {
   /* overflow: hidden removed to allow floating toolbar visibility */
 }
 
-/* Left Panel */
+/* Left Panel - FigJam style */
 .zm-draw-left-panel {
-  background: var(--zm-bg-secondary);
+  background: var(--zm-bg-primary);
   border-right: 1px solid var(--zm-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
+  margin: 8px 0 8px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--zm-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-/* Right Panel */
+/* Right Panel - FigJam style */
 .zm-draw-right-panel {
-  background: var(--zm-bg-secondary);
+  background: var(--zm-bg-primary);
   border-left: 1px solid var(--zm-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
+  margin: 8px 8px 8px 0;
+  border-radius: 12px;
+  border: 1px solid var(--zm-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .zm-draw-panel-header {
-  padding: 12px 16px;
+  padding: 14px 16px 12px;
   border-bottom: 1px solid var(--zm-border);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--zm-text-secondary);
+  color: var(--zm-text-primary);
 }
 
 .zm-draw-panel-content {
@@ -334,11 +340,9 @@ body {
 
 .zm-draw-panel-section-title {
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--zm-text-muted);
-  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--zm-text-secondary);
+  margin-bottom: 10px;
 }
 
 .zm-draw-panel-row {
@@ -356,14 +360,14 @@ body {
 
 .zm-draw-panel-input {
   flex: 1;
-  background: var(--zm-bg-tertiary);
+  background: var(--zm-bg-secondary);
   border: 1px solid var(--zm-border);
-  border-radius: 4px;
-  padding: 6px 8px;
+  border-radius: 6px;
+  padding: 8px 10px;
   font-size: 12px;
   color: var(--zm-text-primary);
   outline: none;
-  transition: border-color 0.15s;
+  transition: all 0.15s;
 }
 
 .zm-draw-panel-input:hover {
@@ -401,11 +405,13 @@ body {
   color: white;
 }
 
-/* Panel Tabs */
+/* Panel Tabs - FigJam style segment control */
 .zm-draw-panel-tabs {
   display: flex;
+  gap: 4px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--zm-border);
-  background: var(--zm-bg-secondary);
+  background: transparent;
 }
 
 .zm-draw-panel-tab {
@@ -414,13 +420,13 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   font-size: 12px;
   font-weight: 500;
   color: var(--zm-text-secondary);
   background: transparent;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -431,8 +437,9 @@ body {
 }
 
 .zm-draw-panel-tab.active {
-  color: var(--zm-accent);
-  border-bottom-color: var(--zm-accent);
+  color: var(--zm-text-primary);
+  background: var(--zm-bg-secondary);
+  font-weight: 600;
 }
 
 /* Layers Panel */
@@ -691,7 +698,7 @@ body {
 }
 
 .zm-panel-close-button:hover {
-  background: var(--zm-bg-tertiary);
+  background: var(--zm-bg-hover);
   color: var(--zm-text-primary);
 }
 
@@ -702,10 +709,15 @@ body {
   gap: 8px;
   padding: 8px 12px;
   margin: 8px 12px;
-  background: var(--zm-bg-tertiary);
+  background: var(--zm-bg-secondary);
   border: 1px solid var(--zm-border);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--zm-text-muted);
+  transition: border-color 0.15s;
+}
+
+.zm-shapes-search:focus-within {
+  border-color: var(--zm-accent);
 }
 
 .zm-shapes-search input {
