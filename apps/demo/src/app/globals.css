@@ -861,6 +861,16 @@ body {
   box-shadow: var(--zm-focus-ring);
 }
 
+.zm-shape-button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.zm-shape-button.disabled:hover {
+  background: transparent;
+  transform: none;
+}
+
 .zm-shape-button svg {
   width: 24px;
   height: 24px;

@@ -577,18 +577,21 @@ function ShapeButton({
   icon,
   label,
   onClick,
-  active = false
+  active = false,
+  disabled = false
 }: {
   icon: React.ReactNode;
   label: string;
   onClick?: () => void;
   active?: boolean;
+  disabled?: boolean;
 }) {
   return (
-    <Tooltip content={label}>
+    <Tooltip content={disabled ? `${label} (Coming soon)` : label}>
       <button
-        className={`zm-shape-button ${active ? 'active' : ''}`}
-        onClick={onClick}
+        className={`zm-shape-button ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
+        onClick={disabled ? undefined : onClick}
+        disabled={disabled}
       >
         {icon}
       </button>
@@ -673,6 +676,8 @@ export default function Home() {
   const [showMinimap, setShowMinimap] = useState(true);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [connectors, setConnectors] = useState<Connector[]>([]);
+  // Track which button was clicked to avoid duplicate active states
+  const [selectedButtonLabel, setSelectedButtonLabel] = useState<string | null>(null);
 
   // Close export dropdown when clicking outside
   useEffect(() => {
@@ -696,6 +701,13 @@ export default function Home() {
   const currentTool = useToolStore((s) => s.tool);
   const currentStickyColor = useToolStore((s) => s.currentStickyColor);
   const setStickyColor = useToolStore((s) => s.setStickyColor);
+
+  // Reset selected button label when tool changes to 'select'
+  useEffect(() => {
+    if (currentTool === 'select') {
+      setSelectedButtonLabel(null);
+    }
+  }, [currentTool]);
 
   // Selection store for multi-select count and type
   const selectedIds = useSelectionStore((s) => s.selectedIds);
@@ -845,8 +857,9 @@ export default function Home() {
   }, []);
 
   // Handle shape button click - set tool for drawing
-  const handleShapeClick = useCallback((toolType: ToolType) => {
+  const handleShapeClick = useCallback((toolType: ToolType, buttonLabel: string) => {
     setTool(toolType);
+    setSelectedButtonLabel(buttonLabel);
   }, [setTool]);
 
   // Update canvas offset when panels change or window resizes
@@ -966,7 +979,7 @@ export default function Home() {
                   <div className="zm-figjam-subsection">
                     <div className="zm-figjam-label">Sticky Notes (S)</div>
                     <div className="zm-shapes-grid">
-                      <ShapeButton icon={ShapeIcons.stickyNote} label="Sticky Note (S)" onClick={() => handleShapeClick('sticky')} active={currentTool === 'sticky'} />
+                      <ShapeButton icon={ShapeIcons.stickyNote} label="Sticky Note (S)" onClick={() => handleShapeClick('sticky', 'Sticky Note (S)')} active={selectedButtonLabel === 'Sticky Note (S)'} />
                     </div>
                     <div className="zm-sticky-colors">
                       {(Object.keys(STICKY_COLORS) as StickyNoteColor[]).map((color) => (
@@ -984,10 +997,10 @@ export default function Home() {
                   <div className="zm-figjam-subsection">
                     <div className="zm-figjam-label">Drawing</div>
                     <div className="zm-shapes-grid">
-                      <ShapeButton icon={<PenIcon />} label="Pen (P)" onClick={() => handleShapeClick('pen')} active={currentTool === 'pen'} />
-                      <ShapeButton icon={<MarkerIcon />} label="Marker (M)" onClick={() => handleShapeClick('marker')} active={currentTool === 'marker'} />
-                      <ShapeButton icon={<HighlighterIcon />} label="Highlighter (H)" onClick={() => handleShapeClick('highlighter')} active={currentTool === 'highlighter'} />
-                      <ShapeButton icon={<EraserIcon />} label="Eraser (E)" onClick={() => handleShapeClick('eraser')} active={currentTool === 'eraser'} />
+                      <ShapeButton icon={<PenIcon />} label="Pen (P)" onClick={() => handleShapeClick('pen', 'Pen (P)')} active={selectedButtonLabel === 'Pen (P)'} />
+                      <ShapeButton icon={<MarkerIcon />} label="Marker (M)" onClick={() => handleShapeClick('marker', 'Marker (M)')} active={selectedButtonLabel === 'Marker (M)'} />
+                      <ShapeButton icon={<HighlighterIcon />} label="Highlighter (H)" onClick={() => handleShapeClick('highlighter', 'Highlighter (H)')} active={selectedButtonLabel === 'Highlighter (H)'} />
+                      <ShapeButton icon={<EraserIcon />} label="Eraser (E)" onClick={() => handleShapeClick('eraser', 'Eraser (E)')} active={selectedButtonLabel === 'Eraser (E)'} />
                     </div>
                   </div>
                 </CollapsibleSection>
@@ -995,39 +1008,39 @@ export default function Home() {
                 {/* Connectors Section */}
                 <CollapsibleSection title="Connectors">
                   <div className="zm-shapes-grid">
-                    <ShapeButton icon={ShapeIcons.arrowRight} label="Arrow (Connector)" onClick={() => handleShapeClick('connector')} active={currentTool === 'connector'} />
-                    <ShapeButton icon={ShapeIcons.arrowBidirectional} label="Bidirectional Arrow" />
-                    <ShapeButton icon={ShapeIcons.arrowElbow} label="Elbow Arrow" />
-                    <ShapeButton icon={ShapeIcons.line} label="Line" />
+                    <ShapeButton icon={ShapeIcons.arrowRight} label="Arrow (Connector)" onClick={() => handleShapeClick('connector', 'Arrow (Connector)')} active={selectedButtonLabel === 'Arrow (Connector)'} />
+                    <ShapeButton icon={ShapeIcons.arrowBidirectional} label="Bidirectional Arrow" disabled />
+                    <ShapeButton icon={ShapeIcons.arrowElbow} label="Elbow Arrow" disabled />
+                    <ShapeButton icon={ShapeIcons.line} label="Line" disabled />
                   </div>
                 </CollapsibleSection>
 
                 {/* Basic Shapes Section */}
                 <CollapsibleSection title="Basic">
                   <div className="zm-shapes-grid">
-                    <ShapeButton icon={ShapeIcons.rectangle} label="Rectangle (R)" onClick={() => handleShapeClick('rectangle')} active={currentTool === 'rectangle'} />
-                    <ShapeButton icon={ShapeIcons.roundedRect} label="Rounded Rectangle" />
-                    <ShapeButton icon={ShapeIcons.circle} label="Circle" onClick={() => handleShapeClick('ellipse')} active={currentTool === 'ellipse'} />
-                    <ShapeButton icon={ShapeIcons.ellipse} label="Ellipse (O)" onClick={() => handleShapeClick('ellipse')} active={currentTool === 'ellipse'} />
-                    <ShapeButton icon={ShapeIcons.triangle} label="Triangle" />
-                    <ShapeButton icon={ShapeIcons.triangleDown} label="Triangle Down" />
-                    <ShapeButton icon={ShapeIcons.diamond} label="Diamond" onClick={() => handleShapeClick('diamond')} active={currentTool === 'diamond'} />
-                    <ShapeButton icon={ShapeIcons.pentagon} label="Pentagon" />
-                    <ShapeButton icon={ShapeIcons.hexagon} label="Hexagon" />
-                    <ShapeButton icon={ShapeIcons.star} label="Star" />
-                    <ShapeButton icon={ShapeIcons.cross} label="Cross" />
+                    <ShapeButton icon={ShapeIcons.rectangle} label="Rectangle (R)" onClick={() => handleShapeClick('rectangle', 'Rectangle (R)')} active={selectedButtonLabel === 'Rectangle (R)'} />
+                    <ShapeButton icon={ShapeIcons.roundedRect} label="Rounded Rectangle" disabled />
+                    <ShapeButton icon={ShapeIcons.circle} label="Circle" onClick={() => handleShapeClick('ellipse', 'Circle')} active={selectedButtonLabel === 'Circle'} />
+                    <ShapeButton icon={ShapeIcons.ellipse} label="Ellipse (O)" onClick={() => handleShapeClick('ellipse', 'Ellipse (O)')} active={selectedButtonLabel === 'Ellipse (O)'} />
+                    <ShapeButton icon={ShapeIcons.triangle} label="Triangle" disabled />
+                    <ShapeButton icon={ShapeIcons.triangleDown} label="Triangle Down" disabled />
+                    <ShapeButton icon={ShapeIcons.diamond} label="Diamond" onClick={() => handleShapeClick('diamond', 'Diamond')} active={selectedButtonLabel === 'Diamond'} />
+                    <ShapeButton icon={ShapeIcons.pentagon} label="Pentagon" disabled />
+                    <ShapeButton icon={ShapeIcons.hexagon} label="Hexagon" disabled />
+                    <ShapeButton icon={ShapeIcons.star} label="Star" disabled />
+                    <ShapeButton icon={ShapeIcons.cross} label="Cross" disabled />
                   </div>
                 </CollapsibleSection>
 
                 {/* Flowchart Section */}
                 <CollapsibleSection title="Flowchart">
                   <div className="zm-shapes-grid">
-                    <ShapeButton icon={ShapeIcons.process} label="Process" onClick={() => handleShapeClick('rectangle')} active={currentTool === 'rectangle'} />
-                    <ShapeButton icon={ShapeIcons.decision} label="Decision" onClick={() => handleShapeClick('diamond')} active={currentTool === 'diamond'} />
-                    <ShapeButton icon={ShapeIcons.terminal} label="Terminal" onClick={() => handleShapeClick('ellipse')} active={currentTool === 'ellipse'} />
-                    <ShapeButton icon={ShapeIcons.document} label="Document" />
-                    <ShapeButton icon={ShapeIcons.database} label="Database" />
-                    <ShapeButton icon={ShapeIcons.parallelogram} label="Data" />
+                    <ShapeButton icon={ShapeIcons.process} label="Process" onClick={() => handleShapeClick('rectangle', 'Process')} active={selectedButtonLabel === 'Process'} />
+                    <ShapeButton icon={ShapeIcons.decision} label="Decision" onClick={() => handleShapeClick('diamond', 'Decision')} active={selectedButtonLabel === 'Decision'} />
+                    <ShapeButton icon={ShapeIcons.terminal} label="Terminal" onClick={() => handleShapeClick('ellipse', 'Terminal')} active={selectedButtonLabel === 'Terminal'} />
+                    <ShapeButton icon={ShapeIcons.document} label="Document" disabled />
+                    <ShapeButton icon={ShapeIcons.database} label="Database" disabled />
+                    <ShapeButton icon={ShapeIcons.parallelogram} label="Data" disabled />
                   </div>
                 </CollapsibleSection>
 

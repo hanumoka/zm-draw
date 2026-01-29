@@ -1,6 +1,6 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-29 (도구 스토어 동기화 버그 수정)
+> 최종 업데이트: 2026-01-29 (도구 버튼 활성화 버그 수정)
 
 ---
 
@@ -11,6 +11,18 @@
 **진행률**: Phase 1-14 완료
 
 ### 마지막 작업 (2026-01-29)
+
+- **버그 수정: 도구 버튼 중복 활성화** ✅ 완료
+  - **문제 1**: 같은 도구 타입을 공유하는 버튼들이 모두 활성화됨
+    - Rectangle 클릭 시 Process도 활성화 (둘 다 `'rectangle'` 타입)
+    - Circle, Ellipse, Terminal 모두 활성화 (모두 `'ellipse'` 타입)
+  - **문제 2**: 미구현 버튼들 (Rounded Rectangle, Triangle 등) 클릭 시 무반응
+  - **해결책**:
+    - `selectedButtonLabel` 상태 추가하여 클릭된 버튼 추적
+    - `active` 조건을 `selectedButtonLabel === label`로 변경
+    - 미구현 버튼들에 `disabled` 속성 추가 + CSS 스타일
+    - 도구가 'select'로 변경 시 `selectedButtonLabel` 리셋
+  - **수정 파일**: `page.tsx`, `globals.css`
 
 - **버그 수정: 도구 스토어 동기화** ✅ 완료
   - **문제**: 데모 페이지와 DrawCanvas 간 zustand 스토어 인스턴스 분리
