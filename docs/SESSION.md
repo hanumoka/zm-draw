@@ -1,98 +1,58 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-29 (Phase 10 스탬프 기능 완료)
+> 최종 업데이트: 2026-01-29 (Phase 11 Yjs 협업 통합 중)
 
 ---
 
 ## 현재 상태
 
-**Phase**: **Phase 10 완료** ✅ (스탬프 기능)
+**Phase**: **Phase 11 진행 중** 🔄 (Yjs 실시간 협업)
 **목표**: FigJam 스타일 실시간 협업 화이트보드
-**진행률**: Phase 1-10 완료 / Phase 11-17 예정
+**진행률**: Phase 1-10 완료 / Phase 11 진행 중 / Phase 12-17 예정
 
 ### 마지막 작업 (2026-01-29)
 
+- **Phase 11: Yjs 실시간 협업** 🔄 진행 중
+  - **Yjs 패키지 설치** ✅
+    - `yjs`: CRDT 기반 실시간 동기화
+    - `y-websocket`: WebSocket 프로바이더
+    - `y-indexeddb`: 오프라인 지원
+  - **collaborationStore.ts** ✅ 생성
+    - `Y.Doc` 관리 (shapes, connectors Y.Map)
+    - WebSocket 프로바이더 연결
+    - IndexedDB 오프라인 지원
+    - UserPresence (cursor, selection, viewport 공유)
+    - Awareness API 통합
+  - **useCollaboration.ts** ✅ 생성
+    - Yjs ↔ 로컬 상태 양방향 동기화
+    - 원격 변경 감지 및 적용
+    - 커서/선택/뷰포트 업데이트 함수
+  - **DrawCanvas 통합** ✅ 완료
+    - 협업 props 추가 (collaborationEnabled, roomId, serverUrl, userName)
+    - useCollaboration 훅 연결
+    - 원격 커서 렌더링 (Konva 레이어)
+    - 연결 상태 UI (상단 우측)
+    - 원격 사용자 아바타 표시
+  - **빌드** ✅ 성공 (141.08 KB)
+
+### 남은 작업 (Phase 11)
+
+- [ ] 11.3 원격 선택 하이라이트 표시
+- [ ] 11.4 WebSocket 서버 설정 가이드
+- [ ] 11.5 오프라인 모드 테스트
+- [ ] 11.6 충돌 해결 테스트
+
+### 이전 작업 (2026-01-29)
+
 - **Phase 10: 스탬프 기능** ✅ 완료
-  - **스탬프 도형** 구현 ✅
-    - `stamp` 도형 타입 추가
-    - `StampType`: thumbsUp, thumbsDown, heart, star, check, question, exclamation, celebration
-    - `STAMP_EMOJIS` 상수 (이모지 매핑)
-    - Shape에 `stampType` 속성 추가
-    - `defaultStampProps` 기본 속성
-  - **스탬프 렌더링** ✅
-    - Konva.Text 기반 이모지 렌더링
-    - SVG export 지원
-  - **툴바 UI** ✅
-    - 스탬프 버튼 + 팝오버 선택기 (8가지 이모지)
-    - 현재 선택된 스탬프 표시
-  - **단축키** ✅
-    - 숫자 1-8: 스탬프 빠른 선택 및 추가
-  - **Store 확장** ✅
-    - `toolStore`: currentStampType, setStampType
+  - 스탬프 도형 (8가지 이모지)
+  - 툴바 UI + 팝오버 선택기
+  - 숫자 1-8 단축키
 
 - **Phase 9: 이미지 기능** ✅ 완료
-  - **이미지 도형** 구현 ✅
-    - `image` 도형 타입 추가
-    - Shape에 `src`, `naturalWidth`, `naturalHeight`, `preserveAspectRatio` 속성 추가
-    - `defaultImageShapeProps` 기본 속성
-    - 이미지 캐싱 (`imageCache` Map)
-    - Konva.Image 렌더링
-    - 비율 유지 Transformer
-  - **드래그앤드롭** 구현 ✅
-    - 캔버스에 이미지 파일 드롭
-    - 드롭 위치에 이미지 삽입
-  - **클립보드 붙여넣기** 구현 ✅
-    - Ctrl+V로 클립보드 이미지 붙여넣기
-    - 뷰포트 중앙에 삽입
-  - **툴바 버튼** 추가 ✅
-    - Image 버튼 (단축키: I)
-    - 파일 선택 다이얼로그
-  - **Export 지원** ✅
-    - SVG export에 이미지 포함
-
-### 이전 작업 (2026-01-28)
-
-- **Phase 8: 스티키 노트 + 펜 도구** ✅
-  - **스티키 노트** 구현 ✅
-    - `sticky` 도형 타입 추가
-    - 6가지 색상 프리셋 (yellow, pink, blue, green, purple, orange)
-    - 150x150 기본 크기, 그림자 효과
-    - 텍스트 자동 편집 모드 (더블클릭)
-    - 색상 선택 UI (좌측 패널)
-    - 단축키 S
-  - **펜 도구** 구현 ✅
-    - `freedraw` 도형 타입 추가
-    - 펜 (P): 2px, 부드러운 곡선
-    - 마커 (M): 8px
-    - 하이라이터 (H): 20px, opacity 0.5
-    - 지우개 (E): freedraw 도형 삭제
-  - **타입 시스템 확장** ✅
-    - `StickyNoteColor`, `DrawingToolType` 타입
-    - `STICKY_COLORS` 상수
-    - `FreeDrawPoint` 인터페이스
-    - Shape에 `points`, `stickyColor`, `lineCap`, `author` 속성 추가
-  - **Store 확장** ✅
-    - `toolStore`: isDrawing, currentStrokeWidth/Color/Opacity, currentStickyColor
-    - `canvasStore`: defaultStickyNoteProps, defaultFreeDrawProps
-  - **UI 추가** ✅
-    - 좌측 패널에 FigJam 섹션 추가
-    - 스티키 노트 색상 선택 버튼
-    - 펜/마커/하이라이터/지우개 버튼
-    - 키보드 단축키 (S, P, M, H, E)
-
-### 이전 작업 (2026-01-28)
-
-- **미니맵 구현** ✅
-- **Phase 7: Zoom Controls** ✅
-- **Phase 7: Grid Snap** ✅
-- **Phase 7: Smart Guides** ✅
-- **Phase 7: PNG/SVG Export** ✅
-- **Phase 6: 정렬/분배/그룹핑** ✅
-- **Phase 5: 독립 텍스트 도형** ✅
-- **Phase 4: 레이어 패널 완료** ✅
-- **Phase 3.5: 커넥터 고급 기능** ✅
-- **Phase 2.6: 다중 선택** ✅
-- **Phase 2.5: 속성 패널** ✅
+  - 이미지 도형 (드래그앤드롭, 클립보드)
+  - 툴바 버튼 (I 단축키)
+  - SVG export 지원
 
 ### 개발 서버
 
@@ -104,76 +64,76 @@
 
 - **브랜치**: main
 - **원격**: origin/main
-- **마지막 커밋**: `d2f3e32 docs: Add FigJam-style collaborative whiteboard roadmap`
 
 ---
 
-## Phase 8 완료 ✅
+## Phase 11 협업 아키텍처
 
-### 스티키 노트
 ```
-┌─────────────────────┐
-│  ┌───────────────┐  │
-│  │    Yellow     │  │  ← 6가지 색상 선택
-│  │   Sticky      │  │  ← 150x150 기본 크기
-│  │    Note       │  │  ← 그림자 효과
-│  └───────────────┘  │
-└─────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      DrawCanvas                              │
+│  ┌─────────────┐     ┌──────────────────┐                   │
+│  │   shapes    │ ←→  │ useCollaboration │                   │
+│  │ connectors  │     │   (hook)         │                   │
+│  └─────────────┘     └────────┬─────────┘                   │
+│                                │                            │
+│                      ┌────────▼─────────┐                   │
+│                      │ collaborationStore│                   │
+│                      │   (Zustand)       │                   │
+│                      └────────┬─────────┘                   │
+│                                │                            │
+│           ┌────────────────────┼────────────────────┐       │
+│           │                    │                    │       │
+│    ┌──────▼──────┐     ┌──────▼──────┐     ┌──────▼──────┐ │
+│    │   Y.Doc     │     │  Awareness  │     │  IndexedDB  │ │
+│    │  Y.Map      │     │   (cursors) │     │ (offline)   │ │
+│    └──────┬──────┘     └──────┬──────┘     └─────────────┘ │
+│           │                    │                            │
+│           └────────┬───────────┘                            │
+│                    │                                        │
+│            ┌───────▼───────┐                                │
+│            │ WebSocketProvider │ ← y-websocket              │
+│            └───────┬───────┘                                │
+└────────────────────┼────────────────────────────────────────┘
+                     │
+                     ▼
+            ┌─────────────────┐
+            │  Yjs Server     │ (별도 서버 필요)
+            │  (y-websocket)  │
+            └─────────────────┘
 ```
 
-### 펜 도구
-| 도구 | 두께 | 투명도 | lineCap | 단축키 |
-|------|------|--------|---------|--------|
-| Pen | 2px | 1.0 | round | P |
-| Marker | 8px | 1.0 | round | M |
-| Highlighter | 20px | 0.5 | square | H |
-| Eraser | - | - | - | E |
+### 연결 상태 UI
+
+```
+┌───────────────────────────────────────┐
+│  ● 2 online  [A] [B]                  │  ← 상단 우측
+└───────────────────────────────────────┘
+  │     │        │   │
+  │     │        │   └─ 원격 사용자 아바타
+  │     │        └─ 로컬 사용자 아바타
+  │     └─ 연결된 사용자 수
+  └─ 연결 상태 (녹색/주황/회색)
+```
+
+### 원격 커서 렌더링
+
+- Konva.Layer에 원격 사용자 커서 표시
+- 사용자 색상 + 이름 라벨
+- 캔버스 좌표로 변환
 
 ---
 
-## Phase 9: 이미지 기능 🔄 진행 중
-
-### 구현 완료 ✅
-
-**이미지 삽입:**
-- [x] 이미지 도형 타입 (`image`) 추가
-- [x] `src`, `naturalWidth`, `naturalHeight`, `preserveAspectRatio` 속성
-- [x] Konva.Image 렌더링 + 이미지 캐싱
-- [x] 드래그앤드롭 업로드
-- [x] 클립보드 붙여넣기 (Ctrl+V)
-- [x] 툴바 버튼 (I 단축키) + 파일 선택 다이얼로그
-- [x] 이미지 리사이즈 (비율 유지)
-- [x] SVG export 지원
-
-### 남은 작업 (선택적)
-
-**미디어:**
-- [ ] 웹 링크 임베드
-- [ ] 외부 리소스 미리보기 (OG 메타데이터)
-
-### 이후 로드맵 (예상 9주)
-
-| Phase | 내용 | 기간 |
-|-------|------|------|
-| ~~8~~ | ~~스티키 노트 + 펜~~ | ~~1주~~ ✅ |
-| 9 | 이미지/미디어 | 4일 |
-| 10 | 스탬프/이모지 | 4일 |
-| **11** | **실시간 협업 (Yjs)** | **2주** |
-| 12 | 댓글 | 5일 |
-| 13 | 투표/타이머 | 5일 |
-| 14-17 | 고급 기능 | 4주 |
-
-**상세 로드맵**: `docs/FIGJAM-ROADMAP.md`
-
----
-
-## 구현 완료된 기능 (Phase 8 기준)
+## 구현 완료된 기능 (Phase 11 기준)
 
 | 기능 | 상태 | Figma 대비 |
 |------|------|-----------|
 | 도형 생성 (Rect, Ellipse, Diamond) | ✅ 완료 | 30% |
-| **스티키 노트** | ✅ 완료 | 80% |
-| **펜/마커/하이라이터** | ✅ 완료 | 70% |
+| 스티키 노트 | ✅ 완료 | 80% |
+| 펜/마커/하이라이터 | ✅ 완료 | 70% |
+| 이미지 삽입 | ✅ 완료 | 80% |
+| 스탬프/이모지 | ✅ 완료 | 90% |
+| **실시간 협업** | 🔄 진행 중 | 60% |
 | 도형 선택/삭제/이동 | ✅ 완료 | 100% |
 | 리사이즈/회전 | ✅ 완료 | 100% |
 | 텍스트 편집 | ✅ 완료 | 50% |
@@ -198,7 +158,7 @@
 | UI 컴포넌트 | Radix UI | Radix UI | ✅ 완료 |
 | 컬러 피커 | react-colorful | react-colorful | ✅ 완료 |
 | Canvas 라이브러리 | Konva 10.0.0 | Konva 10.x | ✅ 완료 |
-| 실시간 협업 | - | Yjs | 📋 Phase 11 |
+| **실시간 협업** | **Yjs** | **Yjs** | 🔄 **통합 중** |
 
 ---
 

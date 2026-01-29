@@ -5,6 +5,7 @@ import Konva from 'konva';
 import type { Shape, ShapeType, Connector, FreeDrawPoint, StickyNoteColor, StampType } from '../types';
 import { STICKY_COLORS, STAMP_EMOJIS } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
+import { useCollaboration } from '../hooks/useCollaboration';
 import { useToolStore } from '../stores/toolStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useViewportStore } from '../stores/viewportStore';
@@ -119,6 +120,14 @@ export interface DrawCanvasProps {
   onSelectionChange?: (shape: SelectedShapeInfo | null) => void;
   /** Callback when viewport changes (zoom/pan) */
   onViewportChange?: (viewport: ViewportInfo) => void;
+  /** Enable real-time collaboration */
+  collaborationEnabled?: boolean;
+  /** Room ID for collaboration session */
+  roomId?: string;
+  /** WebSocket server URL for collaboration (offline-only if not provided) */
+  serverUrl?: string;
+  /** User name for collaboration */
+  userName?: string;
 }
 
 /**
@@ -137,6 +146,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   onReady,
   onSelectionChange,
   onViewportChange,
+  collaborationEnabled = false,
+  roomId,
+  serverUrl,
+  userName,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -147,6 +160,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const [shapes, setShapes] = useState<Shape[]>(initialShapes);
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+
+  // Collaboration cursors layer
+  const cursorsLayerRef = useRef<Konva.Layer | null>(null);
 
   // Snap to grid helper function
   const snapToGridValue = useCallback((value: number) => {
@@ -195,6 +211,36 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const [historyIndex, setHistoryIndex] = useState(-1);
   const isUndoRedoRef = useRef(false);
   const historyInitializedRef = useRef(false);
+
+  // Collaboration hook callbacks
+  const handleRemoteShapesChange = useCallback((remoteShapes: Shape[]) => {
+    setShapes(remoteShapes);
+  }, []);
+
+  const handleRemoteConnectorsChange = useCallback((remoteConnectors: Connector[]) => {
+    setConnectors(remoteConnectors);
+  }, []);
+
+  // Collaboration hook
+  const {
+    isCollaborating,
+    connectionStatus,
+    localUser,
+    remoteUsers,
+    updateCursor,
+    clearCursor,
+    updateSelection,
+    updateViewport: updateCollabViewport,
+  } = useCollaboration({
+    roomId,
+    serverUrl,
+    userName,
+    enabled: collaborationEnabled,
+    shapes,
+    connectors,
+    onShapesChange: handleRemoteShapesChange,
+    onConnectorsChange: handleRemoteConnectorsChange,
+  });
 
   const connectorsLayerRef = useRef<Konva.Layer | null>(null);
   const selectionLayerRef = useRef<Konva.Layer | null>(null);
@@ -2334,6 +2380,11 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     stage.add(drawingLayer);
     drawingLayerRef.current = drawingLayer;
 
+    // Cursors layer (for remote collaboration cursors)
+    const cursorsLayer = new Konva.Layer({ listening: false });
+    stage.add(cursorsLayer);
+    cursorsLayerRef.current = cursorsLayer;
+
     // Transformer for resize handles
     const transformer = new Konva.Transformer({
       rotateEnabled: true,
@@ -3049,6 +3100,112 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     };
   }, [tool, isPanning, shapes, selectedIds, selectMultiple, clearSelection, isMarqueeSelecting]);
 
+  // Sync selection to collaboration
+  useEffect(() => {
+    if (!isCollaborating) return;
+    updateSelection(selectedIds);
+  }, [isCollaborating, selectedIds, updateSelection]);
+
+  // Track cursor movement for collaboration
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage || !isCollaborating) return;
+
+    const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+      const pos = stage.getPointerPosition();
+      if (!pos) return;
+
+      // Convert to canvas coordinates
+      const transform = stage.getAbsoluteTransform().copy().invert();
+      const canvasPos = transform.point(pos);
+      updateCursor(canvasPos.x, canvasPos.y);
+    };
+
+    const handleMouseLeave = () => {
+      clearCursor();
+    };
+
+    stage.on('mousemove', handleMouseMove);
+    stage.container().addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      stage.off('mousemove', handleMouseMove);
+      stage.container().removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [isCollaborating, updateCursor, clearCursor]);
+
+  // Sync viewport to collaboration
+  useEffect(() => {
+    if (!isCollaborating) return;
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const stageScale = stage.scaleX();
+    const stagePos = stage.position();
+    updateCollabViewport(-stagePos.x / stageScale, -stagePos.y / stageScale, stageScale);
+  }, [isCollaborating, scale, updateCollabViewport]);
+
+  // Render remote user cursors
+  useEffect(() => {
+    const layer = cursorsLayerRef.current;
+    if (!layer) return;
+
+    layer.destroyChildren();
+
+    if (!isCollaborating || remoteUsers.length === 0) {
+      layer.batchDraw();
+      return;
+    }
+
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    remoteUsers.forEach((user) => {
+      if (!user.cursor) return;
+
+      // Create cursor group
+      const group = new Konva.Group({
+        x: user.cursor.x,
+        y: user.cursor.y,
+      });
+
+      // Cursor arrow shape
+      const arrow = new Konva.Line({
+        points: [0, 0, 0, 16, 4, 12, 8, 20, 12, 18, 8, 10, 14, 10],
+        fill: user.color,
+        closed: true,
+        strokeWidth: 1,
+        stroke: '#ffffff',
+      });
+      group.add(arrow);
+
+      // User name label
+      const labelBg = new Konva.Rect({
+        x: 16,
+        y: 8,
+        fill: user.color,
+        cornerRadius: 4,
+        height: 18,
+        width: user.name.length * 7 + 8,
+      });
+      group.add(labelBg);
+
+      const label = new Konva.Text({
+        x: 20,
+        y: 10,
+        text: user.name,
+        fontSize: 12,
+        fill: '#ffffff',
+        fontFamily: 'sans-serif',
+      });
+      group.add(label);
+
+      layer.add(group);
+    });
+
+    layer.batchDraw();
+  }, [isCollaborating, remoteUsers]);
+
   return (
     <div className="zm-draw-wrapper" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'visible' }}>
       {/* Canvas */}
@@ -3068,6 +3225,83 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             backgroundColor: backgroundColor,
           }}
         />
+
+        {/* Collaboration Status Indicator */}
+        {collaborationEnabled && (
+          <div style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 12px',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            borderRadius: 20,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+            fontSize: 12,
+          }}>
+            <div style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: connectionStatus === 'connected' ? '#22c55e' :
+                             connectionStatus === 'connecting' ? '#f59e0b' : '#9ca3af',
+            }} />
+            <span style={{ color: '#374151' }}>
+              {connectionStatus === 'connected' ? `${remoteUsers.length + 1} online` :
+               connectionStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+            </span>
+            {/* Remote user avatars */}
+            {remoteUsers.length > 0 && (
+              <div style={{ display: 'flex', marginLeft: 4 }}>
+                {remoteUsers.slice(0, 3).map((user, i) => (
+                  <div
+                    key={user.odUserId}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      backgroundColor: user.color,
+                      border: '2px solid white',
+                      marginLeft: i > 0 ? -8 : 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      color: 'white',
+                      fontWeight: 500,
+                    }}
+                    title={user.name}
+                  >
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                ))}
+                {remoteUsers.length > 3 && (
+                  <div
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      backgroundColor: '#6b7280',
+                      border: '2px solid white',
+                      marginLeft: -8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      color: 'white',
+                      fontWeight: 500,
+                    }}
+                  >
+                    +{remoteUsers.length - 3}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Bottom Floating Toolbar */}
         <div style={{
