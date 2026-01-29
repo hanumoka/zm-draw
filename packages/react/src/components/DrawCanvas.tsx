@@ -225,7 +225,6 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const {
     isCollaborating,
     connectionStatus,
-    localUser,
     remoteUsers,
     updateCursor,
     clearCursor,

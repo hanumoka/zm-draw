@@ -78,6 +78,9 @@ export function useCollaboration(options: UseCollaborationOptions = {}) {
     };
   }, [enabled, roomId, serverUrl, userName, initCollaboration, initOfflineOnly, disconnect]);
 
+  // Track if initial sync has been done
+  const initialSyncDoneRef = useRef(false);
+
   // Listen for Yjs changes and sync to local state
   useEffect(() => {
     if (!yShapes || !yConnectors || !isCollaborating) return;
@@ -85,12 +88,12 @@ export function useCollaboration(options: UseCollaborationOptions = {}) {
     const handleShapesChange = () => {
       isSyncingFromYjsRef.current = true;
 
-      const shapes: Shape[] = [];
+      const yjsShapes: Shape[] = [];
       yShapes.forEach((shape) => {
-        shapes.push(shape);
+        yjsShapes.push(shape);
       });
 
-      onShapesChange?.(shapes);
+      onShapesChange?.(yjsShapes);
 
       // Small delay to prevent sync loop
       setTimeout(() => {
@@ -101,12 +104,12 @@ export function useCollaboration(options: UseCollaborationOptions = {}) {
     const handleConnectorsChange = () => {
       isSyncingFromYjsRef.current = true;
 
-      const connectors: Connector[] = [];
+      const yjsConnectors: Connector[] = [];
       yConnectors.forEach((connector) => {
-        connectors.push(connector);
+        yjsConnectors.push(connector);
       });
 
-      onConnectorsChange?.(connectors);
+      onConnectorsChange?.(yjsConnectors);
 
       setTimeout(() => {
         isSyncingFromYjsRef.current = false;
@@ -116,9 +119,18 @@ export function useCollaboration(options: UseCollaborationOptions = {}) {
     yShapes.observe(handleShapesChange);
     yConnectors.observe(handleConnectorsChange);
 
-    // Initial sync from Yjs
-    handleShapesChange();
-    handleConnectorsChange();
+    // Initial sync: prefer Yjs data if it exists, otherwise sync local to Yjs
+    if (!initialSyncDoneRef.current) {
+      initialSyncDoneRef.current = true;
+      const yjsHasData = yShapes.size > 0 || yConnectors.size > 0;
+
+      if (yjsHasData) {
+        // Yjs has data, sync to local
+        handleShapesChange();
+        handleConnectorsChange();
+      }
+      // If Yjs is empty, local→Yjs sync will happen via the other useEffect
+    }
 
     return () => {
       yShapes.unobserve(handleShapesChange);
@@ -132,7 +144,6 @@ export function useCollaboration(options: UseCollaborationOptions = {}) {
     if (!yShapes || !yConnectors) return;
 
     // Detect shape changes
-    const prevShapeIds = new Set(prevShapesRef.current.map((s) => s.id));
     const currentShapeIds = new Set(shapes.map((s) => s.id));
 
     // Added or updated shapes
@@ -151,7 +162,6 @@ export function useCollaboration(options: UseCollaborationOptions = {}) {
     });
 
     // Detect connector changes
-    const prevConnectorIds = new Set(prevConnectorsRef.current.map((c) => c.id));
     const currentConnectorIds = new Set(connectors.map((c) => c.id));
 
     // Added or updated connectors
@@ -173,8 +183,12 @@ export function useCollaboration(options: UseCollaborationOptions = {}) {
     prevConnectorsRef.current = connectors;
   }, [shapes, connectors, isCollaborating, yShapes, yConnectors, setShape, deleteShape, setConnector, deleteConnector]);
 
-  // Cursor update (throttled)
+  // Cursor update (throttled to ~30fps)
+  const lastCursorUpdateRef = useRef(0);
   const updateCursor = useCallback((x: number, y: number) => {
+    const now = Date.now();
+    if (now - lastCursorUpdateRef.current < 33) return; // ~30fps
+    lastCursorUpdateRef.current = now;
     updateLocalCursor({ x, y });
   }, [updateLocalCursor]);
 
