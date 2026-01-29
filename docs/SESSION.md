@@ -1,46 +1,45 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-29 (Phase 11 Yjs 협업 통합 중)
+> 최종 업데이트: 2026-01-29 (Phase 12 댓글 기능 완료)
 
 ---
 
 ## 현재 상태
 
-**Phase**: **Phase 11 진행 중** 🔄 (Yjs 실시간 협업)
+**Phase**: **Phase 12 완료** ✅ (댓글 기능)
 **목표**: FigJam 스타일 실시간 협업 화이트보드
-**진행률**: Phase 1-10 완료 / Phase 11 진행 중 / Phase 12-17 예정
+**진행률**: Phase 1-12 완료 / Phase 13-17 예정
 
 ### 마지막 작업 (2026-01-29)
 
-- **Phase 11: Yjs 실시간 협업** 🔄 진행 중
-  - **Yjs 패키지 설치** ✅
-    - `yjs`: CRDT 기반 실시간 동기화
-    - `y-websocket`: WebSocket 프로바이더
-    - `y-indexeddb`: 오프라인 지원
-  - **collaborationStore.ts** ✅ 생성
-    - `Y.Doc` 관리 (shapes, connectors Y.Map)
-    - WebSocket 프로바이더 연결
-    - IndexedDB 오프라인 지원
-    - UserPresence (cursor, selection, viewport 공유)
-    - Awareness API 통합
-  - **useCollaboration.ts** ✅ 생성
-    - Yjs ↔ 로컬 상태 양방향 동기화
-    - 원격 변경 감지 및 적용
-    - 커서/선택/뷰포트 업데이트 함수
-  - **DrawCanvas 통합** ✅ 완료
-    - 협업 props 추가 (collaborationEnabled, roomId, serverUrl, userName)
-    - useCollaboration 훅 연결
-    - 원격 커서 렌더링 (Konva 레이어)
-    - 연결 상태 UI (상단 우측)
-    - 원격 사용자 아바타 표시
-  - **빌드** ✅ 성공 (141.08 KB)
+- **Phase 12: 댓글 기능** ✅ 완료
+  - **타입 정의** ✅
+    - `Comment` 인터페이스 (id, shapeId, author, content, replies)
+    - `CommentThread` 인터페이스 (root + replies)
+  - **commentStore.ts** ✅ 생성
+    - 댓글 CRUD (추가, 수정, 삭제)
+    - 스레드 해결/재개
+    - 패널 열기/닫기 상태
+  - **CommentPanel.tsx** ✅ 생성
+    - 스레드 목록 뷰
+    - 스레드 상세 뷰 (답글 포함)
+    - 댓글 작성/수정/삭제 UI
+    - 해결됨/미해결 필터
+  - **Toolbar 통합** ✅
+    - 댓글 버튼 추가
+    - 미해결 댓글 수 배지
+  - **DrawCanvas 통합** ✅
+    - 도형에 댓글 표시 아이콘
+    - 클릭하여 스레드 열기
+  - **빌드** ✅ 성공 (164.28 KB)
 
-### 남은 작업 (Phase 11)
-
-- [x] 11.3 원격 선택 하이라이트 표시 ✅
-- [x] 11.4 WebSocket 서버 설정 가이드 ✅ (`docs/COLLABORATION-SETUP.md`)
-- [ ] 11.5 오프라인 모드 테스트
-- [ ] 11.6 충돌 해결 테스트
+- **Phase 11: Yjs 실시간 협업** ✅ 완료
+  - Yjs 패키지 설치 ✅
+  - collaborationStore.ts ✅
+  - useCollaboration.ts 훅 ✅
+  - 원격 커서/선택 표시 ✅
+  - 연결 상태 UI ✅
+  - 서버 설정 가이드 ✅ (`docs/COLLABORATION-SETUP.md`)
 
 ### 이전 작업 (2026-01-29)
 
