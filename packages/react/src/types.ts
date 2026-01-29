@@ -1,7 +1,31 @@
 // Shape types for zm-draw
 
 /** Basic shape types */
-export type ShapeType = 'rectangle' | 'ellipse' | 'diamond' | 'text' | 'sticky' | 'freedraw' | 'image' | 'stamp' | 'section';
+export type ShapeType =
+  | 'rectangle'
+  | 'roundedRectangle'
+  | 'ellipse'
+  | 'diamond'
+  | 'text'
+  | 'sticky'
+  | 'freedraw'
+  | 'image'
+  | 'stamp'
+  | 'section'
+  | 'table'
+  | 'mindmap'
+  | 'embed'
+  // Polygon shapes
+  | 'triangle'
+  | 'triangleDown'
+  | 'pentagon'
+  | 'hexagon'
+  | 'star'
+  | 'cross'
+  // Flowchart shapes
+  | 'parallelogram'
+  | 'database'
+  | 'document';
 
 /** Extended shape types for future use */
 export type ExtendedShapeType = ShapeType | 'line' | 'polygon' | 'frame';
@@ -66,6 +90,52 @@ export const STAMP_EMOJIS: Record<StampType, string> = {
   exclamation: '❗',
   celebration: '🎉',
 };
+
+/** Table cell data */
+export interface TableCell {
+  text: string;
+  fill?: string;
+  textColor?: string;
+  textAlign?: 'left' | 'center' | 'right';
+}
+
+/** Table data structure */
+export interface TableData {
+  rows: number;
+  cols: number;
+  cells: TableCell[][];  // 2D array [row][col]
+  colWidths: number[];   // Width of each column
+  rowHeights: number[];  // Height of each row
+  headerRow?: boolean;   // Apply header style to first row
+}
+
+/** Mindmap node data */
+export interface MindmapNode {
+  id: string;
+  text: string;
+  children: MindmapNode[];
+  collapsed?: boolean;
+  color?: string;
+}
+
+/** Mindmap data structure */
+export interface MindmapData {
+  root: MindmapNode;
+  layout: 'horizontal' | 'vertical' | 'radial';
+  nodeSpacing: number;
+  levelSpacing: number;
+}
+
+/** Embed/Link preview data structure */
+export interface EmbedData {
+  url: string;
+  title?: string;
+  description?: string;
+  thumbnail?: string;
+  siteName?: string;
+  favicon?: string;
+  embedType?: 'link' | 'video' | 'rich';
+}
 
 /**
  * Shape object representing a drawable element on the canvas
@@ -139,6 +209,12 @@ export interface Shape {
   sectionTitle?: string;
   /** Child shape IDs contained in section (computed, not stored) */
   childIds?: string[];
+  /** Table data (for table shapes) */
+  tableData?: TableData;
+  /** Mindmap data (for mindmap shapes) */
+  mindmapData?: MindmapData;
+  /** Embed/link preview data (for embed shapes) */
+  embedData?: EmbedData;
 }
 
 /** Connection point position on a shape */
@@ -149,6 +225,9 @@ export type ArrowType = 'none' | 'arrow' | 'triangle' | 'diamond' | 'circle';
 
 /** Connector routing type */
 export type RoutingType = 'straight' | 'orthogonal';
+
+/** Connector variant for toolbar selection */
+export type ConnectorVariant = 'arrow' | 'bidirectional' | 'elbow' | 'line';
 
 /**
  * Connector object representing a line/arrow between two shapes
@@ -270,4 +349,32 @@ export interface CommentThread {
   resolved: boolean;
   /** Number of unread replies */
   unreadCount?: number;
+}
+
+/**
+ * Template category for organizing templates
+ */
+export type TemplateCategory = 'brainstorm' | 'meeting' | 'planning' | 'retro' | 'flowchart' | 'custom';
+
+/**
+ * Template for quick canvas initialization
+ */
+export interface Template {
+  /** Unique identifier */
+  id: string;
+  /** Display name */
+  name: string;
+  /** Brief description */
+  description: string;
+  /** Category for filtering */
+  category: TemplateCategory;
+  /** Thumbnail emoji or icon */
+  thumbnail: string;
+  /** Template data */
+  data: {
+    shapes: Shape[];
+    connectors: Connector[];
+  };
+  /** Whether this is a built-in template */
+  isBuiltIn?: boolean;
 }

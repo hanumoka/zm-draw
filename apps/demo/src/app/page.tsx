@@ -5,8 +5,8 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { TooltipProvider, Tooltip } from '../components/Tooltip';
 import { PanelResizer } from '../components/PanelResizer';
 import { ColorPicker } from '../components/ColorPicker';
-import type { DrawCanvasHandle, ToolType, Connector, Shape, StickyNoteColor } from '@zm-draw/react';
-import { useToolStore, useSelectionStore, STICKY_COLORS } from '@zm-draw/react';
+import type { DrawCanvasHandle, ToolType, Connector, Shape, StickyNoteColor, ConnectorVariant, Template, TemplateCategory } from '@zm-draw/react';
+import { useToolStore, useSelectionStore, STICKY_COLORS, useTemplateStore } from '@zm-draw/react';
 
 // Konva requires window, so we need to dynamically import
 const DrawCanvas = dynamic(
@@ -114,6 +114,14 @@ const DownloadIcon = () => (
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <polyline points="7 10 12 15 17 10" />
     <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
+
+const TemplateIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <line x1="3" y1="9" x2="21" y2="9" />
+    <line x1="9" y1="21" x2="9" y2="9" />
   </svg>
 );
 
@@ -515,6 +523,37 @@ const ShapeIcons = {
       <path d="M15 9l6-6" />
     </svg>
   ),
+  table: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="18" height="18" rx="1" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="3" y1="15" x2="21" y2="15" />
+      <line x1="9" y1="3" x2="9" y2="21" />
+      <line x1="15" y1="3" x2="15" y2="21" />
+    </svg>
+  ),
+  mindmap: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="3" />
+      <circle cx="4" cy="6" r="2" />
+      <circle cx="4" cy="18" r="2" />
+      <circle cx="20" cy="6" r="2" />
+      <circle cx="20" cy="18" r="2" />
+      <line x1="9.5" y1="10.5" x2="6" y2="7" />
+      <line x1="9.5" y1="13.5" x2="6" y2="17" />
+      <line x1="14.5" y1="10.5" x2="18" y2="7" />
+      <line x1="14.5" y1="13.5" x2="18" y2="17" />
+    </svg>
+  ),
+  embed: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="8" cy="12" r="2" />
+      <line x1="12" y1="9" x2="18" y2="9" />
+      <line x1="12" y1="12" x2="18" y2="12" />
+      <line x1="12" y1="15" x2="16" y2="15" />
+    </svg>
+  ),
 };
 
 // Sticky Note Color Button Component
@@ -678,6 +717,11 @@ export default function Home() {
   const [connectors, setConnectors] = useState<Connector[]>([]);
   // Track which button was clicked to avoid duplicate active states
   const [selectedButtonLabel, setSelectedButtonLabel] = useState<string | null>(null);
+  // Template picker
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [templateCategory, setTemplateCategory] = useState<TemplateCategory | 'all'>('all');
+  const templatePickerRef = useRef<HTMLDivElement>(null);
+  const { getTemplatesByCategory } = useTemplateStore();
 
   // Close export dropdown when clicking outside
   useEffect(() => {
@@ -696,11 +740,54 @@ export default function Home() {
     };
   }, [showExportDropdown]);
 
+  // Close template picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (templatePickerRef.current && !templatePickerRef.current.contains(event.target as Node)) {
+        setShowTemplatePicker(false);
+      }
+    };
+
+    if (showTemplatePicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showTemplatePicker]);
+
+  // Load template
+  const loadTemplate = useCallback((template: Template) => {
+    if (canvasRef.current) {
+      // Generate new IDs for shapes and connectors to avoid conflicts
+      const idMap = new Map<string, string>();
+      const newShapes = template.data.shapes.map((shape) => {
+        const newId = `shape-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        idMap.set(shape.id, newId);
+        return { ...shape, id: newId };
+      });
+      const newConnectors = template.data.connectors.map((conn) => {
+        const newId = `conn-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        return {
+          ...conn,
+          id: newId,
+          fromShapeId: idMap.get(conn.fromShapeId) || conn.fromShapeId,
+          toShapeId: idMap.get(conn.toShapeId) || conn.toShapeId,
+        };
+      });
+
+      canvasRef.current.loadFromJSON({ shapes: newShapes, connectors: newConnectors });
+      setShowTemplatePicker(false);
+    }
+  }, []);
+
   // Tool store for shape panel buttons
   const setTool = useToolStore((s) => s.setTool);
   const currentTool = useToolStore((s) => s.tool);
   const currentStickyColor = useToolStore((s) => s.currentStickyColor);
   const setStickyColor = useToolStore((s) => s.setStickyColor);
+  const setConnectorVariant = useToolStore((s) => s.setConnectorVariant);
 
   // Reset selected button label when tool changes to 'select'
   useEffect(() => {
@@ -745,6 +832,8 @@ export default function Home() {
         return '□';
       case 'freedraw':
         return '~';
+      case 'table':
+        return '▦';
       default:
         return '▢';
     }
@@ -861,6 +950,13 @@ export default function Home() {
     setTool(toolType);
     setSelectedButtonLabel(buttonLabel);
   }, [setTool]);
+
+  // Handle connector button click - set tool and variant
+  const handleConnectorClick = useCallback((variant: ConnectorVariant, buttonLabel: string) => {
+    setTool('connector');
+    setConnectorVariant(variant);
+    setSelectedButtonLabel(buttonLabel);
+  }, [setTool, setConnectorVariant]);
 
   // Update canvas offset when panels change or window resizes
   useEffect(() => {
@@ -1008,10 +1104,10 @@ export default function Home() {
                 {/* Connectors Section */}
                 <CollapsibleSection title="Connectors">
                   <div className="zm-shapes-grid">
-                    <ShapeButton icon={ShapeIcons.arrowRight} label="Arrow (Connector)" onClick={() => handleShapeClick('connector', 'Arrow (Connector)')} active={selectedButtonLabel === 'Arrow (Connector)'} />
-                    <ShapeButton icon={ShapeIcons.arrowBidirectional} label="Bidirectional Arrow" disabled />
-                    <ShapeButton icon={ShapeIcons.arrowElbow} label="Elbow Arrow" disabled />
-                    <ShapeButton icon={ShapeIcons.line} label="Line" disabled />
+                    <ShapeButton icon={ShapeIcons.arrowRight} label="Arrow (Connector)" onClick={() => handleConnectorClick('arrow', 'Arrow (Connector)')} active={selectedButtonLabel === 'Arrow (Connector)'} />
+                    <ShapeButton icon={ShapeIcons.arrowBidirectional} label="Bidirectional Arrow" onClick={() => handleConnectorClick('bidirectional', 'Bidirectional Arrow')} active={selectedButtonLabel === 'Bidirectional Arrow'} />
+                    <ShapeButton icon={ShapeIcons.arrowElbow} label="Elbow Arrow" onClick={() => handleConnectorClick('elbow', 'Elbow Arrow')} active={selectedButtonLabel === 'Elbow Arrow'} />
+                    <ShapeButton icon={ShapeIcons.line} label="Line" onClick={() => handleConnectorClick('line', 'Line')} active={selectedButtonLabel === 'Line'} />
                   </div>
                 </CollapsibleSection>
 
@@ -1019,16 +1115,19 @@ export default function Home() {
                 <CollapsibleSection title="Basic">
                   <div className="zm-shapes-grid">
                     <ShapeButton icon={ShapeIcons.rectangle} label="Rectangle (R)" onClick={() => handleShapeClick('rectangle', 'Rectangle (R)')} active={selectedButtonLabel === 'Rectangle (R)'} />
-                    <ShapeButton icon={ShapeIcons.roundedRect} label="Rounded Rectangle" disabled />
+                    <ShapeButton icon={ShapeIcons.roundedRect} label="Rounded Rectangle" onClick={() => handleShapeClick('roundedRectangle', 'Rounded Rectangle')} active={selectedButtonLabel === 'Rounded Rectangle'} />
                     <ShapeButton icon={ShapeIcons.circle} label="Circle" onClick={() => handleShapeClick('ellipse', 'Circle')} active={selectedButtonLabel === 'Circle'} />
                     <ShapeButton icon={ShapeIcons.ellipse} label="Ellipse (O)" onClick={() => handleShapeClick('ellipse', 'Ellipse (O)')} active={selectedButtonLabel === 'Ellipse (O)'} />
-                    <ShapeButton icon={ShapeIcons.triangle} label="Triangle" disabled />
-                    <ShapeButton icon={ShapeIcons.triangleDown} label="Triangle Down" disabled />
+                    <ShapeButton icon={ShapeIcons.triangle} label="Triangle" onClick={() => handleShapeClick('triangle', 'Triangle')} active={selectedButtonLabel === 'Triangle'} />
+                    <ShapeButton icon={ShapeIcons.triangleDown} label="Triangle Down" onClick={() => handleShapeClick('triangleDown', 'Triangle Down')} active={selectedButtonLabel === 'Triangle Down'} />
                     <ShapeButton icon={ShapeIcons.diamond} label="Diamond" onClick={() => handleShapeClick('diamond', 'Diamond')} active={selectedButtonLabel === 'Diamond'} />
-                    <ShapeButton icon={ShapeIcons.pentagon} label="Pentagon" disabled />
-                    <ShapeButton icon={ShapeIcons.hexagon} label="Hexagon" disabled />
-                    <ShapeButton icon={ShapeIcons.star} label="Star" disabled />
-                    <ShapeButton icon={ShapeIcons.cross} label="Cross" disabled />
+                    <ShapeButton icon={ShapeIcons.pentagon} label="Pentagon" onClick={() => handleShapeClick('pentagon', 'Pentagon')} active={selectedButtonLabel === 'Pentagon'} />
+                    <ShapeButton icon={ShapeIcons.hexagon} label="Hexagon" onClick={() => handleShapeClick('hexagon', 'Hexagon')} active={selectedButtonLabel === 'Hexagon'} />
+                    <ShapeButton icon={ShapeIcons.star} label="Star" onClick={() => handleShapeClick('star', 'Star')} active={selectedButtonLabel === 'Star'} />
+                    <ShapeButton icon={ShapeIcons.cross} label="Cross" onClick={() => handleShapeClick('cross', 'Cross')} active={selectedButtonLabel === 'Cross'} />
+                    <ShapeButton icon={ShapeIcons.table} label="Table" onClick={() => handleShapeClick('table', 'Table')} active={selectedButtonLabel === 'Table'} />
+                    <ShapeButton icon={ShapeIcons.mindmap} label="Mindmap" onClick={() => handleShapeClick('mindmap', 'Mindmap')} active={selectedButtonLabel === 'Mindmap'} />
+                    <ShapeButton icon={ShapeIcons.embed} label="Link Preview" onClick={() => handleShapeClick('embed', 'Link Preview')} active={selectedButtonLabel === 'Link Preview'} />
                   </div>
                 </CollapsibleSection>
 
@@ -1038,9 +1137,9 @@ export default function Home() {
                     <ShapeButton icon={ShapeIcons.process} label="Process" onClick={() => handleShapeClick('rectangle', 'Process')} active={selectedButtonLabel === 'Process'} />
                     <ShapeButton icon={ShapeIcons.decision} label="Decision" onClick={() => handleShapeClick('diamond', 'Decision')} active={selectedButtonLabel === 'Decision'} />
                     <ShapeButton icon={ShapeIcons.terminal} label="Terminal" onClick={() => handleShapeClick('ellipse', 'Terminal')} active={selectedButtonLabel === 'Terminal'} />
-                    <ShapeButton icon={ShapeIcons.document} label="Document" disabled />
-                    <ShapeButton icon={ShapeIcons.database} label="Database" disabled />
-                    <ShapeButton icon={ShapeIcons.parallelogram} label="Data" disabled />
+                    <ShapeButton icon={ShapeIcons.document} label="Document" onClick={() => handleShapeClick('document', 'Document')} active={selectedButtonLabel === 'Document'} />
+                    <ShapeButton icon={ShapeIcons.database} label="Database" onClick={() => handleShapeClick('database', 'Database')} active={selectedButtonLabel === 'Database'} />
+                    <ShapeButton icon={ShapeIcons.parallelogram} label="Data" onClick={() => handleShapeClick('parallelogram', 'Data')} active={selectedButtonLabel === 'Data'} />
                   </div>
                 </CollapsibleSection>
 
@@ -1115,6 +1214,47 @@ export default function Home() {
                   <GridSnapIcon />
                 </button>
               </Tooltip>
+              <div className="zm-draw-export-dropdown" ref={templatePickerRef}>
+                <Tooltip content="Templates">
+                  <button
+                    className="zm-draw-icon-button"
+                    onClick={() => setShowTemplatePicker(!showTemplatePicker)}
+                  >
+                    <TemplateIcon />
+                  </button>
+                </Tooltip>
+                {showTemplatePicker && (
+                  <div className="zm-draw-dropdown-menu zm-template-picker">
+                    <div className="zm-template-picker-header">
+                      <span className="zm-template-picker-title">Templates</span>
+                      <div className="zm-template-picker-categories">
+                        {(['all', 'brainstorm', 'meeting', 'planning', 'retro', 'flowchart'] as const).map((cat) => (
+                          <button
+                            key={cat}
+                            className={`zm-template-category-btn ${templateCategory === cat ? 'active' : ''}`}
+                            onClick={() => setTemplateCategory(cat)}
+                          >
+                            {cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="zm-template-picker-grid">
+                      {getTemplatesByCategory(templateCategory).map((template) => (
+                        <button
+                          key={template.id}
+                          className="zm-template-card"
+                          onClick={() => loadTemplate(template)}
+                        >
+                          <span className="zm-template-thumbnail">{template.thumbnail}</span>
+                          <span className="zm-template-name">{template.name}</span>
+                          <span className="zm-template-desc">{template.description}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="zm-draw-export-dropdown" ref={exportDropdownRef}>
                 <Tooltip content="Export">
                   <button

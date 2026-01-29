@@ -1,21 +1,21 @@
 import { create } from 'zustand';
-import type { Shape, Connector, StickyNoteColor, StampType, SectionColor } from '../types';
+import type { Shape, Connector, StickyNoteColor, StampType, SectionColor, TableData, MindmapData, EmbedData } from '../types';
 
 // Generate unique ID
 export const generateId = () => `shape-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-// Default shape properties
+// Default shape properties (FigJam style)
 export const defaultShapeProps = {
   width: 100,
   height: 60,
-  fill: '#3b82f6',
-  stroke: '#1d4ed8',
+  fill: '#ffffff',
+  stroke: '#1e1e1e',
   strokeWidth: 2,
   cornerRadius: 0,
   text: '',
   fontSize: 14,
   fontFamily: 'Arial',
-  textColor: '#ffffff',
+  textColor: '#1e1e1e',
 };
 
 // Default text shape properties
@@ -82,6 +82,72 @@ export const defaultSectionProps = {
   sectionColor: 'gray' as SectionColor,
   sectionTitle: 'Section',
   opacity: 1,
+};
+
+// Default table properties
+const createDefaultTableData = (): TableData => ({
+  rows: 3,
+  cols: 3,
+  cells: [
+    [{ text: '' }, { text: '' }, { text: '' }],
+    [{ text: '' }, { text: '' }, { text: '' }],
+    [{ text: '' }, { text: '' }, { text: '' }],
+  ],
+  colWidths: [100, 100, 100],
+  rowHeights: [40, 40, 40],
+  headerRow: false,
+});
+
+export const defaultTableProps = {
+  width: 300,
+  height: 120,
+  fill: '#ffffff',
+  stroke: '#1e1e1e',
+  strokeWidth: 1,
+  tableData: createDefaultTableData(),
+};
+
+// Default mindmap properties
+const createDefaultMindmapData = (): MindmapData => ({
+  root: {
+    id: 'root',
+    text: 'Central Idea',
+    children: [
+      { id: 'child-1', text: 'Topic 1', children: [] },
+      { id: 'child-2', text: 'Topic 2', children: [] },
+      { id: 'child-3', text: 'Topic 3', children: [] },
+    ],
+  },
+  layout: 'horizontal',
+  nodeSpacing: 20,
+  levelSpacing: 120,
+});
+
+export const defaultMindmapProps = {
+  width: 600,
+  height: 400,
+  fill: 'transparent',
+  stroke: 'transparent',
+  strokeWidth: 0,
+  mindmapData: createDefaultMindmapData(),
+};
+
+// Default embed/link preview properties
+const createDefaultEmbedData = (): EmbedData => ({
+  url: '',
+  title: 'Link Preview',
+  description: 'Paste a URL to see a preview',
+  embedType: 'link',
+});
+
+export const defaultEmbedProps = {
+  width: 320,
+  height: 180,
+  fill: '#ffffff',
+  stroke: '#e5e7eb',
+  strokeWidth: 1,
+  cornerRadius: 8,
+  embedData: createDefaultEmbedData(),
 };
 
 // Default freedraw properties for each tool

@@ -9,7 +9,7 @@ import { useCollaboration } from '../hooks/useCollaboration';
 import { useToolStore } from '../stores/toolStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useViewportStore } from '../stores/viewportStore';
-import { generateId, defaultShapeProps, defaultTextShapeProps, defaultStickyNoteProps, defaultFreeDrawProps, defaultImageShapeProps, defaultStampProps, defaultSectionProps } from '../stores/canvasStore';
+import { generateId, defaultShapeProps, defaultTextShapeProps, defaultStickyNoteProps, defaultFreeDrawProps, defaultImageShapeProps, defaultStampProps, defaultSectionProps, defaultTableProps, defaultMindmapProps, defaultEmbedProps } from '../stores/canvasStore';
 
 // Module-level image cache for performance
 const imageCache = new Map<string, HTMLImageElement>();
@@ -98,10 +98,30 @@ export interface DrawCanvasHandle {
   setViewportPosition: (position: { x: number; y: number }) => void;
   /** Get canvas size */
   getCanvasSize: () => { width: number; height: number };
+  /** Set connectors */
+  setConnectors: (connectors: Connector[]) => void;
+  /** Load shapes and connectors from JSON data */
+  loadFromJSON: (data: { shapes: Shape[]; connectors: Connector[] }) => void;
+}
+
+/** Theme options for DrawCanvas */
+export type DrawCanvasTheme = 'light' | 'dark' | 'system';
+
+/**
+ * UI customization options for DrawCanvas.
+ * All options default to true (shown) for backward compatibility.
+ */
+export interface DrawCanvasUIOptions {
+  /** Show the built-in floating toolbar (default: true) */
+  toolbar?: boolean;
+  /** Show the comment panel (default: true) */
+  commentPanel?: boolean;
+  /** Show collaboration status indicator when collaborationEnabled (default: true) */
+  collaborationIndicator?: boolean;
 }
 
 export interface DrawCanvasProps {
-  /** Background color */
+  /** Background color (overrides theme default) */
   backgroundColor?: string;
   /** Show grid */
   showGrid?: boolean;
@@ -131,6 +151,24 @@ export interface DrawCanvasProps {
   serverUrl?: string;
   /** User name for collaboration */
   userName?: string;
+  /**
+   * Color theme for the canvas UI.
+   * - 'light': Light theme (default)
+   * - 'dark': Dark theme
+   * - 'system': Follow system preference
+   *
+   * Requires importing '@zm-draw/react/styles.css' for theme styles.
+   * If not set, no theme class is applied (backward compatible).
+   */
+  theme?: DrawCanvasTheme;
+  /** Additional CSS class name for the canvas container */
+  className?: string;
+  /**
+   * UI customization options.
+   * Use this to show/hide built-in UI elements.
+   * All options default to true (shown) for backward compatibility.
+   */
+  UIOptions?: DrawCanvasUIOptions;
 }
 
 /**
@@ -153,6 +191,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   roomId,
   serverUrl,
   userName,
+  theme,
+  className,
+  UIOptions,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
@@ -163,6 +204,18 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const [shapes, setShapes] = useState<Shape[]>(initialShapes);
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+
+  // Table context menu state
+  const [tableContextMenu, setTableContextMenu] = useState<{
+    x: number;
+    y: number;
+    shapeId: string;
+    row: number;
+    col: number;
+  } | null>(null);
+
+  // Accessibility: Screen reader announcements
+  const [announcement, setAnnouncement] = useState('');
 
   // Collaboration cursors layer
   const cursorsLayerRef = useRef<Konva.Layer | null>(null);
@@ -196,6 +249,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const setConnectingFrom = useToolStore((s) => s.setConnectingFrom);
   const editingId = useToolStore((s) => s.editingId);
   const setEditingId = useToolStore((s) => s.setEditingId);
+  const editingCell = useToolStore((s) => s.editingCell);
+  const setEditingCell = useToolStore((s) => s.setEditingCell);
   const resetTool = useToolStore((s) => s.resetTool);
 
   // Drawing tool state from Zustand store
@@ -208,6 +263,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const currentStickyColor = useToolStore((s) => s.currentStickyColor);
   const currentStampType = useToolStore((s) => s.currentStampType);
   const setStampType = useToolStore((s) => s.setStampType);
+  const connectorVariant = useToolStore((s) => s.connectorVariant);
 
   // History for undo/redo
   const historyRef = useRef<{ shapes: Shape[]; connectors: Connector[] }[]>([]);
@@ -744,17 +800,66 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     );
     if (exists) return;
 
+    // Configure connector based on variant
+    let arrowStart: 'none' | 'arrow' = 'none';
+    let arrowEnd: 'none' | 'arrow' = 'arrow';
+    let routing: 'straight' | 'orthogonal' = 'straight';
+
+    switch (connectorVariant) {
+      case 'arrow':
+        arrowEnd = 'arrow';
+        break;
+      case 'bidirectional':
+        arrowStart = 'arrow';
+        arrowEnd = 'arrow';
+        break;
+      case 'elbow':
+        arrowEnd = 'arrow';
+        routing = 'orthogonal';
+        break;
+      case 'line':
+        arrowStart = 'none';
+        arrowEnd = 'none';
+        break;
+    }
+
     const newConnector: Connector = {
       id: `conn-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       fromShapeId: fromId,
       toShapeId: toId,
       stroke: '#6b7280',
       strokeWidth: 2,
-      arrow: true,
+      arrow: arrowEnd === 'arrow',
+      arrowStart,
+      arrowEnd,
+      routing,
     };
 
     setConnectors((prev) => [...prev, newConnector]);
-  }, [connectors]);
+  }, [connectors, connectorVariant]);
+
+  // Check if a shape is within the visible viewport (with padding for smooth scrolling)
+  const isShapeInViewport = useCallback((shape: Shape): boolean => {
+    const stage = stageRef.current;
+    if (!stage) return true; // Render if we can't determine visibility
+
+    const scale = stage.scaleX();
+    const stagePos = stage.position();
+    const padding = 100; // Extra padding to render shapes slightly outside viewport
+
+    // Calculate visible area in canvas coordinates
+    const viewLeft = (-stagePos.x / scale) - padding;
+    const viewTop = (-stagePos.y / scale) - padding;
+    const viewRight = viewLeft + (canvasSize.width / scale) + (padding * 2);
+    const viewBottom = viewTop + (canvasSize.height / scale) + (padding * 2);
+
+    // Check if shape intersects with visible area
+    const shapeRight = shape.x + shape.width;
+    const shapeBottom = shape.y + shape.height;
+
+    return !(shape.x > viewRight || shapeRight < viewLeft ||
+             shape.y > viewBottom || shapeBottom < viewTop);
+  }, [canvasSize]);
 
   // Render all shapes to the layer
   const renderShapes = useCallback(() => {
@@ -766,6 +871,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     shapes.forEach((shape) => {
       // Skip hidden shapes
       if (shape.visible === false) return;
+
+      // Skip shapes outside viewport for performance (viewport culling)
+      if (!isShapeInViewport(shape)) return;
 
       const group = new Konva.Group({
         id: shape.id,
@@ -947,6 +1055,590 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             group.add(titleText);
           }
           break;
+        case 'table':
+          // Table shape - grid of cells with text
+          {
+            const tableGroup = new Konva.Group();
+            const data = shape.tableData;
+            if (data) {
+              let yOffset = 0;
+              for (let row = 0; row < data.rows; row++) {
+                let xOffset = 0;
+                const rowHeight = data.rowHeights[row] || 40;
+                for (let col = 0; col < data.cols; col++) {
+                  const colWidth = data.colWidths[col] || 100;
+                  const cell = data.cells[row]?.[col] || { text: '' };
+                  // Cell background
+                  const isHeader = row === 0 && data.headerRow;
+                  const cellRect = new Konva.Rect({
+                    x: xOffset,
+                    y: yOffset,
+                    width: colWidth,
+                    height: rowHeight,
+                    fill: cell.fill || (isHeader ? '#f3f4f6' : '#ffffff'),
+                    stroke: shape.stroke,
+                    strokeWidth: shape.strokeWidth,
+                  });
+                  tableGroup.add(cellRect);
+                  // Cell text
+                  if (cell.text) {
+                    const cellText = new Konva.Text({
+                      x: xOffset + 8,
+                      y: yOffset + 4,
+                      width: colWidth - 16,
+                      height: rowHeight - 8,
+                      text: cell.text,
+                      fontSize: shape.fontSize || 14,
+                      fontFamily: shape.fontFamily || 'Arial',
+                      fill: cell.textColor || shape.textColor || '#1e1e1e',
+                      align: cell.textAlign || 'left',
+                      verticalAlign: 'middle',
+                      listening: false,
+                    });
+                    tableGroup.add(cellText);
+                  }
+                  xOffset += colWidth;
+                }
+                yOffset += rowHeight;
+              }
+            }
+            group.add(tableGroup);
+            // Transparent hit detection rect
+            konvaShape = new Konva.Rect({
+              x: 0,
+              y: 0,
+              width: shape.width,
+              height: shape.height,
+              fill: 'transparent',
+            });
+          }
+          break;
+        case 'mindmap':
+          // Mindmap with nodes and connections
+          {
+            const mindmapGroup = new Konva.Group();
+            const data = shape.mindmapData;
+
+            if (data) {
+              // Node dimensions
+              const nodeHeight = 32;
+              const nodePadding = 12;
+              const nodeRadius = 8;
+
+              // Colors for different levels
+              const levelColors = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899'];
+
+              // Calculate node positions recursively
+              interface NodePosition {
+                node: typeof data.root;
+                x: number;
+                y: number;
+                level: number;
+              }
+
+              const positions: NodePosition[] = [];
+
+              const calculatePositions = (
+                node: typeof data.root,
+                x: number,
+                y: number,
+                level: number,
+                parentY: number | null
+              ): { minY: number; maxY: number } => {
+                const children = node.children || [];
+                const childCount = children.length;
+
+                if (childCount === 0) {
+                  positions.push({ node, x, y, level });
+                  return { minY: y, maxY: y };
+                }
+
+                // Calculate children positions first
+                let currentY = y - ((childCount - 1) * (nodeHeight + data.nodeSpacing)) / 2;
+                let minY = currentY;
+                let maxY = currentY;
+
+                children.forEach((child) => {
+                  const childX = x + data.levelSpacing;
+                  const result = calculatePositions(child, childX, currentY, level + 1, y);
+                  minY = Math.min(minY, result.minY);
+                  maxY = Math.max(maxY, result.maxY);
+                  currentY += nodeHeight + data.nodeSpacing;
+                });
+
+                // Center parent among children
+                const centerY = (minY + maxY) / 2;
+                positions.push({ node, x, y: centerY, level });
+
+                return { minY, maxY };
+              };
+
+              // Start from center
+              const startX = 20;
+              const startY = shape.height / 2;
+              calculatePositions(data.root, startX, startY, 0, null);
+
+              // Draw connections first (behind nodes)
+              positions.forEach((pos) => {
+                const parentNode = pos.node;
+                const children = parentNode.children || [];
+
+                children.forEach((child) => {
+                  const childPos = positions.find((p) => p.node.id === child.id);
+                  if (childPos) {
+                    // Estimate node width
+                    const parentWidth = Math.max(60, parentNode.text.length * 8 + nodePadding * 2);
+
+                    const line = new Konva.Line({
+                      points: [
+                        pos.x + parentWidth,
+                        pos.y + nodeHeight / 2,
+                        childPos.x,
+                        childPos.y + nodeHeight / 2,
+                      ],
+                      stroke: '#d1d5db',
+                      strokeWidth: 2,
+                      lineCap: 'round',
+                      lineJoin: 'round',
+                    });
+                    mindmapGroup.add(line);
+                  }
+                });
+              });
+
+              // Draw nodes
+              positions.forEach((pos) => {
+                const nodeWidth = Math.max(60, pos.node.text.length * 8 + nodePadding * 2);
+                const color = pos.node.color || levelColors[pos.level % levelColors.length];
+
+                // Node background
+                const nodeRect = new Konva.Rect({
+                  x: pos.x,
+                  y: pos.y,
+                  width: nodeWidth,
+                  height: nodeHeight,
+                  fill: color,
+                  cornerRadius: nodeRadius,
+                  shadowColor: 'rgba(0,0,0,0.1)',
+                  shadowBlur: 4,
+                  shadowOffsetY: 2,
+                });
+                mindmapGroup.add(nodeRect);
+
+                // Node text
+                const nodeText = new Konva.Text({
+                  x: pos.x,
+                  y: pos.y,
+                  width: nodeWidth,
+                  height: nodeHeight,
+                  text: pos.node.text,
+                  fontSize: 13,
+                  fontFamily: 'Arial',
+                  fill: '#ffffff',
+                  align: 'center',
+                  verticalAlign: 'middle',
+                  listening: false,
+                });
+                mindmapGroup.add(nodeText);
+              });
+            }
+
+            group.add(mindmapGroup);
+
+            // Transparent hit detection rect
+            konvaShape = new Konva.Rect({
+              x: 0,
+              y: 0,
+              width: shape.width,
+              height: shape.height,
+              fill: 'transparent',
+            });
+          }
+          break;
+        case 'embed':
+          // Embed/Link preview card
+          {
+            const embedGroup = new Konva.Group();
+            const data = shape.embedData;
+            const cornerRadius = shape.cornerRadius ?? 8;
+
+            // Card background with shadow
+            const cardBg = new Konva.Rect({
+              x: 0,
+              y: 0,
+              width: shape.width,
+              height: shape.height,
+              fill: shape.fill || '#ffffff',
+              stroke: shape.stroke || '#e5e7eb',
+              strokeWidth: shape.strokeWidth || 1,
+              cornerRadius,
+              shadowColor: 'rgba(0,0,0,0.1)',
+              shadowBlur: 8,
+              shadowOffsetY: 2,
+            });
+            embedGroup.add(cardBg);
+
+            if (data) {
+              // Thumbnail area (left side or top)
+              const thumbnailWidth = 80;
+              const contentX = data.thumbnail ? thumbnailWidth + 12 : 12;
+              const contentWidth = shape.width - contentX - 12;
+
+              if (data.thumbnail) {
+                // Thumbnail placeholder
+                const thumbBg = new Konva.Rect({
+                  x: 0,
+                  y: 0,
+                  width: thumbnailWidth,
+                  height: shape.height,
+                  fill: '#f3f4f6',
+                  cornerRadius: [cornerRadius, 0, 0, cornerRadius],
+                });
+                embedGroup.add(thumbBg);
+
+                // Link icon placeholder
+                const linkIcon = new Konva.Text({
+                  x: 0,
+                  y: 0,
+                  width: thumbnailWidth,
+                  height: shape.height,
+                  text: '🔗',
+                  fontSize: 24,
+                  align: 'center',
+                  verticalAlign: 'middle',
+                });
+                embedGroup.add(linkIcon);
+              }
+
+              // Site name / favicon area
+              if (data.siteName || data.url) {
+                const siteText = new Konva.Text({
+                  x: contentX,
+                  y: 12,
+                  width: contentWidth,
+                  text: data.siteName || new URL(data.url || 'https://example.com').hostname,
+                  fontSize: 11,
+                  fontFamily: 'Arial',
+                  fill: '#6b7280',
+                  ellipsis: true,
+                });
+                embedGroup.add(siteText);
+              }
+
+              // Title
+              if (data.title) {
+                const titleText = new Konva.Text({
+                  x: contentX,
+                  y: 28,
+                  width: contentWidth,
+                  text: data.title,
+                  fontSize: 14,
+                  fontFamily: 'Arial',
+                  fontStyle: 'bold',
+                  fill: '#1f2937',
+                  ellipsis: true,
+                  wrap: 'word',
+                  height: 40,
+                });
+                embedGroup.add(titleText);
+              }
+
+              // Description
+              if (data.description) {
+                const descText = new Konva.Text({
+                  x: contentX,
+                  y: 72,
+                  width: contentWidth,
+                  height: shape.height - 84,
+                  text: data.description,
+                  fontSize: 12,
+                  fontFamily: 'Arial',
+                  fill: '#6b7280',
+                  ellipsis: true,
+                  wrap: 'word',
+                });
+                embedGroup.add(descText);
+              }
+
+              // URL at bottom
+              const urlText = new Konva.Text({
+                x: contentX,
+                y: shape.height - 24,
+                width: contentWidth,
+                text: data.url || '',
+                fontSize: 10,
+                fontFamily: 'Arial',
+                fill: '#9ca3af',
+                ellipsis: true,
+              });
+              embedGroup.add(urlText);
+            }
+
+            group.add(embedGroup);
+
+            // Transparent hit detection rect
+            konvaShape = new Konva.Rect({
+              x: 0,
+              y: 0,
+              width: shape.width,
+              height: shape.height,
+              fill: 'transparent',
+            });
+          }
+          break;
+        case 'triangle':
+          // Equilateral-ish triangle pointing up
+          konvaShape = new Konva.Line({
+            points: [
+              shape.width / 2, 0,              // top center
+              shape.width, shape.height,       // bottom right
+              0, shape.height,                 // bottom left
+            ],
+            closed: true,
+            fill: shape.fill,
+            stroke: shape.stroke,
+            strokeWidth: shape.strokeWidth,
+          });
+          break;
+        case 'triangleDown':
+          // Triangle pointing down
+          konvaShape = new Konva.Line({
+            points: [
+              0, 0,                            // top left
+              shape.width, 0,                  // top right
+              shape.width / 2, shape.height,   // bottom center
+            ],
+            closed: true,
+            fill: shape.fill,
+            stroke: shape.stroke,
+            strokeWidth: shape.strokeWidth,
+          });
+          break;
+        case 'roundedRectangle':
+          // Rectangle with rounded corners
+          konvaShape = new Konva.Rect({
+            ...shapeConfig,
+            cornerRadius: shape.cornerRadius ?? 12,
+          });
+          break;
+        case 'pentagon':
+          // Regular pentagon
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const r = Math.min(w, h) / 2;
+            const points: number[] = [];
+            for (let i = 0; i < 5; i++) {
+              const angle = (i * 2 * Math.PI / 5) - Math.PI / 2; // Start from top
+              points.push(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+            }
+            konvaShape = new Konva.Line({
+              points,
+              closed: true,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+          }
+          break;
+        case 'hexagon':
+          // Regular hexagon
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const r = Math.min(w, h) / 2;
+            const points: number[] = [];
+            for (let i = 0; i < 6; i++) {
+              const angle = (i * 2 * Math.PI / 6) - Math.PI / 2; // Start from top
+              points.push(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+            }
+            konvaShape = new Konva.Line({
+              points,
+              closed: true,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+          }
+          break;
+        case 'star':
+          // 5-pointed star
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const cx = w / 2;
+            const cy = h / 2;
+            const outerR = Math.min(w, h) / 2;
+            const innerR = outerR * 0.4; // Inner radius ratio
+            const points: number[] = [];
+            for (let i = 0; i < 10; i++) {
+              const angle = (i * Math.PI / 5) - Math.PI / 2;
+              const r = i % 2 === 0 ? outerR : innerR;
+              points.push(cx + r * Math.cos(angle), cy + r * Math.sin(angle));
+            }
+            konvaShape = new Konva.Line({
+              points,
+              closed: true,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+          }
+          break;
+        case 'cross':
+          // Plus/cross shape
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const armWidth = Math.min(w, h) * 0.33; // Width of arm
+            const hOffset = (w - armWidth) / 2;
+            const vOffset = (h - armWidth) / 2;
+            konvaShape = new Konva.Line({
+              points: [
+                hOffset, 0,                      // top-left of vertical arm
+                hOffset + armWidth, 0,           // top-right of vertical arm
+                hOffset + armWidth, vOffset,     // inner corner
+                w, vOffset,                      // outer right of horizontal arm
+                w, vOffset + armWidth,           // bottom of horizontal arm right
+                hOffset + armWidth, vOffset + armWidth, // inner corner
+                hOffset + armWidth, h,           // bottom of vertical arm
+                hOffset, h,                      // bottom-left of vertical arm
+                hOffset, vOffset + armWidth,     // inner corner
+                0, vOffset + armWidth,           // left of horizontal arm
+                0, vOffset,                      // top of horizontal arm left
+                hOffset, vOffset,                // inner corner
+              ],
+              closed: true,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+          }
+          break;
+        case 'parallelogram':
+          // Flowchart parallelogram (data symbol)
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const skew = w * 0.2; // 20% skew
+            konvaShape = new Konva.Line({
+              points: [
+                skew, 0,           // top-left
+                w, 0,              // top-right
+                w - skew, h,       // bottom-right
+                0, h,              // bottom-left
+              ],
+              closed: true,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+          }
+          break;
+        case 'database':
+          // Flowchart database/cylinder shape
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const ellipseHeight = h * 0.15; // Height of top/bottom ellipse
+            // Create a group with cylinder parts
+            const cylinderGroup = new Konva.Group();
+            // Bottom ellipse (visible arc)
+            const bottomArc = new Konva.Ellipse({
+              x: w / 2,
+              y: h - ellipseHeight / 2,
+              radiusX: w / 2,
+              radiusY: ellipseHeight / 2,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+            // Body rectangle (no stroke on sides that overlap)
+            const body = new Konva.Rect({
+              x: 0,
+              y: ellipseHeight / 2,
+              width: w,
+              height: h - ellipseHeight,
+              fill: shape.fill,
+            });
+            // Side lines
+            const leftLine = new Konva.Line({
+              points: [0, ellipseHeight / 2, 0, h - ellipseHeight / 2],
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+            const rightLine = new Konva.Line({
+              points: [w, ellipseHeight / 2, w, h - ellipseHeight / 2],
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+            // Top ellipse
+            const topEllipse = new Konva.Ellipse({
+              x: w / 2,
+              y: ellipseHeight / 2,
+              radiusX: w / 2,
+              radiusY: ellipseHeight / 2,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+            cylinderGroup.add(bottomArc);
+            cylinderGroup.add(body);
+            cylinderGroup.add(leftLine);
+            cylinderGroup.add(rightLine);
+            cylinderGroup.add(topEllipse);
+            group.add(cylinderGroup);
+            // Use a transparent rect for hit detection
+            konvaShape = new Konva.Rect({
+              x: 0,
+              y: 0,
+              width: w,
+              height: h,
+              fill: 'transparent',
+            });
+          }
+          break;
+        case 'document':
+          // Flowchart document shape (rectangle with wavy bottom)
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const waveHeight = h * 0.1;
+            // Use path-like approach with bezier
+            const docGroup = new Konva.Group();
+            // Main body with custom shape
+            const docShape = new Konva.Shape({
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+              sceneFunc: (ctx, shp) => {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(w, 0);
+                ctx.lineTo(w, h - waveHeight);
+                // Wavy bottom
+                ctx.quadraticCurveTo(w * 0.75, h - waveHeight * 2, w / 2, h - waveHeight);
+                ctx.quadraticCurveTo(w * 0.25, h, 0, h - waveHeight);
+                ctx.closePath();
+                ctx.fillStrokeShape(shp);
+              },
+            });
+            docGroup.add(docShape);
+            group.add(docGroup);
+            // Use a transparent rect for hit detection
+            konvaShape = new Konva.Rect({
+              x: 0,
+              y: 0,
+              width: w,
+              height: h,
+              fill: 'transparent',
+            });
+          }
+          break;
         default:
           konvaShape = new Konva.Rect({
             ...shapeConfig,
@@ -954,9 +1646,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           });
       }
 
-      // Selection highlight (different for text, freedraw, and image shapes)
+      // Selection highlight (different for text, freedraw, image, and table shapes)
       if (selectedIds.includes(shape.id) && selectionType === 'shape') {
-        if (shape.type === 'text' || shape.type === 'freedraw' || shape.type === 'image') {
+        if (shape.type === 'text' || shape.type === 'freedraw' || shape.type === 'image' || shape.type === 'table') {
           // For text/freedraw/image shapes, add a selection border rect (don't modify stroke)
           const selectionRect = new Konva.Rect({
             x: -2,
@@ -1161,9 +1853,47 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         }
       });
 
-      group.on('dblclick dbltap', () => {
-        setEditingId(shape.id);
-        setSelectedId(shape.id);
+      group.on('dblclick dbltap', (e) => {
+        if (shape.type === 'table' && shape.tableData) {
+          // For table shapes, detect which cell was clicked
+          const stage = e.target.getStage();
+          if (!stage) return;
+          const pointer = stage.getPointerPosition();
+          if (!pointer) return;
+
+          // Get shape position in stage coordinates
+          const groupTransform = group.getAbsoluteTransform();
+          const invertedTransform = groupTransform.copy().invert();
+          const localPos = invertedTransform.point(pointer);
+
+          // Find which cell was clicked
+          const tableData = shape.tableData;
+          let yOffset = 0;
+          for (let row = 0; row < tableData.rows; row++) {
+            const rowHeight = tableData.rowHeights[row] || 40;
+            let xOffset = 0;
+            for (let col = 0; col < tableData.cols; col++) {
+              const colWidth = tableData.colWidths[col] || 100;
+              if (
+                localPos.x >= xOffset &&
+                localPos.x < xOffset + colWidth &&
+                localPos.y >= yOffset &&
+                localPos.y < yOffset + rowHeight
+              ) {
+                // Found the clicked cell
+                setEditingCell({ shapeId: shape.id, row, col });
+                setSelectedId(shape.id);
+                return;
+              }
+              xOffset += colWidth;
+            }
+            yOffset += rowHeight;
+          }
+        } else {
+          // For other shapes, edit shape text
+          setEditingId(shape.id);
+          setSelectedId(shape.id);
+        }
       });
 
       // Hover events for connection points in connector mode
@@ -1176,6 +1906,54 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       group.on('mouseleave', () => {
         if (tool === 'connector') {
           setHoveredShapeId(null);
+        }
+      });
+
+      // Right-click context menu for tables
+      group.on('contextmenu', (e) => {
+        if (shape.type === 'table' && shape.tableData) {
+          e.evt.preventDefault();
+          const stage = e.target.getStage();
+          if (!stage) return;
+          const pointer = stage.getPointerPosition();
+          if (!pointer) return;
+
+          // Get shape position in stage coordinates
+          const groupTransform = group.getAbsoluteTransform();
+          const invertedTransform = groupTransform.copy().invert();
+          const localPos = invertedTransform.point(pointer);
+
+          // Find which cell was right-clicked
+          const tableData = shape.tableData;
+          let yOffset = 0;
+          for (let row = 0; row < tableData.rows; row++) {
+            const rowHeight = tableData.rowHeights[row] || 40;
+            let xOffset = 0;
+            for (let col = 0; col < tableData.cols; col++) {
+              const colWidth = tableData.colWidths[col] || 100;
+              if (
+                localPos.x >= xOffset &&
+                localPos.x < xOffset + colWidth &&
+                localPos.y >= yOffset &&
+                localPos.y < yOffset + rowHeight
+              ) {
+                // Found the clicked cell - show context menu
+                const containerRect = containerRef.current?.getBoundingClientRect();
+                if (containerRect) {
+                  setTableContextMenu({
+                    x: e.evt.clientX - containerRect.left,
+                    y: e.evt.clientY - containerRect.top,
+                    shapeId: shape.id,
+                    row,
+                    col,
+                  });
+                }
+                return;
+              }
+              xOffset += colWidth;
+            }
+            yOffset += rowHeight;
+          }
         }
       });
 
@@ -1207,7 +1985,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     }
 
     layer.batchDraw();
-  }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides, remoteUsers, getThreadForShape, openThread]);
+  }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides, remoteUsers, getThreadForShape, openThread, isShapeInViewport]);
 
   // Add shape at position
   const addShape = useCallback((type: ShapeType, x: number, y: number, options?: { stampType?: StampType; sectionColor?: SectionColor }) => {
@@ -1232,6 +2010,58 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         ...defaultSectionProps,
         fill: SECTION_COLORS[color],
         sectionColor: color,
+      };
+    } else if (type === 'table') {
+      // Create fresh tableData to avoid shared references
+      props = {
+        ...defaultTableProps,
+        tableData: {
+          rows: 3,
+          cols: 3,
+          cells: [
+            [{ text: '' }, { text: '' }, { text: '' }],
+            [{ text: '' }, { text: '' }, { text: '' }],
+            [{ text: '' }, { text: '' }, { text: '' }],
+          ],
+          colWidths: [100, 100, 100],
+          rowHeights: [40, 40, 40],
+          headerRow: false,
+        },
+      };
+    } else if (type === 'mindmap') {
+      // Create fresh mindmapData to avoid shared references
+      props = {
+        ...defaultMindmapProps,
+        mindmapData: {
+          root: {
+            id: 'root',
+            text: 'Central Idea',
+            children: [
+              { id: 'child-1', text: 'Topic 1', children: [] },
+              { id: 'child-2', text: 'Topic 2', children: [] },
+              { id: 'child-3', text: 'Topic 3', children: [] },
+            ],
+          },
+          layout: 'horizontal' as const,
+          nodeSpacing: 20,
+          levelSpacing: 120,
+        },
+      };
+    } else if (type === 'embed') {
+      // Create fresh embedData to avoid shared references
+      props = {
+        ...defaultEmbedProps,
+        embedData: {
+          url: '',
+          title: 'Link Preview',
+          description: 'Paste a URL to see a preview',
+          embedType: 'link' as const,
+        },
+      };
+    } else if (type === 'roundedRectangle') {
+      props = {
+        ...defaultShapeProps,
+        cornerRadius: 12, // Default corner radius for rounded rectangle
       };
     } else {
       props = defaultShapeProps;
@@ -1260,6 +2090,17 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     }
 
     setTool('select');
+
+    // Announce to screen readers
+    const shapeNames: Record<string, string> = {
+      rectangle: 'Rectangle', ellipse: 'Ellipse', diamond: 'Diamond',
+      text: 'Text', sticky: 'Sticky note', table: 'Table', mindmap: 'Mind map',
+      embed: 'Link preview', section: 'Section', stamp: 'Stamp',
+      triangle: 'Triangle', triangleDown: 'Triangle down', pentagon: 'Pentagon',
+      hexagon: 'Hexagon', star: 'Star', cross: 'Cross', roundedRectangle: 'Rounded rectangle',
+      parallelogram: 'Parallelogram', database: 'Database', document: 'Document',
+    };
+    setAnnouncement(`${shapeNames[type] || type} added`);
   }, [onShapesChange, snapToGridValue, currentStickyColor, currentStampType]);
 
   // Load image from src and cache it
@@ -1528,8 +2369,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       // Delete single connector
       setConnectors((prev) => prev.filter((c) => c.id !== selectedId));
       clearSelection();
+      setAnnouncement('Connector deleted');
     } else {
       // Delete all selected shapes
+      const count = selectedIds.length;
       setShapes((prev) => {
         const updated = prev.filter((s) => !selectedIds.includes(s.id));
         onShapesChange?.(updated);
@@ -1542,6 +2385,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         )
       );
       clearSelection();
+      setAnnouncement(`${count} shape${count > 1 ? 's' : ''} deleted`);
     }
   }, [selectedIds, selectedId, selectionType, onShapesChange, clearSelection]);
 
@@ -1847,6 +2691,178 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       return updated;
     });
     setEditingId(null);
+  }, [onShapesChange]);
+
+  // Update table cell text
+  const updateCellText = useCallback((shapeId: string, row: number, col: number, text: string) => {
+    setShapes((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== shapeId || !s.tableData) return s;
+        const newCells = s.tableData.cells.map((r, ri) =>
+          ri === row
+            ? r.map((c, ci) => (ci === col ? { ...c, text } : c))
+            : r
+        );
+        return {
+          ...s,
+          tableData: { ...s.tableData, cells: newCells },
+        };
+      });
+      onShapesChange?.(updated);
+      return updated;
+    });
+    setEditingCell(null);
+  }, [onShapesChange, setEditingCell]);
+
+  // Add row to table
+  const addTableRow = useCallback((shapeId: string, afterRow?: number) => {
+    setShapes((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== shapeId || !s.tableData) return s;
+        const insertIndex = afterRow !== undefined ? afterRow + 1 : s.tableData.rows;
+        const newRow = Array(s.tableData.cols).fill(null).map(() => ({ text: '' }));
+        const newCells = [
+          ...s.tableData.cells.slice(0, insertIndex),
+          newRow,
+          ...s.tableData.cells.slice(insertIndex),
+        ];
+        const newRowHeights = [
+          ...s.tableData.rowHeights.slice(0, insertIndex),
+          40,
+          ...s.tableData.rowHeights.slice(insertIndex),
+        ];
+        return {
+          ...s,
+          height: s.height + 40,
+          tableData: {
+            ...s.tableData,
+            rows: s.tableData.rows + 1,
+            cells: newCells,
+            rowHeights: newRowHeights,
+          },
+        };
+      });
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [onShapesChange]);
+
+  // Delete row from table
+  const deleteTableRow = useCallback((shapeId: string, rowIndex: number) => {
+    setShapes((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== shapeId || !s.tableData || s.tableData.rows <= 1) return s;
+        const deletedRowHeight = s.tableData.rowHeights[rowIndex] || 40;
+        const newCells = s.tableData.cells.filter((_, i) => i !== rowIndex);
+        const newRowHeights = s.tableData.rowHeights.filter((_, i) => i !== rowIndex);
+        return {
+          ...s,
+          height: s.height - deletedRowHeight,
+          tableData: {
+            ...s.tableData,
+            rows: s.tableData.rows - 1,
+            cells: newCells,
+            rowHeights: newRowHeights,
+          },
+        };
+      });
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [onShapesChange]);
+
+  // Add column to table
+  const addTableColumn = useCallback((shapeId: string, afterCol?: number) => {
+    setShapes((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== shapeId || !s.tableData) return s;
+        const insertIndex = afterCol !== undefined ? afterCol + 1 : s.tableData.cols;
+        const newCells = s.tableData.cells.map((row) => [
+          ...row.slice(0, insertIndex),
+          { text: '' },
+          ...row.slice(insertIndex),
+        ]);
+        const newColWidths = [
+          ...s.tableData.colWidths.slice(0, insertIndex),
+          100,
+          ...s.tableData.colWidths.slice(insertIndex),
+        ];
+        return {
+          ...s,
+          width: s.width + 100,
+          tableData: {
+            ...s.tableData,
+            cols: s.tableData.cols + 1,
+            cells: newCells,
+            colWidths: newColWidths,
+          },
+        };
+      });
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [onShapesChange]);
+
+  // Delete column from table
+  const deleteTableColumn = useCallback((shapeId: string, colIndex: number) => {
+    setShapes((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== shapeId || !s.tableData || s.tableData.cols <= 1) return s;
+        const deletedColWidth = s.tableData.colWidths[colIndex] || 100;
+        const newCells = s.tableData.cells.map((row) => row.filter((_, i) => i !== colIndex));
+        const newColWidths = s.tableData.colWidths.filter((_, i) => i !== colIndex);
+        return {
+          ...s,
+          width: s.width - deletedColWidth,
+          tableData: {
+            ...s.tableData,
+            cols: s.tableData.cols - 1,
+            cells: newCells,
+            colWidths: newColWidths,
+          },
+        };
+      });
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [onShapesChange]);
+
+  // Toggle header row style
+  const toggleTableHeaderRow = useCallback((shapeId: string) => {
+    setShapes((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== shapeId || !s.tableData) return s;
+        return {
+          ...s,
+          tableData: {
+            ...s.tableData,
+            headerRow: !s.tableData.headerRow,
+          },
+        };
+      });
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [onShapesChange]);
+
+  // Set cell background color
+  const setCellBackground = useCallback((shapeId: string, row: number, col: number, color: string) => {
+    setShapes((prev) => {
+      const updated = prev.map((s) => {
+        if (s.id !== shapeId || !s.tableData) return s;
+        const newCells = s.tableData.cells.map((r, ri) =>
+          ri === row
+            ? r.map((c, ci) => (ci === col ? { ...c, fill: color } : c))
+            : r
+        );
+        return {
+          ...s,
+          tableData: { ...s.tableData, cells: newCells },
+        };
+      });
+      onShapesChange?.(updated);
+      return updated;
+    });
   }, [onShapesChange]);
 
   // Get editing shape position for overlay
@@ -2268,6 +3284,243 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             svgContent += `  </g>\n`;
           }
           break;
+        case 'table':
+          // Render table as group of rects and texts
+          {
+            const tableData = shape.tableData;
+            if (tableData) {
+              svgContent += `  <g opacity="${opacity}"${transform}>\n`;
+              let yOffset = 0;
+              for (let row = 0; row < tableData.rows; row++) {
+                let xOffset = 0;
+                const rowHeight = tableData.rowHeights[row] || 40;
+                for (let col = 0; col < tableData.cols; col++) {
+                  const colWidth = tableData.colWidths[col] || 100;
+                  const cell = tableData.cells[row]?.[col] || { text: '' };
+                  const isHeader = row === 0 && tableData.headerRow;
+                  const cellFill = cell.fill || (isHeader ? '#f3f4f6' : '#ffffff');
+                  svgContent += `    <rect x="${shape.x + xOffset}" y="${shape.y + yOffset}" width="${colWidth}" height="${rowHeight}" fill="${cellFill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" />\n`;
+                  if (cell.text) {
+                    const textContent = escapeXml(cell.text);
+                    const textX = shape.x + xOffset + 8;
+                    const textY = shape.y + yOffset + rowHeight / 2 + 5;
+                    svgContent += `    <text x="${textX}" y="${textY}" font-size="${shape.fontSize || 14}" font-family="${shape.fontFamily || 'Arial'}" fill="${cell.textColor || shape.textColor || '#1e1e1e'}">${textContent}</text>\n`;
+                  }
+                  xOffset += colWidth;
+                }
+                yOffset += rowHeight;
+              }
+              svgContent += `  </g>\n`;
+            }
+          }
+          break;
+        case 'mindmap':
+          // Render mindmap as nodes and connections
+          {
+            const data = shape.mindmapData;
+            if (data) {
+              svgContent += `  <g opacity="${opacity}"${transform}>\n`;
+
+              const nodeHeight = 32;
+              const nodePadding = 12;
+              const nodeRadius = 8;
+              const levelColors = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899'];
+
+              interface NodePos { node: typeof data.root; x: number; y: number; level: number; }
+              const positions: NodePos[] = [];
+
+              const calculatePositions = (
+                node: typeof data.root, x: number, y: number, level: number
+              ): { minY: number; maxY: number } => {
+                const children = node.children || [];
+                if (children.length === 0) {
+                  positions.push({ node, x, y, level });
+                  return { minY: y, maxY: y };
+                }
+                let currentY = y - ((children.length - 1) * (nodeHeight + data.nodeSpacing)) / 2;
+                let minY = currentY, maxY = currentY;
+                children.forEach((child) => {
+                  const result = calculatePositions(child, x + data.levelSpacing, currentY, level + 1);
+                  minY = Math.min(minY, result.minY);
+                  maxY = Math.max(maxY, result.maxY);
+                  currentY += nodeHeight + data.nodeSpacing;
+                });
+                positions.push({ node, x, y: (minY + maxY) / 2, level });
+                return { minY, maxY };
+              };
+
+              calculatePositions(data.root, shape.x + 20, shape.y + shape.height / 2, 0);
+
+              // Draw connections
+              positions.forEach((pos) => {
+                (pos.node.children || []).forEach((child) => {
+                  const childPos = positions.find((p) => p.node.id === child.id);
+                  if (childPos) {
+                    const parentWidth = Math.max(60, pos.node.text.length * 8 + nodePadding * 2);
+                    svgContent += `    <line x1="${pos.x + parentWidth}" y1="${pos.y + nodeHeight / 2}" x2="${childPos.x}" y2="${childPos.y + nodeHeight / 2}" stroke="#d1d5db" stroke-width="2" />\n`;
+                  }
+                });
+              });
+
+              // Draw nodes
+              positions.forEach((pos) => {
+                const nodeWidth = Math.max(60, pos.node.text.length * 8 + nodePadding * 2);
+                const color = pos.node.color || levelColors[pos.level % levelColors.length];
+                svgContent += `    <rect x="${pos.x}" y="${pos.y}" width="${nodeWidth}" height="${nodeHeight}" fill="${color}" rx="${nodeRadius}" />\n`;
+                svgContent += `    <text x="${pos.x + nodeWidth / 2}" y="${pos.y + nodeHeight / 2 + 4}" font-size="13" font-family="Arial" fill="#ffffff" text-anchor="middle">${escapeXml(pos.node.text)}</text>\n`;
+              });
+
+              svgContent += `  </g>\n`;
+            }
+          }
+          break;
+        case 'embed':
+          // Render embed/link preview card
+          {
+            const data = shape.embedData;
+            const cornerRadius = shape.cornerRadius ?? 8;
+            svgContent += `  <g opacity="${opacity}"${transform}>\n`;
+            // Card background
+            svgContent += `    <rect x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" fill="${shape.fill || '#ffffff'}" stroke="${shape.stroke || '#e5e7eb'}" stroke-width="${shape.strokeWidth || 1}" rx="${cornerRadius}" />\n`;
+            if (data) {
+              const contentX = shape.x + 12;
+              // Site name
+              if (data.siteName || data.url) {
+                const hostname = data.siteName || (data.url ? new URL(data.url).hostname : 'example.com');
+                svgContent += `    <text x="${contentX}" y="${shape.y + 20}" font-size="11" font-family="Arial" fill="#6b7280">${escapeXml(hostname)}</text>\n`;
+              }
+              // Title
+              if (data.title) {
+                svgContent += `    <text x="${contentX}" y="${shape.y + 40}" font-size="14" font-family="Arial" font-weight="bold" fill="#1f2937">${escapeXml(data.title)}</text>\n`;
+              }
+              // Description
+              if (data.description) {
+                svgContent += `    <text x="${contentX}" y="${shape.y + 60}" font-size="12" font-family="Arial" fill="#6b7280">${escapeXml(data.description.substring(0, 50))}...</text>\n`;
+              }
+              // URL
+              if (data.url) {
+                svgContent += `    <text x="${contentX}" y="${shape.y + shape.height - 12}" font-size="10" font-family="Arial" fill="#9ca3af">${escapeXml(data.url)}</text>\n`;
+              }
+            }
+            svgContent += `  </g>\n`;
+          }
+          break;
+        case 'triangle':
+          {
+            const pts = `${shape.x + shape.width / 2},${shape.y} ${shape.x + shape.width},${shape.y + shape.height} ${shape.x},${shape.y + shape.height}`;
+            svgContent += `  <polygon points="${pts}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
+        case 'triangleDown':
+          {
+            const pts = `${shape.x},${shape.y} ${shape.x + shape.width},${shape.y} ${shape.x + shape.width / 2},${shape.y + shape.height}`;
+            svgContent += `  <polygon points="${pts}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
+        case 'roundedRectangle':
+          svgContent += `  <rect x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" rx="${shape.cornerRadius ?? 12}" opacity="${opacity}"${transform} />\n`;
+          break;
+        case 'pentagon':
+          {
+            const cx = shape.x + shape.width / 2;
+            const cy = shape.y + shape.height / 2;
+            const r = Math.min(shape.width, shape.height) / 2;
+            const pts: string[] = [];
+            for (let i = 0; i < 5; i++) {
+              const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+              pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+            }
+            svgContent += `  <polygon points="${pts.join(' ')}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
+        case 'hexagon':
+          {
+            const cx = shape.x + shape.width / 2;
+            const cy = shape.y + shape.height / 2;
+            const r = Math.min(shape.width, shape.height) / 2;
+            const pts: string[] = [];
+            for (let i = 0; i < 6; i++) {
+              const angle = (i * 2 * Math.PI / 6) - Math.PI / 2;
+              pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+            }
+            svgContent += `  <polygon points="${pts.join(' ')}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
+        case 'star':
+          {
+            const cx = shape.x + shape.width / 2;
+            const cy = shape.y + shape.height / 2;
+            const outerR = Math.min(shape.width, shape.height) / 2;
+            const innerR = outerR * 0.4;
+            const pts: string[] = [];
+            for (let i = 0; i < 10; i++) {
+              const angle = (i * Math.PI / 5) - Math.PI / 2;
+              const r = i % 2 === 0 ? outerR : innerR;
+              pts.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+            }
+            svgContent += `  <polygon points="${pts.join(' ')}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
+        case 'cross':
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const armWidth = Math.min(w, h) * 0.33;
+            const hOffset = (w - armWidth) / 2;
+            const vOffset = (h - armWidth) / 2;
+            const pts = [
+              `${shape.x + hOffset},${shape.y}`,
+              `${shape.x + hOffset + armWidth},${shape.y}`,
+              `${shape.x + hOffset + armWidth},${shape.y + vOffset}`,
+              `${shape.x + w},${shape.y + vOffset}`,
+              `${shape.x + w},${shape.y + vOffset + armWidth}`,
+              `${shape.x + hOffset + armWidth},${shape.y + vOffset + armWidth}`,
+              `${shape.x + hOffset + armWidth},${shape.y + h}`,
+              `${shape.x + hOffset},${shape.y + h}`,
+              `${shape.x + hOffset},${shape.y + vOffset + armWidth}`,
+              `${shape.x},${shape.y + vOffset + armWidth}`,
+              `${shape.x},${shape.y + vOffset}`,
+              `${shape.x + hOffset},${shape.y + vOffset}`,
+            ];
+            svgContent += `  <polygon points="${pts.join(' ')}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
+        case 'parallelogram':
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const skew = w * 0.2;
+            const pts = `${shape.x + skew},${shape.y} ${shape.x + w},${shape.y} ${shape.x + w - skew},${shape.y + h} ${shape.x},${shape.y + h}`;
+            svgContent += `  <polygon points="${pts}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
+        case 'database':
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const ellipseHeight = h * 0.15;
+            svgContent += `  <g${transform}>\n`;
+            // Body
+            svgContent += `    <rect x="${shape.x}" y="${shape.y + ellipseHeight / 2}" width="${w}" height="${h - ellipseHeight}" fill="${shape.fill}" />\n`;
+            // Left/right lines
+            svgContent += `    <line x1="${shape.x}" y1="${shape.y + ellipseHeight / 2}" x2="${shape.x}" y2="${shape.y + h - ellipseHeight / 2}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" />\n`;
+            svgContent += `    <line x1="${shape.x + w}" y1="${shape.y + ellipseHeight / 2}" x2="${shape.x + w}" y2="${shape.y + h - ellipseHeight / 2}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" />\n`;
+            // Bottom ellipse
+            svgContent += `    <ellipse cx="${shape.x + w / 2}" cy="${shape.y + h - ellipseHeight / 2}" rx="${w / 2}" ry="${ellipseHeight / 2}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}" />\n`;
+            // Top ellipse
+            svgContent += `    <ellipse cx="${shape.x + w / 2}" cy="${shape.y + ellipseHeight / 2}" rx="${w / 2}" ry="${ellipseHeight / 2}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}" />\n`;
+            svgContent += `  </g>\n`;
+          }
+          break;
+        case 'document':
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const waveHeight = h * 0.1;
+            const d = `M ${shape.x},${shape.y} L ${shape.x + w},${shape.y} L ${shape.x + w},${shape.y + h - waveHeight} Q ${shape.x + w * 0.75},${shape.y + h - waveHeight * 2} ${shape.x + w / 2},${shape.y + h - waveHeight} Q ${shape.x + w * 0.25},${shape.y + h} ${shape.x},${shape.y + h - waveHeight} Z`;
+            svgContent += `  <path d="${d}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
       }
 
       // Add text overlay for non-text shapes
@@ -2456,6 +3709,14 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     zoomTo100,
     setViewportPosition,
     getCanvasSize: () => canvasSize,
+    setConnectors: (newConnectors: Connector[]) => {
+      setConnectors(newConnectors);
+    },
+    loadFromJSON: (data: { shapes: Shape[]; connectors: Connector[] }) => {
+      setShapes(data.shapes || []);
+      setConnectors(data.connectors || []);
+      onShapesChange?.(data.shapes || []);
+    },
   }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, onShapesChange, alignShapes, distributeShapes, groupSelected, ungroupSelected, exportToPNG, exportToSVG, setZoom, zoomToFit, zoomTo100, setViewportPosition, canvasSize]);
 
   // Handle escape key
@@ -2858,6 +4119,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     stage.off('click tap');
     stage.on('click tap', (e) => {
+      // Close table context menu on any canvas click
+      setTableContextMenu(null);
+
       if (isPanning) return;
       if (isDrawingTool) return; // Drawing tools handle their own events
 
@@ -3397,8 +4661,12 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     layer.batchDraw();
   }, [isCollaborating, remoteUsers]);
 
+  // Build theme class name
+  const themeClass = theme ? `zm-${theme}` : '';
+  const wrapperClassName = ['zm-draw-wrapper', themeClass, className].filter(Boolean).join(' ');
+
   return (
-    <div className="zm-draw-wrapper" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'visible' }}>
+    <div className={wrapperClassName} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'visible' }}>
       {/* Canvas */}
       <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'visible' }}>
         <div
@@ -3406,6 +4674,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           className="zm-draw-canvas-container"
           onDragOver={handleDragOver}
           onDrop={handleDrop}
+          role="application"
+          aria-label={`Drawing canvas with ${shapes.length} shapes. Use arrow keys to move selected shapes, Delete to remove, Ctrl+Z to undo.`}
+          aria-describedby="zm-canvas-instructions"
+          tabIndex={0}
           style={{
             width: '100%',
             height: '100%',
@@ -3416,9 +4688,27 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             backgroundColor: backgroundColor,
           }}
         />
+        {/* Screen reader instructions (visually hidden) */}
+        <div
+          id="zm-canvas-instructions"
+          style={{
+            position: 'absolute',
+            width: 1,
+            height: 1,
+            padding: 0,
+            margin: -1,
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: 0,
+          }}
+        >
+          Interactive drawing canvas. Press S for sticky note, R for rectangle, O for ellipse.
+          Use Tab to navigate between shapes. Press Enter to edit text. Press Escape to deselect.
+        </div>
 
         {/* Collaboration Status Indicator */}
-        {collaborationEnabled && (
+        {collaborationEnabled && UIOptions?.collaborationIndicator !== false && (
           <div style={{
             position: 'absolute',
             top: 12,
@@ -3495,44 +4785,46 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         )}
 
         {/* Bottom Floating Toolbar */}
-        <div style={{
-          position: 'absolute',
-          bottom: 16,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 100,
-        }}>
-          <Toolbar
-            tool={tool}
-            setTool={setTool}
-            connectingFrom={connectingFrom}
-            cancelConnecting={cancelConnecting}
-            hasSelection={!!selectedId}
-            onDelete={deleteSelected}
-            shapeCount={shapes.length}
-            onClearAll={clearAll}
-            canUndo={canUndo}
-            onUndo={undo}
-            canRedo={canRedo}
-            onRedo={redo}
-            scale={scale}
-            onResetZoom={resetZoom}
-            onSave={exportToJson}
-            onLoad={importFromJson}
-            onAddImage={openImageDialog}
-            currentStampType={currentStampType}
-            onStampTypeChange={setStampType}
-            onAddStamp={addStampAtCenter}
-            onToggleComments={togglePanel}
-            isCommentPanelOpen={isPanelOpen}
-            commentCount={unresolvedCommentCount}
-            onTidyUp={handleTidyUp}
-            selectedCount={selectedIds.length}
-          />
-        </div>
+        {UIOptions?.toolbar !== false && (
+          <div style={{
+            position: 'absolute',
+            bottom: 16,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 100,
+          }}>
+            <Toolbar
+              tool={tool}
+              setTool={setTool}
+              connectingFrom={connectingFrom}
+              cancelConnecting={cancelConnecting}
+              hasSelection={!!selectedId}
+              onDelete={deleteSelected}
+              shapeCount={shapes.length}
+              onClearAll={clearAll}
+              canUndo={canUndo}
+              onUndo={undo}
+              canRedo={canRedo}
+              onRedo={redo}
+              scale={scale}
+              onResetZoom={resetZoom}
+              onSave={exportToJson}
+              onLoad={importFromJson}
+              onAddImage={openImageDialog}
+              currentStampType={currentStampType}
+              onStampTypeChange={setStampType}
+              onAddStamp={addStampAtCenter}
+              onToggleComments={togglePanel}
+              isCommentPanelOpen={isPanelOpen}
+              commentCount={unresolvedCommentCount}
+              onTidyUp={handleTidyUp}
+              selectedCount={selectedIds.length}
+            />
+          </div>
+        )}
 
         {/* Comment Panel */}
-        <CommentPanel />
+        {UIOptions?.commentPanel !== false && <CommentPanel />}
 
         {/* Text editing overlay */}
         {editingId && (() => {
@@ -3553,6 +4845,271 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             />
           );
         })()}
+
+        {/* Table cell editing overlay */}
+        {editingCell && (() => {
+          const tableShape = shapes.find((s) => s.id === editingCell.shapeId);
+          if (!tableShape || !tableShape.tableData) return null;
+
+          const stage = stageRef.current;
+          const stageScale = stage?.scaleX() || 1;
+          const stagePos = stage?.position() || { x: 0, y: 0 };
+
+          const tableData = tableShape.tableData;
+          const { row, col } = editingCell;
+
+          // Calculate cell position
+          let cellX = tableShape.x;
+          let cellY = tableShape.y;
+          for (let c = 0; c < col; c++) {
+            cellX += tableData.colWidths[c] || 100;
+          }
+          for (let r = 0; r < row; r++) {
+            cellY += tableData.rowHeights[r] || 40;
+          }
+          const cellWidth = tableData.colWidths[col] || 100;
+          const cellHeight = tableData.rowHeights[row] || 40;
+          const currentText = tableData.cells[row]?.[col]?.text || '';
+
+          return (
+            <input
+              type="text"
+              autoFocus
+              defaultValue={currentText}
+              style={{
+                position: 'absolute',
+                left: cellX * stageScale + stagePos.x,
+                top: cellY * stageScale + stagePos.y,
+                width: cellWidth * stageScale,
+                height: cellHeight * stageScale,
+                fontSize: (tableShape.fontSize || 14) * stageScale,
+                fontFamily: tableShape.fontFamily || 'Arial',
+                textAlign: 'left',
+                border: '2px solid #3b82f6',
+                outline: 'none',
+                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                color: '#1e1e1e',
+                padding: `0 ${8 * stageScale}px`,
+                boxSizing: 'border-box',
+              }}
+              onBlur={(e) => updateCellText(editingCell.shapeId, row, col, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  updateCellText(editingCell.shapeId, row, col, (e.target as HTMLInputElement).value);
+                } else if (e.key === 'Escape') {
+                  setEditingCell(null);
+                } else if (e.key === 'Tab') {
+                  e.preventDefault();
+                  // Move to next cell
+                  const nextCol = col + 1;
+                  if (nextCol < tableData.cols) {
+                    updateCellText(editingCell.shapeId, row, col, (e.target as HTMLInputElement).value);
+                    setTimeout(() => setEditingCell({ shapeId: editingCell.shapeId, row, col: nextCol }), 0);
+                  } else if (row + 1 < tableData.rows) {
+                    updateCellText(editingCell.shapeId, row, col, (e.target as HTMLInputElement).value);
+                    setTimeout(() => setEditingCell({ shapeId: editingCell.shapeId, row: row + 1, col: 0 }), 0);
+                  } else {
+                    updateCellText(editingCell.shapeId, row, col, (e.target as HTMLInputElement).value);
+                  }
+                }
+              }}
+            />
+          );
+        })()}
+
+        {/* Table context menu */}
+        {tableContextMenu && (
+          <div
+            style={{
+              position: 'absolute',
+              left: tableContextMenu.x,
+              top: tableContextMenu.y,
+              backgroundColor: 'white',
+              borderRadius: 8,
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+              border: '1px solid #e5e5e5',
+              padding: 4,
+              zIndex: 1000,
+              minWidth: 160,
+            }}
+            onMouseLeave={() => setTableContextMenu(null)}
+          >
+            <button
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                width: '100%',
+                padding: '8px 12px',
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+                fontSize: 13,
+                color: '#1e1e1e',
+                borderRadius: 4,
+                textAlign: 'left',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f0f0')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onClick={() => {
+                addTableRow(tableContextMenu.shapeId, tableContextMenu.row);
+                setTableContextMenu(null);
+              }}
+            >
+              + Insert row below
+            </button>
+            <button
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                width: '100%',
+                padding: '8px 12px',
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+                fontSize: 13,
+                color: '#1e1e1e',
+                borderRadius: 4,
+                textAlign: 'left',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f0f0')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onClick={() => {
+                addTableColumn(tableContextMenu.shapeId, tableContextMenu.col);
+                setTableContextMenu(null);
+              }}
+            >
+              + Insert column right
+            </button>
+            <div style={{ height: 1, backgroundColor: '#e5e5e5', margin: '4px 0' }} />
+            <button
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                width: '100%',
+                padding: '8px 12px',
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+                fontSize: 13,
+                color: '#ef4444',
+                borderRadius: 4,
+                textAlign: 'left',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onClick={() => {
+                deleteTableRow(tableContextMenu.shapeId, tableContextMenu.row);
+                setTableContextMenu(null);
+              }}
+            >
+              − Delete row
+            </button>
+            <button
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                width: '100%',
+                padding: '8px 12px',
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+                fontSize: 13,
+                color: '#ef4444',
+                borderRadius: 4,
+                textAlign: 'left',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onClick={() => {
+                deleteTableColumn(tableContextMenu.shapeId, tableContextMenu.col);
+                setTableContextMenu(null);
+              }}
+            >
+              − Delete column
+            </button>
+            <div style={{ height: 1, backgroundColor: '#e5e5e5', margin: '4px 0' }} />
+            {/* Header row toggle */}
+            {(() => {
+              const tableShape = shapes.find((s) => s.id === tableContextMenu.shapeId);
+              const hasHeader = tableShape?.tableData?.headerRow || false;
+              return (
+                <button
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    color: '#1e1e1e',
+                    borderRadius: 4,
+                    textAlign: 'left',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f0f0f0')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  onClick={() => {
+                    toggleTableHeaderRow(tableContextMenu.shapeId);
+                    setTableContextMenu(null);
+                  }}
+                >
+                  {hasHeader ? '☑' : '☐'} Header row
+                </button>
+              );
+            })()}
+            {/* Cell background colors */}
+            <div style={{ padding: '8px 12px' }}>
+              <div style={{ fontSize: 11, color: '#6b6b6b', marginBottom: 6 }}>Cell color</div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {['#ffffff', '#f3f4f6', '#fef9c3', '#dcfce7', '#dbeafe', '#f3e8ff', '#fee2e2'].map((color) => (
+                  <button
+                    key={color}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 4,
+                      backgroundColor: color,
+                      border: '1px solid #d1d5db',
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                    onClick={() => {
+                      setCellBackground(tableContextMenu.shapeId, tableContextMenu.row, tableContextMenu.col, color);
+                      setTableContextMenu(null);
+                    }}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ARIA live region for screen reader announcements */}
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          style={{
+            position: 'absolute',
+            width: 1,
+            height: 1,
+            padding: 0,
+            margin: -1,
+            overflow: 'hidden',
+            clip: 'rect(0, 0, 0, 0)',
+            whiteSpace: 'nowrap',
+            border: 0,
+          }}
+        >
+          {announcement}
+        </div>
       </div>
     </div>
   );

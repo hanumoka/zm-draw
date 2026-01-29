@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import '@zm-draw/react/styles.css';
 
 export const metadata: Metadata = {
   title: 'zm-draw Demo',

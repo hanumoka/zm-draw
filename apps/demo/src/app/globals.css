@@ -1236,3 +1236,100 @@ body {
 .zm-draw-canvas-container.eraser-mode {
   cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='8' y1='8' x2='16' y2='16'/%3E%3C/svg%3E") 12 12, not-allowed !important;
 }
+
+/* Template Picker */
+.zm-template-picker {
+  min-width: 400px;
+  max-height: 500px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.zm-template-picker-header {
+  padding: 12px;
+  border-bottom: 1px solid var(--zm-border);
+}
+
+.zm-template-picker-title {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: var(--zm-text-primary);
+}
+
+.zm-template-picker-categories {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.zm-template-category-btn {
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  border-radius: 12px !important;
+  background: var(--zm-bg-tertiary) !important;
+  color: var(--zm-text-secondary) !important;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: auto !important;
+  text-align: center !important;
+}
+
+.zm-template-category-btn:hover {
+  background: var(--zm-accent-light) !important;
+  color: var(--zm-accent) !important;
+}
+
+.zm-template-category-btn.active {
+  background: var(--zm-accent) !important;
+  color: white !important;
+}
+
+.zm-template-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 380px;
+}
+
+.zm-template-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 12px !important;
+  background: var(--zm-bg-primary) !important;
+  border: 1px solid var(--zm-border) !important;
+  border-radius: 8px !important;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+.zm-template-card:hover {
+  border-color: var(--zm-accent) !important;
+  background: var(--zm-accent-light) !important;
+}
+
+.zm-template-thumbnail {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.zm-template-name {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--zm-text-primary);
+}
+
+.zm-template-desc {
+  font-size: 11px;
+  color: var(--zm-text-secondary);
+  line-height: 1.3;
+}

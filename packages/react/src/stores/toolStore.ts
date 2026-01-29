@@ -1,6 +1,13 @@
 import { create } from 'zustand';
-import type { ToolType, StickyNoteColor, DrawingToolType, StampType } from '../types';
+import type { ToolType, StickyNoteColor, DrawingToolType, StampType, ConnectorVariant } from '../types';
 import { defaultFreeDrawProps } from './canvasStore';
+
+/** Table cell editing state */
+export interface EditingCell {
+  shapeId: string;
+  row: number;
+  col: number;
+}
 
 interface ToolState {
   // Current tool
@@ -8,9 +15,13 @@ interface ToolState {
 
   // Connector mode state
   connectingFrom: string | null;
+  connectorVariant: ConnectorVariant;
 
   // Text editing state
   editingId: string | null;
+
+  // Table cell editing state
+  editingCell: EditingCell | null;
 
   // Drawing state (for pen/marker/highlighter)
   isDrawing: boolean;
@@ -39,6 +50,11 @@ interface ToolState {
   startEditing: (id: string) => void;
   stopEditing: () => void;
 
+  // Table cell editing actions
+  setEditingCell: (cell: EditingCell | null) => void;
+  startCellEditing: (shapeId: string, row: number, col: number) => void;
+  stopCellEditing: () => void;
+
   // Drawing actions
   setIsDrawing: (isDrawing: boolean) => void;
   setStrokeWidth: (width: number) => void;
@@ -51,12 +67,17 @@ interface ToolState {
 
   // Stamp actions
   setStampType: (type: StampType) => void;
+
+  // Connector actions
+  setConnectorVariant: (variant: ConnectorVariant) => void;
 }
 
 export const useToolStore = create<ToolState>((set) => ({
   tool: 'select',
   connectingFrom: null,
+  connectorVariant: 'arrow',
   editingId: null,
+  editingCell: null,
   isDrawing: false,
   currentStrokeWidth: defaultFreeDrawProps.pen.strokeWidth,
   currentStrokeColor: defaultFreeDrawProps.pen.stroke,
@@ -90,6 +111,7 @@ export const useToolStore = create<ToolState>((set) => ({
       tool: 'select',
       connectingFrom: null,
       editingId: null,
+      editingCell: null,
       isDrawing: false,
     }),
 
@@ -104,6 +126,12 @@ export const useToolStore = create<ToolState>((set) => ({
   startEditing: (id) => set({ editingId: id }),
 
   stopEditing: () => set({ editingId: null }),
+
+  setEditingCell: (cell) => set({ editingCell: cell }),
+
+  startCellEditing: (shapeId, row, col) => set({ editingCell: { shapeId, row, col } }),
+
+  stopCellEditing: () => set({ editingCell: null }),
 
   setIsDrawing: (isDrawing) => set({ isDrawing }),
 
@@ -125,4 +153,6 @@ export const useToolStore = create<ToolState>((set) => ({
   setStickyColor: (color) => set({ currentStickyColor: color }),
 
   setStampType: (type) => set({ currentStampType: type }),
+
+  setConnectorVariant: (variant) => set({ connectorVariant: variant }),
 }));
