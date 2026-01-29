@@ -32,6 +32,14 @@
 
   /* Dot Grid */
   --zm-grid-dot: rgba(0, 0, 0, 0.1);
+
+  /* Transitions */
+  --zm-transition-fast: 0.1s ease;
+  --zm-transition-normal: 0.15s ease;
+  --zm-transition-slow: 0.25s ease;
+
+  /* Focus Ring */
+  --zm-focus-ring: 0 0 0 2px var(--zm-accent-light), 0 0 0 4px var(--zm-accent);
 }
 
 /* Dark theme (optional - preserved for user preference) */
@@ -53,11 +61,22 @@
   --zm-selection: #0d99ff;
   --zm-selection-light: rgba(13, 153, 255, 0.2);
   --zm-grid-dot: rgba(255, 255, 255, 0.08);
+  --zm-focus-ring: 0 0 0 2px var(--zm-accent-light), 0 0 0 4px var(--zm-accent);
 }
 
 body {
   color: var(--zm-text-primary);
   background: var(--zm-bg-primary);
+}
+
+/* Global Focus Styles for Accessibility */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: none;
+  box-shadow: var(--zm-focus-ring);
 }
 
 /* zm-draw Editor Layout */
@@ -267,11 +286,11 @@ body {
   background: transparent;
   color: var(--zm-text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--zm-transition-normal);
 }
 
 .zm-draw-icon-button:hover {
-  background: var(--zm-bg-tertiary);
+  background: var(--zm-bg-hover);
   color: var(--zm-text-primary);
 }
 
@@ -281,7 +300,12 @@ body {
 }
 
 .zm-draw-icon-button:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
+  transition: transform var(--zm-transition-fast);
+}
+
+.zm-draw-icon-button:focus-visible {
+  box-shadow: var(--zm-focus-ring);
 }
 
 .zm-draw-canvas-container {
@@ -385,12 +409,12 @@ body {
   justify-content: center;
   width: 36px;
   height: 28px;
-  background: var(--zm-bg-tertiary);
+  background: var(--zm-bg-secondary);
   border: 1px solid var(--zm-border);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--zm-text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--zm-transition-normal);
 }
 
 .zm-style-button:hover {
@@ -399,10 +423,18 @@ body {
   color: var(--zm-text-primary);
 }
 
+.zm-style-button:active {
+  transform: scale(0.95);
+}
+
 .zm-style-button.active {
   background: var(--zm-accent);
   border-color: var(--zm-accent);
   color: white;
+}
+
+.zm-style-button:focus-visible {
+  box-shadow: var(--zm-focus-ring);
 }
 
 /* Panel Tabs - FigJam style segment control */
@@ -428,7 +460,7 @@ body {
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--zm-transition-normal);
 }
 
 .zm-draw-panel-tab:hover {
@@ -436,10 +468,18 @@ body {
   background: var(--zm-bg-hover);
 }
 
+.zm-draw-panel-tab:active {
+  transform: scale(0.98);
+}
+
 .zm-draw-panel-tab.active {
   color: var(--zm-text-primary);
   background: var(--zm-bg-secondary);
   font-weight: 600;
+}
+
+.zm-draw-panel-tab:focus-visible {
+  box-shadow: var(--zm-focus-ring);
 }
 
 /* Layers Panel */
@@ -459,7 +499,7 @@ body {
   padding: 8px 12px;
   cursor: pointer;
   border-bottom: 1px solid var(--zm-border);
-  transition: background 0.1s;
+  transition: all var(--zm-transition-fast);
 }
 
 .zm-layer-item:hover {
@@ -468,6 +508,8 @@ body {
 
 .zm-layer-item.selected {
   background: var(--zm-accent-light);
+  border-left: 3px solid var(--zm-accent);
+  padding-left: 9px;
 }
 
 .zm-layer-visibility,
@@ -793,21 +835,30 @@ body {
   width: 100%;
   aspect-ratio: 1;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: var(--zm-text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--zm-transition-normal);
 }
 
 .zm-shape-button:hover {
-  background: var(--zm-bg-tertiary);
+  background: var(--zm-bg-hover);
   color: var(--zm-text-primary);
+  transform: scale(1.05);
+}
+
+.zm-shape-button:active {
+  transform: scale(0.95);
 }
 
 .zm-shape-button.active {
   background: var(--zm-accent);
   color: white;
+}
+
+.zm-shape-button:focus-visible {
+  box-shadow: var(--zm-focus-ring);
 }
 
 .zm-shape-button svg {
@@ -905,16 +956,21 @@ body {
   background: transparent;
   color: var(--zm-text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--zm-transition-normal);
 }
 
 .zm-context-menu-button:hover {
-  background: var(--zm-bg-tertiary);
+  background: var(--zm-bg-hover);
   color: var(--zm-text-primary);
 }
 
 .zm-context-menu-button:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
+  transition: transform var(--zm-transition-fast);
+}
+
+.zm-context-menu-button:focus-visible {
+  box-shadow: var(--zm-focus-ring);
 }
 
 .zm-context-menu-button-danger:hover {
