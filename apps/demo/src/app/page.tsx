@@ -652,7 +652,7 @@ export default function Home() {
   const canvasRef = useRef<DrawCanvasHandle>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
   const [selectedShape, setSelectedShape] = useState<SelectedShape | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false); // FigJam style: light mode default
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
   const [leftPanelWidth, setLeftPanelWidth] = useState(240);

@@ -1,15 +1,15 @@
 'use client';
 
-import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
+import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle, useMemo } from 'react';
 import Konva from 'konva';
-import type { Shape, ShapeType, Connector, FreeDrawPoint, StickyNoteColor, StampType } from '../types';
-import { STICKY_COLORS, STAMP_EMOJIS } from '../types';
+import type { Shape, ShapeType, Connector, FreeDrawPoint, StickyNoteColor, StampType, SectionColor } from '../types';
+import { STICKY_COLORS, STAMP_EMOJIS, SECTION_COLORS } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { useCollaboration } from '../hooks/useCollaboration';
 import { useToolStore } from '../stores/toolStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useViewportStore } from '../stores/viewportStore';
-import { generateId, defaultShapeProps, defaultTextShapeProps, defaultStickyNoteProps, defaultFreeDrawProps, defaultImageShapeProps, defaultStampProps } from '../stores/canvasStore';
+import { generateId, defaultShapeProps, defaultTextShapeProps, defaultStickyNoteProps, defaultFreeDrawProps, defaultImageShapeProps, defaultStampProps, defaultSectionProps } from '../stores/canvasStore';
 
 // Module-level image cache for performance
 const imageCache = new Map<string, HTMLImageElement>();
@@ -20,6 +20,7 @@ import { Toolbar } from './Toolbar';
 import { TextEditor } from './TextEditor';
 import { CommentPanel } from './CommentPanel';
 import { useCommentStore } from '../stores/commentStore';
+import { tidyUp, TidyUpLayout } from '../utils/tidyUp';
 
 /** Selected shape info for external consumption */
 export interface SelectedShapeInfo {
@@ -246,11 +247,23 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   // Comment store
   const isPanelOpen = useCommentStore((s) => s.isPanelOpen);
   const togglePanel = useCommentStore((s) => s.togglePanel);
-  const getThreads = useCommentStore((s) => s.getThreads);
+  const commentsMap = useCommentStore((s) => s.comments);
   const getThreadForShape = useCommentStore((s) => s.getThreadForShape);
   const addComment = useCommentStore((s) => s.addComment);
   const openThread = useCommentStore((s) => s.openThread);
   const setCurrentUser = useCommentStore((s) => s.setCurrentUser);
+
+  // Compute unresolved comment count (memoized)
+  const unresolvedCommentCount = useMemo(() => {
+    let count = 0;
+    commentsMap.forEach((comment) => {
+      // Count root comments (threads) that are not resolved
+      if (!comment.parentId && !comment.resolved) {
+        count++;
+      }
+    });
+    return count;
+  }, [commentsMap]);
 
   // Set current user for comments when collaboration is enabled
   useEffect(() => {
@@ -598,17 +611,17 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   // Grid shape ref for performance optimization
   const gridShapeRef = useRef<Konva.Shape | null>(null);
 
-  // Draw infinite dotted grid based on viewport (Figma style)
+  // Draw infinite dotted grid based on viewport (FigJam style)
   // Uses a single Konva.Shape with sceneFunc for performance (instead of thousands of Circle nodes)
   const drawInfiniteGrid = useCallback(() => {
     const layer = gridLayerRef.current;
     const stage = stageRef.current;
     if (!layer || !stage) return;
 
-    // Determine grid color based on background brightness
+    // FigJam style: subtle dots - 10% opacity black on light, 8% white on dark
     const isDark = backgroundColor.startsWith('#') &&
       parseInt(backgroundColor.slice(1, 3), 16) < 128;
-    const gridColor = isDark ? '#4a4a4a' : '#d1d5db';
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.1)';
 
     // Remove existing grid shape if any
     if (gridShapeRef.current) {
@@ -632,18 +645,18 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         const endX = startX + viewportWidth / stageScale;
         const endY = startY + viewportHeight / stageScale;
 
-        // Adjust grid size based on zoom level for better visibility
+        // FigJam: adjust grid size based on zoom level
         let effectiveGridSize = gridSize;
-        if (stageScale < 0.5) effectiveGridSize = gridSize * 2;
-        if (stageScale < 0.25) effectiveGridSize = gridSize * 4;
-        if (stageScale > 2) effectiveGridSize = gridSize / 2;
+        if (stageScale < 0.3) effectiveGridSize = gridSize * 4;
+        else if (stageScale < 0.5) effectiveGridSize = gridSize * 2;
+        else if (stageScale > 2) effectiveGridSize = gridSize / 2;
 
         // Calculate grid dot positions
         const firstX = Math.floor(startX / effectiveGridSize) * effectiveGridSize;
         const firstY = Math.floor(startY / effectiveGridSize) * effectiveGridSize;
 
-        // Dot size scales inversely with zoom for consistent appearance
-        const dotRadius = Math.max(1, 1.5 / stageScale);
+        // FigJam style: small subtle dots (1px at 100% zoom)
+        const dotRadius = Math.max(0.8, 1.2 / stageScale);
 
         // Draw all dots in a single path for performance
         context.beginPath();
@@ -914,6 +927,26 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             });
           }
           break;
+        case 'section':
+          // FigJam-style section container with title
+          {
+            konvaShape = new Konva.Rect({
+              ...shapeConfig,
+              cornerRadius: shape.cornerRadius ?? 8,
+            });
+            // Add section title at the top-left
+            const titleText = new Konva.Text({
+              x: 12,
+              y: -24,
+              text: shape.sectionTitle || 'Section',
+              fontSize: 14,
+              fontFamily: 'Arial',
+              fontStyle: 'bold',
+              fill: '#6b7280',
+            });
+            group.add(titleText);
+          }
+          break;
         default:
           konvaShape = new Konva.Rect({
             ...shapeConfig,
@@ -1177,7 +1210,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides, remoteUsers, getThreadForShape, openThread]);
 
   // Add shape at position
-  const addShape = useCallback((type: ShapeType, x: number, y: number, options?: { stampType?: StampType }) => {
+  const addShape = useCallback((type: ShapeType, x: number, y: number, options?: { stampType?: StampType; sectionColor?: SectionColor }) => {
     // Use different defaults based on shape type
     let props;
     if (type === 'text') {
@@ -1192,6 +1225,13 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       props = {
         ...defaultStampProps,
         stampType: options?.stampType || currentStampType,
+      };
+    } else if (type === 'section') {
+      const color = options?.sectionColor || 'gray';
+      props = {
+        ...defaultSectionProps,
+        fill: SECTION_COLORS[color],
+        sectionColor: color,
       };
     } else {
       props = defaultShapeProps;
@@ -1512,6 +1552,28 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     setSelectedId(null);
     onShapesChange?.([]);
   }, [onShapesChange]);
+
+  // Tidy up selected shapes
+  const handleTidyUp = useCallback((layout: TidyUpLayout) => {
+    if (selectedIds.length < 2) return;
+
+    // Get selected shapes
+    const selectedShapes = shapes.filter((s) => selectedIds.includes(s.id));
+    if (selectedShapes.length < 2) return;
+
+    // Apply tidy up layout
+    const tidiedShapes = tidyUp(selectedShapes, { layout });
+
+    // Update shapes with new positions
+    setShapes((prev) => {
+      const updated = prev.map((shape) => {
+        const tidied = tidiedShapes.find((t) => t.id === shape.id);
+        return tidied || shape;
+      });
+      onShapesChange?.(updated);
+      return updated;
+    });
+  }, [selectedIds, shapes, onShapesChange]);
 
   // Get shape center position
   const getShapeCenter = useCallback((shape: Shape) => {
@@ -2194,6 +2256,16 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             const centerX = shape.x + shape.width / 2;
             const centerY = shape.y + shape.height / 2;
             svgContent += `  <text x="${centerX}" y="${centerY}" font-size="${fontSize}" text-anchor="middle" dominant-baseline="central" opacity="${opacity}"${transform}>${emoji}</text>\n`;
+          }
+          break;
+        case 'section':
+          // Render section container with title
+          {
+            const sectionTitle = escapeXml(shape.sectionTitle || 'Section');
+            svgContent += `  <g${transform}>\n`;
+            svgContent += `    <rect x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" rx="${shape.cornerRadius ?? 8}" opacity="${opacity}" />\n`;
+            svgContent += `    <text x="${shape.x + 12}" y="${shape.y - 8}" font-size="14" font-family="Arial" font-weight="bold" fill="#6b7280">${sectionTitle}</text>\n`;
+            svgContent += `  </g>\n`;
           }
           break;
       }
@@ -3453,7 +3525,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             onAddStamp={addStampAtCenter}
             onToggleComments={togglePanel}
             isCommentPanelOpen={isPanelOpen}
-            commentCount={getThreads().filter(t => !t.resolved).length}
+            commentCount={unresolvedCommentCount}
+            onTidyUp={handleTidyUp}
+            selectedCount={selectedIds.length}
           />
         </div>
 

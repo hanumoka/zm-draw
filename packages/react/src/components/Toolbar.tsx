@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { ToolType, StampType } from '../types';
 import { STAMP_EMOJIS } from '../types';
+import type { TidyUpLayout } from '../utils/tidyUp';
 
 export interface ToolbarProps {
   /** Current selected tool */
@@ -51,6 +52,10 @@ export interface ToolbarProps {
   isCommentPanelOpen?: boolean;
   /** Number of unresolved comments */
   commentCount?: number;
+  /** Tidy up selected shapes */
+  onTidyUp?: (layout: TidyUpLayout) => void;
+  /** Number of selected shapes (for tidy up button state) */
+  selectedCount?: number;
 }
 
 // Icons
@@ -142,6 +147,20 @@ const Icons = {
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   ),
+  section: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" strokeDasharray="4 2" />
+      <line x1="3" y1="9" x2="7" y2="9" />
+    </svg>
+  ),
+  tidyUp: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  ),
 };
 
 /**
@@ -171,8 +190,11 @@ export function Toolbar({
   onToggleComments,
   isCommentPanelOpen,
   commentCount = 0,
+  onTidyUp,
+  selectedCount = 0,
 }: ToolbarProps) {
   const [showStampPicker, setShowStampPicker] = useState(false);
+  const [showTidyUpMenu, setShowTidyUpMenu] = useState(false);
 
   const handleStampSelect = (type: StampType) => {
     onStampTypeChange?.(type);
@@ -185,10 +207,10 @@ export function Toolbar({
       display: 'flex',
       alignItems: 'center',
       gap: 8,
-      padding: '6px 8px',
-      backgroundColor: 'var(--zm-bg-secondary, #2c2c2c)',
-      borderRadius: 8,
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--zm-border, #3c3c3c)',
+      padding: '8px 12px',
+      backgroundColor: 'var(--zm-bg-primary, #ffffff)',
+      borderRadius: 12,
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--zm-border, #e5e5e5)',
     }}>
       {/* Tool Selection Group */}
       <ToolGroup>
@@ -241,6 +263,13 @@ export function Toolbar({
           active={tool === 'connector'}
           onClick={() => { setTool('connector'); cancelConnecting(); }}
         />
+        <ToolButton
+          icon={Icons.section}
+          label="Section"
+          shortcut="Shift+S"
+          active={tool === 'section'}
+          onClick={() => setTool('section')}
+        />
         {/* Stamp button with picker */}
         <div style={{ position: 'relative' }}>
           <button
@@ -253,7 +282,7 @@ export function Toolbar({
               width: 32,
               height: 32,
               padding: 0,
-              backgroundColor: tool === 'stamp' ? 'var(--zm-accent, #0d99ff)' : 'transparent',
+              backgroundColor: tool === 'stamp' ? 'var(--zm-accent, #9747ff)' : 'transparent',
               border: 'none',
               borderRadius: 4,
               fontSize: 18,
@@ -262,7 +291,7 @@ export function Toolbar({
             }}
             onMouseEnter={(e) => {
               if (tool !== 'stamp') {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                e.currentTarget.style.backgroundColor = 'var(--zm-bg-hover, #f0f0f0)';
               }
             }}
             onMouseLeave={(e) => {
@@ -281,9 +310,9 @@ export function Toolbar({
               transform: 'translateX(-50%)',
               marginBottom: 8,
               padding: 8,
-              backgroundColor: 'var(--zm-bg-secondary, #2c2c2c)',
-              borderRadius: 8,
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              backgroundColor: 'var(--zm-bg-primary, #ffffff)',
+              borderRadius: 12,
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--zm-border, #e5e5e5)',
               display: 'grid',
               gridTemplateColumns: 'repeat(4, 1fr)',
               gap: 4,
@@ -297,7 +326,7 @@ export function Toolbar({
                     width: 36,
                     height: 36,
                     padding: 0,
-                    backgroundColor: currentStampType === type ? 'var(--zm-accent, #0d99ff)' : 'transparent',
+                    backgroundColor: currentStampType === type ? 'var(--zm-accent, #9747ff)' : 'transparent',
                     border: 'none',
                     borderRadius: 4,
                     fontSize: 20,
@@ -306,7 +335,7 @@ export function Toolbar({
                   }}
                   onMouseEnter={(e) => {
                     if (currentStampType !== type) {
-                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.backgroundColor = 'var(--zm-bg-hover, #f0f0f0)';
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -354,8 +383,8 @@ export function Toolbar({
           padding: '6px 10px',
           backgroundColor: 'transparent',
           border: 'none',
-          borderRadius: 4,
-          color: scale === 1 ? 'var(--zm-text-muted, #6b6b6b)' : 'var(--zm-text-secondary, #a0a0a0)',
+          borderRadius: 6,
+          color: scale === 1 ? 'var(--zm-text-muted, #999999)' : 'var(--zm-text-secondary, #6b6b6b)',
           fontSize: 12,
           fontWeight: 500,
           cursor: scale === 1 ? 'default' : 'pointer',
@@ -365,13 +394,13 @@ export function Toolbar({
         title="Reset zoom"
         onMouseEnter={(e) => {
           if (scale !== 1) {
-            e.currentTarget.style.backgroundColor = 'var(--zm-bg-tertiary, #383838)';
-            e.currentTarget.style.color = 'var(--zm-text-primary, #ffffff)';
+            e.currentTarget.style.backgroundColor = 'var(--zm-bg-hover, #f0f0f0)';
+            e.currentTarget.style.color = 'var(--zm-text-primary, #1e1e1e)';
           }
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
-          e.currentTarget.style.color = scale === 1 ? 'var(--zm-text-muted, #6b6b6b)' : 'var(--zm-text-secondary, #a0a0a0)';
+          e.currentTarget.style.color = scale === 1 ? 'var(--zm-text-muted, #999999)' : 'var(--zm-text-secondary, #6b6b6b)';
         }}
       >
         {Math.round(scale * 100)}%
@@ -390,6 +419,99 @@ export function Toolbar({
           onClick={onDelete}
         />
       </ToolGroup>
+
+      <Divider />
+
+      {/* Tidy Up */}
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={() => setShowTidyUpMenu(!showTidyUpMenu)}
+          disabled={selectedCount < 2}
+          title="Tidy Up"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 32,
+            height: 32,
+            padding: 0,
+            backgroundColor: showTidyUpMenu ? 'var(--zm-accent, #9747ff)' : 'transparent',
+            border: 'none',
+            borderRadius: 6,
+            color: selectedCount < 2 ? 'var(--zm-text-muted, #999999)' : showTidyUpMenu ? '#ffffff' : 'var(--zm-text-secondary, #6b6b6b)',
+            cursor: selectedCount < 2 ? 'not-allowed' : 'pointer',
+            transition: 'all 0.12s ease',
+          }}
+          onMouseEnter={(e) => {
+            if (selectedCount >= 2 && !showTidyUpMenu) {
+              e.currentTarget.style.backgroundColor = 'var(--zm-bg-hover, #f0f0f0)';
+              e.currentTarget.style.color = 'var(--zm-text-primary, #1e1e1e)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!showTidyUpMenu) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = selectedCount < 2 ? 'var(--zm-text-muted, #999999)' : 'var(--zm-text-secondary, #6b6b6b)';
+            }
+          }}
+        >
+          {Icons.tidyUp}
+        </button>
+        {showTidyUpMenu && (
+          <div style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            marginBottom: 8,
+            padding: 4,
+            backgroundColor: 'var(--zm-bg-primary, #ffffff)',
+            borderRadius: 12,
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--zm-border, #e5e5e5)',
+            zIndex: 1000,
+            minWidth: 120,
+          }}>
+            {(['grid', 'horizontal', 'vertical', 'circle'] as const).map((layout) => (
+              <button
+                key={layout}
+                onClick={() => {
+                  onTidyUp?.(layout);
+                  setShowTidyUpMenu(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  width: '100%',
+                  padding: '8px 12px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderRadius: 4,
+                  color: 'var(--zm-text-secondary, #6b6b6b)',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  transition: 'all 0.1s',
+                  textTransform: 'capitalize',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--zm-bg-hover, #f0f0f0)';
+                  e.currentTarget.style.color = 'var(--zm-text-primary, #1e1e1e)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--zm-text-secondary, #6b6b6b)';
+                }}
+              >
+                {layout === 'grid' && <GridIcon />}
+                {layout === 'horizontal' && <HorizontalIcon />}
+                {layout === 'vertical' && <VerticalIcon />}
+                {layout === 'circle' && <CircleIcon />}
+                {layout}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <Divider />
 
@@ -452,8 +574,8 @@ function ToolGroup({ children }: { children: React.ReactNode }) {
       alignItems: 'center',
       gap: 2,
       padding: '2px',
-      backgroundColor: 'var(--zm-bg-tertiary, #383838)',
-      borderRadius: 6,
+      backgroundColor: 'var(--zm-bg-secondary, #f5f5f5)',
+      borderRadius: 8,
     }}>
       {children}
     </div>
@@ -480,15 +602,15 @@ function ToolButton({
 }) {
   const getBackgroundColor = () => {
     if (disabled) return 'transparent';
-    if (active) return 'var(--zm-accent, #0d99ff)';
+    if (active) return 'var(--zm-accent, #9747ff)';
     return 'transparent';
   };
 
   const getColor = () => {
-    if (disabled) return 'var(--zm-text-muted, #6b6b6b)';
+    if (disabled) return 'var(--zm-text-muted, #999999)';
     if (active) return '#ffffff';
-    if (danger) return 'var(--zm-text-secondary, #a0a0a0)';
-    return 'var(--zm-text-secondary, #a0a0a0)';
+    if (danger) return 'var(--zm-text-secondary, #6b6b6b)';
+    return 'var(--zm-text-secondary, #6b6b6b)';
   };
 
   return (
@@ -513,11 +635,11 @@ function ToolButton({
       onMouseEnter={(e) => {
         if (!disabled && !active) {
           e.currentTarget.style.backgroundColor = danger
-            ? 'rgba(239, 68, 68, 0.15)'
-            : 'rgba(255, 255, 255, 0.08)';
+            ? 'rgba(239, 68, 68, 0.1)'
+            : 'var(--zm-bg-hover, #f0f0f0)';
           e.currentTarget.style.color = danger
             ? '#ef4444'
-            : 'var(--zm-text-primary, #ffffff)';
+            : 'var(--zm-text-primary, #1e1e1e)';
         }
       }}
       onMouseLeave={(e) => {
@@ -546,8 +668,55 @@ function Divider() {
     <div style={{
       width: 1,
       height: 20,
-      backgroundColor: 'var(--zm-border, #3c3c3c)',
-      margin: '0 4px',
+      backgroundColor: 'var(--zm-border, #e5e5e5)',
+      margin: '0 6px',
     }} />
+  );
+}
+
+/** Grid layout icon for tidy up */
+function GridIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  );
+}
+
+/** Horizontal layout icon for tidy up */
+function HorizontalIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="8" width="5" height="8" rx="1" />
+      <rect x="10" y="8" width="5" height="8" rx="1" />
+      <rect x="17" y="8" width="5" height="8" rx="1" />
+    </svg>
+  );
+}
+
+/** Vertical layout icon for tidy up */
+function VerticalIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="8" y="3" width="8" height="5" rx="1" />
+      <rect x="8" y="10" width="8" height="5" rx="1" />
+      <rect x="8" y="17" width="8" height="5" rx="1" />
+    </svg>
+  );
+}
+
+/** Circle layout icon for tidy up */
+function CircleIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="5" r="2" fill="currentColor" />
+      <circle cx="18" cy="12" r="2" fill="currentColor" />
+      <circle cx="12" cy="19" r="2" fill="currentColor" />
+      <circle cx="6" cy="12" r="2" fill="currentColor" />
+    </svg>
   );
 }

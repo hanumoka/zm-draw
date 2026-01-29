@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useCommentStore } from '../stores/commentStore';
 import type { CommentThread, Comment } from '../types';
 
@@ -480,9 +480,51 @@ function ThreadListView({
 export function CommentPanel({ width = 320 }: CommentPanelProps) {
   const isPanelOpen = useCommentStore((s) => s.isPanelOpen);
   const activeThreadId = useCommentStore((s) => s.activeThreadId);
-  const threads = useCommentStore((s) => s.getThreads());
+  const comments = useCommentStore((s) => s.comments);
   const closePanel = useCommentStore((s) => s.closePanel);
   const openThread = useCommentStore((s) => s.openThread);
+
+  // Compute threads from comments (memoized to avoid infinite loops)
+  const threads = useMemo(() => {
+    const threadList: CommentThread[] = [];
+    const rootComments: Comment[] = [];
+
+    // Find all root comments (no parentId)
+    comments.forEach((comment) => {
+      if (!comment.parentId) {
+        rootComments.push(comment);
+      }
+    });
+
+    // Build threads
+    rootComments.forEach((root) => {
+      const replies: Comment[] = [];
+      comments.forEach((comment) => {
+        if (comment.parentId === root.id) {
+          replies.push(comment);
+        }
+      });
+
+      // Sort replies by creation time
+      replies.sort((a, b) => a.createdAt - b.createdAt);
+
+      threadList.push({
+        id: root.id,
+        shapeId: root.shapeId,
+        position: root.x !== undefined && root.y !== undefined
+          ? { x: root.x, y: root.y }
+          : undefined,
+        rootComment: root,
+        replies,
+        resolved: root.resolved ?? false,
+      });
+    });
+
+    // Sort threads by creation time (newest first)
+    threadList.sort((a, b) => b.rootComment.createdAt - a.rootComment.createdAt);
+
+    return threadList;
+  }, [comments]);
 
   const activeThread = activeThreadId
     ? threads.find((t) => t.id === activeThreadId)

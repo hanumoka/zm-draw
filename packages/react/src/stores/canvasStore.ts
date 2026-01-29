@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Shape, Connector, StickyNoteColor, StampType } from '../types';
+import type { Shape, Connector, StickyNoteColor, StampType, SectionColor } from '../types';
 
 // Generate unique ID
 export const generateId = () => `shape-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -69,6 +69,19 @@ export const defaultStampProps = {
   stroke: 'transparent',
   strokeWidth: 0,
   stampType: 'thumbsUp' as StampType,
+};
+
+// Default section properties (FigJam style)
+export const defaultSectionProps = {
+  width: 400,
+  height: 300,
+  fill: '#f3f4f6', // Gray
+  stroke: '#d1d5db',
+  strokeWidth: 1,
+  cornerRadius: 8,
+  sectionColor: 'gray' as SectionColor,
+  sectionTitle: 'Section',
+  opacity: 1,
 };
 
 // Default freedraw properties for each tool

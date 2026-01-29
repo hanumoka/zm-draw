@@ -1,14 +1,14 @@
 # zm-draw 진행상황
 
-> 최종 업데이트: 2026-01-29 (Phase 8 스티키 노트 + 펜 도구 완료)
+> 최종 업데이트: 2026-01-29 (Phase 14A FigJam UI 테마 변환)
 
 ---
 
 ## 전체 진행률
 
 **목표**: ~~Figma 스타일 다이어그램 에디터~~ → **FigJam 스타일 실시간 협업 화이트보드**
-**현재 Phase**: Phase 8 완료 ✅ → Phase 9 준비 중
-**완료율**: 다이어그램 에디터 100% / 협업 화이트보드 Phase 8/17
+**현재 Phase**: Phase 14A 완료 ✅ (FigJam UI 변환)
+**완료율**: 다이어그램 에디터 100% / 협업 화이트보드 Phase 13+14A 완료
 
 ### 방향 전환 (2026-01-28)
 
@@ -482,14 +482,71 @@
 
 ---
 
-## Phase 12-17: 추가 협업 기능 ⏳ 예정
+## Phase 12: 댓글 시스템 ✅ 완료
 
-- **Phase 12**: 댓글 시스템 (5일)
-- **Phase 13**: 투표/타이머 (5일)
-- **Phase 14**: Spotlight, 섹션 (1주)
-- **Phase 15**: 테이블, 마인드맵 (1주)
-- **Phase 16**: 템플릿 시스템 (5일)
-- **Phase 17**: 성능 최적화, 접근성 (1주)
+- [x] Comment, CommentThread 타입 정의
+- [x] commentStore.ts (Zustand)
+- [x] CommentPanel.tsx (스레드 목록/상세)
+- [x] Toolbar 통합 (댓글 버튼 + 배지)
+- [x] DrawCanvas 통합 (도형 댓글 아이콘)
+
+---
+
+## Phase 13: 고급 협업 기능 ✅ 완료
+
+### 13.1 Spotlight 기능 ✅
+- [x] spotlightStore.ts (발표 상태 관리)
+- [x] SpotlightUI.tsx (발표 버튼, 팔로우 요청)
+- [x] collaborationStore 확장 (isPresenting)
+- [x] useCollaboration 훅 확장
+
+### 13.2 Section 기능 ✅
+- [x] SectionColor 타입 및 SECTION_COLORS 상수
+- [x] Section 렌더링 (Konva.Rect + 타이틀)
+- [x] Section SVG export 지원
+- [x] Toolbar 버튼 (Shift+S 단축키)
+
+### 13.3 Tidy Up 기능 ✅
+- [x] utils/tidyUp.ts (grid, horizontal, vertical, circle)
+- [x] detectBestLayout() 자동 레이아웃 감지
+- [x] Toolbar 드롭다운 메뉴
+
+---
+
+## Phase 14A: FigJam UI 테마 변환 ✅ 완료
+
+### 14A.1 CSS 변수 업데이트 ✅
+- [x] FigJam 라이트 테마 기본 적용
+- [x] 퍼플 악센트 컬러 (#9747ff)
+- [x] 새 변수: --zm-bg-hover, --zm-selection, --zm-grid-dot
+
+### 14A.2 도트 그리드 패턴 ✅
+- [x] FigJam 스타일 10% 투명도 검정 도트
+- [x] 줌 레벨에 따른 그리드 밀도 조정
+
+### 14A.3 스티키 노트 10색 팔레트 ✅
+- [x] FigJam 공식 색상: yellow, orange, red, pink, violet, blue, teal, green, gray, white
+
+### 14A.4 Toolbar 스타일 업데이트 ✅
+- [x] 라이트 테마 배경 (#ffffff)
+- [x] 둥근 모서리 (12px)
+- [x] 호버 상태 개선
+
+---
+
+## Phase 14B-D: FigJam UI 변환 (계속) ⏳ 예정
+
+- **Phase 14B**: 하단 플로팅 툴바
+- **Phase 14C**: 패널 레이아웃 변경
+- **Phase 14D**: 인터랙션 개선
+
+---
+
+## Phase 15-17: 추가 기능 ⏳ 예정
+
+- **Phase 15**: 테이블, 마인드맵
+- **Phase 16**: 템플릿 시스템
+- **Phase 17**: 성능 최적화, 접근성
 
 **상세 내용**: `docs/FIGJAM-ROADMAP.md` 참조
 

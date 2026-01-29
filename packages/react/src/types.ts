@@ -1,7 +1,7 @@
 // Shape types for zm-draw
 
 /** Basic shape types */
-export type ShapeType = 'rectangle' | 'ellipse' | 'diamond' | 'text' | 'sticky' | 'freedraw' | 'image' | 'stamp';
+export type ShapeType = 'rectangle' | 'ellipse' | 'diamond' | 'text' | 'sticky' | 'freedraw' | 'image' | 'stamp' | 'section';
 
 /** Extended shape types for future use */
 export type ExtendedShapeType = ShapeType | 'line' | 'polygon' | 'frame';
@@ -9,20 +9,38 @@ export type ExtendedShapeType = ShapeType | 'line' | 'polygon' | 'frame';
 /** Tool types available in the editor */
 export type ToolType = 'select' | 'connector' | 'pen' | 'marker' | 'highlighter' | 'eraser' | ShapeType;
 
+/** Section color presets */
+export type SectionColor = 'gray' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple';
+
+/** Section color hex values (light backgrounds) */
+export const SECTION_COLORS: Record<SectionColor, string> = {
+  gray: '#f3f4f6',
+  red: '#fee2e2',
+  orange: '#ffedd5',
+  yellow: '#fef9c3',
+  green: '#dcfce7',
+  blue: '#dbeafe',
+  purple: '#f3e8ff',
+};
+
 /** Extended tool types for future use */
 export type ExtendedToolType = 'select' | 'connector' | 'pen' | 'marker' | 'highlighter' | 'eraser' | ExtendedShapeType;
 
-/** Sticky note color presets (FigJam style) */
-export type StickyNoteColor = 'yellow' | 'pink' | 'blue' | 'green' | 'purple' | 'orange';
+/** Sticky note color presets (FigJam official 10-color palette) */
+export type StickyNoteColor = 'yellow' | 'orange' | 'red' | 'pink' | 'violet' | 'blue' | 'teal' | 'green' | 'gray' | 'white';
 
-/** Sticky note color hex values */
+/** Sticky note color hex values (FigJam official) */
 export const STICKY_COLORS: Record<StickyNoteColor, string> = {
-  yellow: '#fef08a',
-  pink: '#fda4af',
-  blue: '#93c5fd',
-  green: '#86efac',
-  purple: '#c4b5fd',
-  orange: '#fed7aa',
+  yellow: '#FFE299',
+  orange: '#FFD3A8',
+  red: '#FFB8A8',
+  pink: '#FFA8DB',
+  violet: '#D3BDFF',
+  blue: '#A8DAFF',
+  teal: '#B3F4EF',
+  green: '#B3EFBD',
+  gray: '#E6E6E6',
+  white: '#FFFFFF',
 };
 
 /** Point in a free-draw path */
@@ -115,6 +133,12 @@ export interface Shape {
   preserveAspectRatio?: boolean;
   /** Stamp type for stamp shapes */
   stampType?: StampType;
+  /** Section color name (for section shapes) */
+  sectionColor?: SectionColor;
+  /** Section title (for section shapes) */
+  sectionTitle?: string;
+  /** Child shape IDs contained in section (computed, not stored) */
+  childIds?: string[];
 }
 
 /** Connection point position on a shape */

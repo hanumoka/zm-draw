@@ -12,6 +12,8 @@ export interface UserPresence {
   cursor: { x: number; y: number } | null;
   selection: string[];
   viewport: { x: number; y: number; scale: number };
+  /** Whether this user is presenting in spotlight mode */
+  isPresenting?: boolean;
 }
 
 /** Connection status */
@@ -46,6 +48,8 @@ interface CollaborationState {
   updateLocalCursor: (cursor: { x: number; y: number } | null) => void;
   updateLocalSelection: (selection: string[]) => void;
   updateLocalViewport: (viewport: { x: number; y: number; scale: number }) => void;
+  startPresenting: () => void;
+  stopPresenting: () => void;
 
   // Data sync actions
   setShape: (id: string, shape: Shape) => void;
@@ -245,6 +249,26 @@ export const useCollaborationStore = create<CollaborationState>((set, get) => ({
     if (!wsProvider || !localUser) return;
 
     const updatedUser = { ...localUser, viewport };
+    wsProvider.awareness.setLocalState(updatedUser);
+    set({ localUser: updatedUser });
+  },
+
+  // Start presenting in spotlight mode
+  startPresenting: () => {
+    const { wsProvider, localUser } = get();
+    if (!wsProvider || !localUser) return;
+
+    const updatedUser = { ...localUser, isPresenting: true };
+    wsProvider.awareness.setLocalState(updatedUser);
+    set({ localUser: updatedUser });
+  },
+
+  // Stop presenting in spotlight mode
+  stopPresenting: () => {
+    const { wsProvider, localUser } = get();
+    if (!wsProvider || !localUser) return;
+
+    const updatedUser = { ...localUser, isPresenting: false };
     wsProvider.awareness.setLocalState(updatedUser);
     set({ localUser: updatedUser });
   },

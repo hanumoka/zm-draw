@@ -2,34 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+/* FigJam Light Theme - Official Colors */
 :root {
+  /* Backgrounds */
   --zm-bg-primary: #ffffff;
   --zm-bg-secondary: #f5f5f5;
-  --zm-bg-tertiary: #e8e8e8;
-  --zm-bg-canvas: #fafafa;
-  --zm-border: #e5e7eb;
-  --zm-border-hover: #d1d5db;
-  --zm-text-primary: #171717;
-  --zm-text-secondary: #6b7280;
-  --zm-text-muted: #9ca3af;
-  --zm-accent: #0d99ff;
-  --zm-accent-hover: #0c8ce9;
-  --zm-accent-light: rgba(13, 153, 255, 0.1);
+  --zm-bg-tertiary: #ebebeb;
+  --zm-bg-canvas: #ffffff;
+  --zm-bg-hover: #f0f0f0;
+
+  /* Borders */
+  --zm-border: #e5e5e5;
+  --zm-border-hover: #d4d4d4;
+
+  /* Text */
+  --zm-text-primary: #1e1e1e;
+  --zm-text-secondary: #6b6b6b;
+  --zm-text-muted: #999999;
+  --zm-text-tertiary: #b3b3b3;
+
+  /* FigJam Purple Accent */
+  --zm-accent: #9747ff;
+  --zm-accent-hover: #8338ec;
+  --zm-accent-light: rgba(151, 71, 255, 0.1);
+
+  /* Selection */
+  --zm-selection: #0d99ff;
+  --zm-selection-light: rgba(13, 153, 255, 0.15);
+
+  /* Dot Grid */
+  --zm-grid-dot: rgba(0, 0, 0, 0.1);
 }
 
+/* Dark theme (optional - preserved for user preference) */
 .dark {
   --zm-bg-primary: #1e1e1e;
   --zm-bg-secondary: #2c2c2c;
   --zm-bg-tertiary: #383838;
   --zm-bg-canvas: #252525;
+  --zm-bg-hover: #3d3d3d;
   --zm-border: #3c3c3c;
   --zm-border-hover: #5c5c5c;
   --zm-text-primary: #ffffff;
   --zm-text-secondary: #a0a0a0;
   --zm-text-muted: #6b6b6b;
-  --zm-accent: #0d99ff;
-  --zm-accent-hover: #0c8ce9;
-  --zm-accent-light: rgba(13, 153, 255, 0.15);
+  --zm-text-tertiary: #505050;
+  --zm-accent: #a855f7;
+  --zm-accent-hover: #9333ea;
+  --zm-accent-light: rgba(168, 85, 247, 0.15);
+  --zm-selection: #0d99ff;
+  --zm-selection-light: rgba(13, 153, 255, 0.2);
+  --zm-grid-dot: rgba(255, 255, 255, 0.08);
 }
 
 body {

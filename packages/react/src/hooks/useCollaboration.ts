@@ -1,6 +1,7 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Shape, Connector } from '../types';
 import { useCollaborationStore } from '../stores/collaborationStore';
+import { useSpotlightStore } from '../stores/spotlightStore';
 
 interface UseCollaborationOptions {
   /** Room ID for collaboration */
@@ -19,6 +20,8 @@ interface UseCollaborationOptions {
   connectors?: Connector[];
   /** Whether collaboration is enabled */
   enabled?: boolean;
+  /** Callback when viewport should change (for following presenter) */
+  onViewportChange?: (viewport: { x: number; y: number; scale: number }) => void;
 }
 
 /**
@@ -34,6 +37,7 @@ export function useCollaboration(options: UseCollaborationOptions = {}) {
     shapes = [],
     connectors = [],
     enabled = false,
+    onViewportChange,
   } = options;
 
   // Store
@@ -49,11 +53,21 @@ export function useCollaboration(options: UseCollaborationOptions = {}) {
   const updateLocalCursor = useCollaborationStore((s) => s.updateLocalCursor);
   const updateLocalSelection = useCollaborationStore((s) => s.updateLocalSelection);
   const updateLocalViewport = useCollaborationStore((s) => s.updateLocalViewport);
+  const startPresenting = useCollaborationStore((s) => s.startPresenting);
+  const stopPresenting = useCollaborationStore((s) => s.stopPresenting);
   const setShape = useCollaborationStore((s) => s.setShape);
   const deleteShape = useCollaborationStore((s) => s.deleteShape);
   const setConnector = useCollaborationStore((s) => s.setConnector);
   const deleteConnector = useCollaborationStore((s) => s.deleteConnector);
   const syncToYjs = useCollaborationStore((s) => s.syncToYjs);
+
+  // Spotlight store - select specific functions to avoid unnecessary re-renders
+  const isFollowing = useSpotlightStore((s) => s.isFollowing);
+  const presenterId = useSpotlightStore((s) => s.presenterId);
+  const onRemoteSpotlightStart = useSpotlightStore((s) => s.onRemoteSpotlightStart);
+  const onRemoteSpotlightStop = useSpotlightStore((s) => s.onRemoteSpotlightStop);
+  const spotlightStartSpotlight = useSpotlightStore((s) => s.startSpotlight);
+  const spotlightStopSpotlight = useSpotlightStore((s) => s.stopSpotlight);
 
   // Track if we're syncing from Yjs to avoid infinite loops
   const isSyncingFromYjsRef = useRef(false);
@@ -212,12 +226,68 @@ export function useCollaboration(options: UseCollaborationOptions = {}) {
     syncToYjs(newShapes, newConnectors);
   }, [isCollaborating, syncToYjs]);
 
+  // Track previous presenter to detect changes
+  const prevPresenterRef = useRef<string | null>(null);
+
+  // Memoize remote users array to prevent unnecessary re-renders
+  const remoteUsersArray = useMemo(() => Array.from(remoteUsers.values()), [remoteUsers]);
+
+  // Detect remote presenter and show follow request
+  useEffect(() => {
+    if (!isCollaborating) return;
+
+    // Find a remote user who is presenting
+    const presenter = remoteUsersArray.find((user) => user.isPresenting);
+    const currentPresenterId = presenter?.odUserId || null;
+
+    // Presenter changed
+    if (currentPresenterId !== prevPresenterRef.current) {
+      prevPresenterRef.current = currentPresenterId;
+
+      if (presenter) {
+        // Remote user started presenting
+        onRemoteSpotlightStart(
+          presenter.odUserId,
+          presenter.name,
+          presenter.color
+        );
+      } else {
+        // Presenter stopped
+        onRemoteSpotlightStop();
+      }
+    }
+  }, [isCollaborating, remoteUsersArray, onRemoteSpotlightStart, onRemoteSpotlightStop]);
+
+  // Follow presenter's viewport if following
+  useEffect(() => {
+    if (!isFollowing || !presenterId || !onViewportChange) return;
+
+    // Find the presenter
+    const presenter = remoteUsersArray.find((user) => user.odUserId === presenterId);
+
+    if (presenter?.viewport) {
+      onViewportChange(presenter.viewport);
+    }
+  }, [isFollowing, presenterId, remoteUsersArray, onViewportChange]);
+
+  // Spotlight actions
+  const handleStartSpotlight = useCallback(() => {
+    if (!localUser) return;
+    spotlightStartSpotlight(localUser.odUserId, localUser.name, localUser.color);
+    startPresenting();
+  }, [localUser, spotlightStartSpotlight, startPresenting]);
+
+  const handleStopSpotlight = useCallback(() => {
+    spotlightStopSpotlight();
+    stopPresenting();
+  }, [spotlightStopSpotlight, stopPresenting]);
+
   return {
     // State
     isCollaborating,
     connectionStatus,
     localUser,
-    remoteUsers: Array.from(remoteUsers.values()),
+    remoteUsers: remoteUsersArray,
 
     // Cursor actions
     updateCursor,
@@ -231,5 +301,9 @@ export function useCollaboration(options: UseCollaborationOptions = {}) {
 
     // Sync actions
     bulkSync,
+
+    // Spotlight actions
+    startSpotlight: handleStartSpotlight,
+    stopSpotlight: handleStopSpotlight,
   };
 }

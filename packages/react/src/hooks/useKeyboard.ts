@@ -396,6 +396,10 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
           if (modKey) {
             e.preventDefault();
             onSave?.();
+          } else if (e.shiftKey) {
+            // Shift+S: section tool
+            e.preventDefault();
+            setTool('section');
           } else {
             // S without modifier: sticky note tool
             e.preventDefault();

@@ -16,3 +16,6 @@ export type { MinimapProps } from './Minimap';
 
 // CommentPanel
 export { CommentPanel } from './CommentPanel';
+
+// SpotlightUI
+export { SpotlightUI } from './SpotlightUI';
