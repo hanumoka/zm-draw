@@ -906,6 +906,51 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         konvaShape.strokeWidth(3);
       }
 
+      // Check if any remote user has this shape selected
+      const remoteUserWithSelection = remoteUsers.find(user =>
+        user.selection && user.selection.includes(shape.id)
+      );
+
+      if (remoteUserWithSelection) {
+        // Add remote selection highlight (colored dashed border)
+        const highlightRect = new Konva.Rect({
+          x: -4,
+          y: -4,
+          width: shape.width + 8,
+          height: shape.height + 8,
+          stroke: remoteUserWithSelection.color,
+          strokeWidth: 2,
+          dash: [6, 3],
+          cornerRadius: (shape.cornerRadius ?? 0) + 2,
+          listening: false,
+        });
+        group.add(highlightRect);
+        highlightRect.moveToBottom();
+
+        // Add user name badge
+        const badgeWidth = remoteUserWithSelection.name.length * 6 + 12;
+        const badge = new Konva.Group({
+          x: -4,
+          y: -24,
+          listening: false,
+        });
+        badge.add(new Konva.Rect({
+          width: badgeWidth,
+          height: 18,
+          fill: remoteUserWithSelection.color,
+          cornerRadius: 3,
+        }));
+        badge.add(new Konva.Text({
+          x: 6,
+          y: 3,
+          text: remoteUserWithSelection.name,
+          fontSize: 11,
+          fill: '#ffffff',
+          fontFamily: 'sans-serif',
+        }));
+        group.add(badge);
+      }
+
       group.add(konvaShape);
 
       // Add text overlay for non-text shapes that have text content
@@ -1054,7 +1099,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     }
 
     layer.batchDraw();
-  }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides]);
+  }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides, remoteUsers]);
 
   // Add shape at position
   const addShape = useCallback((type: ShapeType, x: number, y: number, options?: { stampType?: StampType }) => {
