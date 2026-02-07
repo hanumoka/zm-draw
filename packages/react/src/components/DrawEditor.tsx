@@ -397,11 +397,10 @@ export const DrawEditor = forwardRef<DrawEditorHandle, DrawEditorProps>(
                 <Minimap
                   shapes={shapes}
                   connectors={connectors}
-                  viewport={viewport}
-                  canvasWidth={canvasSize.width}
-                  canvasHeight={canvasSize.height}
-                  onNavigate={(pos) => canvasRef.current?.setViewportPosition(pos)}
-                  theme={isDark ? 'dark' : 'light'}
+                  scale={viewport.scale}
+                  position={viewport.position}
+                  canvasSize={canvasSize}
+                  onViewportChange={(pos) => canvasRef.current?.setViewportPosition(pos)}
                 />
               </div>
             )}

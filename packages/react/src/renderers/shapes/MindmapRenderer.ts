@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import type { Shape } from '@zm-draw/core';
+import type { Shape, MindmapNode } from '@zm-draw/core';
 import type { ShapeRenderer, ShapeRendererContext } from '../ShapeRendererRegistry';
 
 export const MindmapRenderer: ShapeRenderer = {
@@ -47,7 +47,7 @@ export const MindmapRenderer: ShapeRenderer = {
         let minY = currentY;
         let maxY = currentY;
 
-        children.forEach((child) => {
+        children.forEach((child: MindmapNode) => {
           const childX = x + data.levelSpacing;
           const result = calculatePositions(child, childX, currentY, level + 1, y);
           minY = Math.min(minY, result.minY);
@@ -67,7 +67,7 @@ export const MindmapRenderer: ShapeRenderer = {
       // Draw connections first (behind nodes)
       positions.forEach((pos) => {
         const children = pos.node.children || [];
-        children.forEach((child) => {
+        children.forEach((child: MindmapNode) => {
           const childPos = positions.find((p) => p.node.id === child.id);
           if (childPos) {
             const parentWidth = Math.max(60, pos.node.text.length * 8 + nodePadding * 2);

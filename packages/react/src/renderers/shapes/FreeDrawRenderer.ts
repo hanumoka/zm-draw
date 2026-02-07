@@ -1,5 +1,5 @@
 import Konva from 'konva';
-import type { Shape } from '@zm-draw/core';
+import type { Shape, FreeDrawPoint } from '@zm-draw/core';
 import type { ShapeRenderer, ShapeRendererContext } from '../ShapeRendererRegistry';
 
 export const FreeDrawRenderer: ShapeRenderer = {
@@ -7,7 +7,7 @@ export const FreeDrawRenderer: ShapeRenderer = {
     // Freedraw path using Line with tension
     const points = shape.points || [];
     const flatPoints: number[] = [];
-    points.forEach((p) => {
+    points.forEach((p: FreeDrawPoint) => {
       flatPoints.push(p.x, p.y);
     });
     return new Konva.Line({

@@ -1,0 +1,187 @@
+/**
+ * @zm-draw/react Main Styles
+ *
+ * This file includes all CSS variables and base component styles.
+ * Import this file once at your application's entry point:
+ *
+ * ```tsx
+ * import '@zm-draw/react/styles.css';
+ * ```
+ */
+
+/* CSS Variables (Light & Dark themes) */
+@import './variables.css';
+
+/* ========================================
+   Base Component Styles
+   ======================================== */
+
+/* Canvas Container */
+.zm-draw-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: var(--zm-bg-canvas, #fafafa);
+  overflow: hidden;
+}
+
+/* Toolbar Base */
+.zm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--zm-spacing-sm, 8px);
+  padding: var(--zm-spacing-sm, 8px) var(--zm-spacing-md, 12px);
+  background-color: var(--zm-toolbar-bg, var(--zm-bg-primary, #ffffff));
+  border-radius: var(--zm-toolbar-radius, var(--zm-radius-lg, 12px));
+  box-shadow: var(--zm-toolbar-shadow, var(--zm-shadow-md));
+  border: 1px solid var(--zm-toolbar-border, var(--zm-border, #e5e5e5));
+}
+
+/* Tool Button Base */
+.zm-tool-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: var(--zm-radius-sm, 4px);
+  color: var(--zm-text-secondary, #6b6b6b);
+  cursor: pointer;
+  transition: all var(--zm-transition-fast, 0.1s ease);
+}
+
+.zm-tool-button:hover:not(:disabled) {
+  background-color: var(--zm-bg-hover, #f0f0f0);
+  color: var(--zm-text-primary, #1e1e1e);
+}
+
+.zm-tool-button:disabled {
+  color: var(--zm-text-muted, #999999);
+  cursor: not-allowed;
+}
+
+.zm-tool-button.active {
+  background-color: var(--zm-accent, #9747ff);
+  color: #ffffff;
+}
+
+.zm-tool-button.danger:hover:not(:disabled) {
+  background-color: var(--zm-danger-light, rgba(239, 68, 68, 0.1));
+  color: var(--zm-danger, #ef4444);
+}
+
+/* Tool Group */
+.zm-tool-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background-color: var(--zm-bg-secondary, #f5f5f5);
+  border-radius: var(--zm-radius-md, 8px);
+}
+
+/* Divider */
+.zm-divider {
+  width: 1px;
+  height: 20px;
+  background-color: var(--zm-border, #e5e5e5);
+  margin: 0 var(--zm-spacing-xs, 4px);
+}
+
+/* Panel Base */
+.zm-panel {
+  background-color: var(--zm-panel-bg, var(--zm-bg-primary, #ffffff));
+  border: 1px solid var(--zm-panel-border, var(--zm-border, #e5e5e5));
+}
+
+/* Input Base */
+.zm-input {
+  padding: var(--zm-spacing-xs, 4px) var(--zm-spacing-sm, 8px);
+  background-color: var(--zm-bg-secondary, #f5f5f5);
+  border: 1px solid var(--zm-border, #e5e5e5);
+  border-radius: var(--zm-radius-sm, 4px);
+  color: var(--zm-text-primary, #1e1e1e);
+  font-size: 12px;
+  transition: border-color var(--zm-transition-fast, 0.1s ease);
+}
+
+.zm-input:hover {
+  border-color: var(--zm-border-hover, #d4d4d4);
+}
+
+.zm-input:focus {
+  border-color: var(--zm-accent, #9747ff);
+  outline: none;
+}
+
+/* Dropdown Menu */
+.zm-dropdown-menu {
+  position: absolute;
+  padding: var(--zm-spacing-xs, 4px);
+  background-color: var(--zm-bg-primary, #ffffff);
+  border-radius: var(--zm-radius-lg, 12px);
+  box-shadow: var(--zm-shadow-lg, 0 8px 32px rgba(0, 0, 0, 0.16));
+  border: 1px solid var(--zm-border, #e5e5e5);
+  z-index: 1000;
+}
+
+.zm-dropdown-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--zm-spacing-sm, 8px);
+  width: 100%;
+  padding: var(--zm-spacing-sm, 8px) var(--zm-spacing-md, 12px);
+  background-color: transparent;
+  border: none;
+  border-radius: var(--zm-radius-sm, 4px);
+  color: var(--zm-text-secondary, #6b6b6b);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--zm-transition-fast, 0.1s ease);
+}
+
+.zm-dropdown-menu button:hover {
+  background-color: var(--zm-bg-hover, #f0f0f0);
+  color: var(--zm-text-primary, #1e1e1e);
+}
+
+/* Context Menu */
+.zm-context-menu {
+  display: flex;
+  align-items: center;
+  gap: var(--zm-spacing-xs, 4px);
+  padding: var(--zm-spacing-xs, 4px);
+  background-color: var(--zm-bg-primary, #ffffff);
+  border-radius: var(--zm-radius-md, 8px);
+  box-shadow: var(--zm-shadow-md, 0 4px 16px rgba(0, 0, 0, 0.12));
+  border: 1px solid var(--zm-border, #e5e5e5);
+}
+
+/* Minimap */
+.zm-minimap {
+  background-color: var(--zm-bg-primary, #ffffff);
+  border: 1px solid var(--zm-border, #e5e5e5);
+  border-radius: var(--zm-radius-md, 8px);
+  box-shadow: var(--zm-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.05));
+  overflow: hidden;
+}
+
+/* Empty State */
+.zm-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--zm-spacing-xl, 24px);
+  color: var(--zm-text-muted, #999999);
+  text-align: center;
+}
+
+/* Focus visible for accessibility */
+.zm-tool-button:focus-visible,
+.zm-input:focus-visible {
+  box-shadow: var(--zm-focus-ring);
+}

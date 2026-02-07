@@ -14,7 +14,11 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "baseUrl": ".",
+    "paths": {
+      "@zm-draw/core": ["../core/src"],
+      "@zm-draw/collaboration": ["../collaboration/src"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

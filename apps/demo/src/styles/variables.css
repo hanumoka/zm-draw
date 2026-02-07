@@ -1,0 +1,196 @@
+/**
+ * @zm-draw/react CSS Variables
+ *
+ * Import this file to use zm-draw with consistent theming:
+ *
+ * ```tsx
+ * import '@zm-draw/react/styles.css';
+ * import { DrawCanvas } from '@zm-draw/react';
+ * ```
+ *
+ * To customize, override the CSS variables in your own stylesheet:
+ *
+ * ```css
+ * :root {
+ *   --zm-accent: #3b82f6;
+ * }
+ * ```
+ *
+ * For dark mode, add the 'zm-dark' class to a parent element:
+ *
+ * ```html
+ * <div class="zm-dark">
+ *   <DrawCanvas />
+ * </div>
+ * ```
+ */
+
+/* ========================================
+   Light Theme (Default)
+   ======================================== */
+:root,
+.zm-light {
+  /* Backgrounds */
+  --zm-bg-primary: #ffffff;
+  --zm-bg-secondary: #f5f5f5;
+  --zm-bg-tertiary: #ebebeb;
+  --zm-bg-canvas: #fafafa;
+  --zm-bg-hover: #f0f0f0;
+
+  /* Borders */
+  --zm-border: #e5e5e5;
+  --zm-border-hover: #d4d4d4;
+
+  /* Text */
+  --zm-text-primary: #1e1e1e;
+  --zm-text-secondary: #6b6b6b;
+  --zm-text-muted: #999999;
+  --zm-text-tertiary: #b3b3b3;
+
+  /* Accent (FigJam Purple) */
+  --zm-accent: #9747ff;
+  --zm-accent-hover: #8338ec;
+  --zm-accent-light: rgba(151, 71, 255, 0.1);
+
+  /* Selection */
+  --zm-selection: #0d99ff;
+  --zm-selection-light: rgba(13, 153, 255, 0.15);
+
+  /* Status Colors */
+  --zm-danger: #ef4444;
+  --zm-danger-light: rgba(239, 68, 68, 0.1);
+  --zm-success: #22c55e;
+  --zm-success-light: rgba(34, 197, 94, 0.1);
+  --zm-warning: #f59e0b;
+  --zm-warning-light: rgba(245, 158, 11, 0.1);
+
+  /* Grid */
+  --zm-grid-dot: rgba(0, 0, 0, 0.1);
+  --zm-grid-line: rgba(0, 0, 0, 0.05);
+
+  /* Shadows */
+  --zm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --zm-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --zm-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
+
+  /* Border Radius */
+  --zm-radius-sm: 4px;
+  --zm-radius-md: 8px;
+  --zm-radius-lg: 12px;
+  --zm-radius-xl: 16px;
+
+  /* Spacing */
+  --zm-spacing-xs: 4px;
+  --zm-spacing-sm: 8px;
+  --zm-spacing-md: 12px;
+  --zm-spacing-lg: 16px;
+  --zm-spacing-xl: 24px;
+
+  /* Transitions */
+  --zm-transition-fast: 0.1s ease;
+  --zm-transition-normal: 0.15s ease;
+  --zm-transition-slow: 0.25s ease;
+
+  /* Focus Ring */
+  --zm-focus-ring: 0 0 0 2px var(--zm-accent-light), 0 0 0 4px var(--zm-accent);
+
+  /* Toolbar */
+  --zm-toolbar-bg: var(--zm-bg-primary);
+  --zm-toolbar-border: var(--zm-border);
+  --zm-toolbar-shadow: var(--zm-shadow-md);
+  --zm-toolbar-radius: var(--zm-radius-lg);
+
+  /* Panel */
+  --zm-panel-bg: var(--zm-bg-primary);
+  --zm-panel-border: var(--zm-border);
+}
+
+/* ========================================
+   Dark Theme
+   ======================================== */
+.zm-dark {
+  /* Backgrounds */
+  --zm-bg-primary: #1e1e1e;
+  --zm-bg-secondary: #2c2c2c;
+  --zm-bg-tertiary: #383838;
+  --zm-bg-canvas: #252525;
+  --zm-bg-hover: #3d3d3d;
+
+  /* Borders */
+  --zm-border: #3c3c3c;
+  --zm-border-hover: #5c5c5c;
+
+  /* Text */
+  --zm-text-primary: #ffffff;
+  --zm-text-secondary: #a0a0a0;
+  --zm-text-muted: #6b6b6b;
+  --zm-text-tertiary: #505050;
+
+  /* Accent */
+  --zm-accent: #a855f7;
+  --zm-accent-hover: #9333ea;
+  --zm-accent-light: rgba(168, 85, 247, 0.15);
+
+  /* Selection */
+  --zm-selection: #0d99ff;
+  --zm-selection-light: rgba(13, 153, 255, 0.2);
+
+  /* Status Colors */
+  --zm-danger: #f87171;
+  --zm-danger-light: rgba(248, 113, 113, 0.15);
+  --zm-success: #4ade80;
+  --zm-success-light: rgba(74, 222, 128, 0.15);
+  --zm-warning: #fbbf24;
+  --zm-warning-light: rgba(251, 191, 36, 0.15);
+
+  /* Grid */
+  --zm-grid-dot: rgba(255, 255, 255, 0.08);
+  --zm-grid-line: rgba(255, 255, 255, 0.04);
+
+  /* Shadows (darker in dark mode) */
+  --zm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --zm-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --zm-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ========================================
+   System Preference Support
+   ======================================== */
+@media (prefers-color-scheme: dark) {
+  .zm-system {
+    /* Backgrounds */
+    --zm-bg-primary: #1e1e1e;
+    --zm-bg-secondary: #2c2c2c;
+    --zm-bg-tertiary: #383838;
+    --zm-bg-canvas: #252525;
+    --zm-bg-hover: #3d3d3d;
+
+    /* Borders */
+    --zm-border: #3c3c3c;
+    --zm-border-hover: #5c5c5c;
+
+    /* Text */
+    --zm-text-primary: #ffffff;
+    --zm-text-secondary: #a0a0a0;
+    --zm-text-muted: #6b6b6b;
+    --zm-text-tertiary: #505050;
+
+    /* Accent */
+    --zm-accent: #a855f7;
+    --zm-accent-hover: #9333ea;
+    --zm-accent-light: rgba(168, 85, 247, 0.15);
+
+    /* Selection */
+    --zm-selection: #0d99ff;
+    --zm-selection-light: rgba(13, 153, 255, 0.2);
+
+    /* Grid */
+    --zm-grid-dot: rgba(255, 255, 255, 0.08);
+    --zm-grid-line: rgba(255, 255, 255, 0.04);
+
+    /* Shadows */
+    --zm-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --zm-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+    --zm-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+}

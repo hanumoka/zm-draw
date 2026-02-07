@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle, useMemo } from 'react';
 import Konva from 'konva';
-import type { Shape, ShapeType, Connector, FreeDrawPoint, StickyNoteColor, StampType, SectionColor, AlignType, DistributeType } from '../types';
+import type { Shape, ShapeType, Connector, FreeDrawPoint, StickyNoteColor, StampType, SectionColor, AlignType, DistributeType, TableCell, MindmapNode } from '../types';
 import { STICKY_COLORS, STAMP_EMOJIS, SECTION_COLORS } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { useCollaboration } from '../hooks/useCollaboration';
@@ -208,6 +208,13 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const [shapes, setShapes] = useState<Shape[]>(initialShapes);
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+
+  // Stable ref for onShapesChange to avoid calling parent setState during render
+  const onShapesChangeRef = useRef(onShapesChange);
+  onShapesChangeRef.current = onShapesChange;
+  const notifyShapesChange = useCallback((updated: Shape[]) => {
+    queueMicrotask(() => onShapesChangeRef.current?.(updated));
+  }, []);
 
   // Table context menu state
   const [tableContextMenu, setTableContextMenu] = useState<{
@@ -842,6 +849,12 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     setConnectors((prev) => [...prev, newConnector]);
   }, [connectors, connectorVariant]);
 
+  // Refs for connection point click handlers (avoid stale closures in useEffect)
+  const connectingFromRef = useRef(connectingFrom);
+  connectingFromRef.current = connectingFrom;
+  const addConnectorRef = useRef(addConnector);
+  addConnectorRef.current = addConnector;
+
   // Check if a shape is within the visible viewport (with padding for smooth scrolling)
   const isShapeInViewport = useCallback((shape: Shape): boolean => {
     const stage = stageRef.current;
@@ -955,7 +968,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           {
             const points = shape.points || [];
             const flatPoints: number[] = [];
-            points.forEach((p) => {
+            points.forEach((p: FreeDrawPoint) => {
               flatPoints.push(p.x, p.y);
             });
             konvaShape = new Konva.Line({
@@ -1162,7 +1175,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
                 let minY = currentY;
                 let maxY = currentY;
 
-                children.forEach((child) => {
+                children.forEach((child: MindmapNode) => {
                   const childX = x + data.levelSpacing;
                   const result = calculatePositions(child, childX, currentY, level + 1, y);
                   minY = Math.min(minY, result.minY);
@@ -1187,7 +1200,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
                 const parentNode = pos.node;
                 const children = parentNode.children || [];
 
-                children.forEach((child) => {
+                children.forEach((child: MindmapNode) => {
                   const childPos = positions.find((p) => p.node.id === child.id);
                   if (childPos) {
                     // Estimate node width
@@ -1833,7 +1846,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           const updated = prev.map((s) =>
             s.id === shape.id ? { ...s, x: newX, y: newY } : s
           );
-          onShapesChange?.(updated);
+          notifyShapesChange(updated);
           return updated;
         });
       });
@@ -1989,7 +2002,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     }
 
     layer.getLayer()?.batchDraw();
-  }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides, remoteUsers, getThreadForShape, openThread, isShapeInViewport]);
+  }, [shapes, selectedIds, selectionType, notifyShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides, remoteUsers, getThreadForShape, openThread, isShapeInViewport]);
 
   // Add shape at position
   const addShape = useCallback((type: ShapeType, x: number, y: number, options?: { stampType?: StampType; sectionColor?: SectionColor }) => {
@@ -2083,7 +2096,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     setShapes((prev) => {
       const updated = [...prev, newShape];
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
     setSelectedId(newShape.id);
@@ -2105,7 +2118,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       parallelogram: 'Parallelogram', database: 'Database', document: 'Document',
     };
     setAnnouncement(`${shapeNames[type] || type} added`);
-  }, [onShapesChange, snapToGridValue, currentStickyColor, currentStampType]);
+  }, [notifyShapesChange, snapToGridValue, currentStickyColor, currentStampType]);
 
   // Load image from src and cache it
   const loadImage = useCallback((src: string): Promise<HTMLImageElement> => {
@@ -2168,12 +2181,12 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     setShapes((prev) => {
       const updated = [...prev, newShape];
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
     setSelectedId(newShape.id);
     setTool('select');
-  }, [onShapesChange, snapToGridValue]);
+  }, [notifyShapesChange, snapToGridValue]);
 
   // Process dropped or pasted image file
   const processImageFile = useCallback(async (file: File, x: number, y: number) => {
@@ -2379,7 +2392,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       const count = selectedIds.length;
       setShapes((prev) => {
         const updated = prev.filter((s) => !selectedIds.includes(s.id));
-        onShapesChange?.(updated);
+        notifyShapesChange(updated);
         return updated;
       });
       // Delete connectors connected to any deleted shape
@@ -2391,15 +2404,15 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       clearSelection();
       setAnnouncement(`${count} shape${count > 1 ? 's' : ''} deleted`);
     }
-  }, [selectedIds, selectedId, selectionType, onShapesChange, clearSelection]);
+  }, [selectedIds, selectedId, selectionType, notifyShapesChange, clearSelection]);
 
   // Clear all shapes
   const clearAll = useCallback(() => {
     setShapes([]);
     setConnectors([]);
     setSelectedId(null);
-    onShapesChange?.([]);
-  }, [onShapesChange]);
+    notifyShapesChange([]);
+  }, [notifyShapesChange]);
 
   // Tidy up selected shapes
   const handleTidyUp = useCallback((layout: TidyUpLayout) => {
@@ -2415,13 +2428,13 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     // Update shapes with new positions
     setShapes((prev) => {
       const updated = prev.map((shape) => {
-        const tidied = tidiedShapes.find((t) => t.id === shape.id);
+        const tidied = tidiedShapes.find((t: Shape) => t.id === shape.id);
         return tidied || shape;
       });
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [selectedIds, shapes, onShapesChange]);
+  }, [selectedIds, shapes, notifyShapesChange]);
 
   // Get shape center position
   const getShapeCenter = useCallback((shape: Shape) => {
@@ -2691,20 +2704,20 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       const updated = prev.map((s) =>
         s.id === id ? { ...s, text } : s
       );
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
     setEditingId(null);
-  }, [onShapesChange]);
+  }, [notifyShapesChange]);
 
   // Update table cell text
   const updateCellText = useCallback((shapeId: string, row: number, col: number, text: string) => {
     setShapes((prev) => {
       const updated = prev.map((s) => {
         if (s.id !== shapeId || !s.tableData) return s;
-        const newCells = s.tableData.cells.map((r, ri) =>
+        const newCells = s.tableData.cells.map((r: TableCell[], ri: number) =>
           ri === row
-            ? r.map((c, ci) => (ci === col ? { ...c, text } : c))
+            ? r.map((c: TableCell, ci: number) => (ci === col ? { ...c, text } : c))
             : r
         );
         return {
@@ -2712,11 +2725,11 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           tableData: { ...s.tableData, cells: newCells },
         };
       });
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
     setEditingCell(null);
-  }, [onShapesChange, setEditingCell]);
+  }, [notifyShapesChange, setEditingCell]);
 
   // Add row to table
   const addTableRow = useCallback((shapeId: string, afterRow?: number) => {
@@ -2746,10 +2759,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           },
         };
       });
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [onShapesChange]);
+  }, [notifyShapesChange]);
 
   // Delete row from table
   const deleteTableRow = useCallback((shapeId: string, rowIndex: number) => {
@@ -2757,8 +2770,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       const updated = prev.map((s) => {
         if (s.id !== shapeId || !s.tableData || s.tableData.rows <= 1) return s;
         const deletedRowHeight = s.tableData.rowHeights[rowIndex] || 40;
-        const newCells = s.tableData.cells.filter((_, i) => i !== rowIndex);
-        const newRowHeights = s.tableData.rowHeights.filter((_, i) => i !== rowIndex);
+        const newCells = s.tableData.cells.filter((_: TableCell[], i: number) => i !== rowIndex);
+        const newRowHeights = s.tableData.rowHeights.filter((_: number, i: number) => i !== rowIndex);
         return {
           ...s,
           height: s.height - deletedRowHeight,
@@ -2770,10 +2783,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           },
         };
       });
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [onShapesChange]);
+  }, [notifyShapesChange]);
 
   // Add column to table
   const addTableColumn = useCallback((shapeId: string, afterCol?: number) => {
@@ -2781,7 +2794,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       const updated = prev.map((s) => {
         if (s.id !== shapeId || !s.tableData) return s;
         const insertIndex = afterCol !== undefined ? afterCol + 1 : s.tableData.cols;
-        const newCells = s.tableData.cells.map((row) => [
+        const newCells = s.tableData.cells.map((row: TableCell[]) => [
           ...row.slice(0, insertIndex),
           { text: '' },
           ...row.slice(insertIndex),
@@ -2802,10 +2815,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           },
         };
       });
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [onShapesChange]);
+  }, [notifyShapesChange]);
 
   // Delete column from table
   const deleteTableColumn = useCallback((shapeId: string, colIndex: number) => {
@@ -2813,8 +2826,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       const updated = prev.map((s) => {
         if (s.id !== shapeId || !s.tableData || s.tableData.cols <= 1) return s;
         const deletedColWidth = s.tableData.colWidths[colIndex] || 100;
-        const newCells = s.tableData.cells.map((row) => row.filter((_, i) => i !== colIndex));
-        const newColWidths = s.tableData.colWidths.filter((_, i) => i !== colIndex);
+        const newCells = s.tableData.cells.map((row: TableCell[]) => row.filter((_: TableCell, i: number) => i !== colIndex));
+        const newColWidths = s.tableData.colWidths.filter((_: number, i: number) => i !== colIndex);
         return {
           ...s,
           width: s.width - deletedColWidth,
@@ -2826,10 +2839,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           },
         };
       });
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [onShapesChange]);
+  }, [notifyShapesChange]);
 
   // Toggle header row style
   const toggleTableHeaderRow = useCallback((shapeId: string) => {
@@ -2844,19 +2857,19 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           },
         };
       });
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [onShapesChange]);
+  }, [notifyShapesChange]);
 
   // Set cell background color
   const setCellBackground = useCallback((shapeId: string, row: number, col: number, color: string) => {
     setShapes((prev) => {
       const updated = prev.map((s) => {
         if (s.id !== shapeId || !s.tableData) return s;
-        const newCells = s.tableData.cells.map((r, ri) =>
+        const newCells = s.tableData.cells.map((r: TableCell[], ri: number) =>
           ri === row
-            ? r.map((c, ci) => (ci === col ? { ...c, fill: color } : c))
+            ? r.map((c: TableCell, ci: number) => (ci === col ? { ...c, fill: color } : c))
             : r
         );
         return {
@@ -2864,10 +2877,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           tableData: { ...s.tableData, cells: newCells },
         };
       });
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [onShapesChange]);
+  }, [notifyShapesChange]);
 
   // Get editing shape position for overlay
   const getEditingShape = useCallback(() => {
@@ -2914,12 +2927,12 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     setShapes((prev) => {
       const updated = [...prev, newShape];
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
     setSelectedId(newShape.id);
     pasteOffsetRef.current += 20;
-  }, [onShapesChange]);
+  }, [notifyShapesChange]);
 
   // Duplicate selected shape
   const duplicateSelected = useCallback(() => {
@@ -2936,11 +2949,11 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     setShapes((prev) => {
       const updated = [...prev, newShape];
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
     setSelectedId(newShape.id);
-  }, [selectedId, shapes, onShapesChange]);
+  }, [selectedId, shapes, notifyShapesChange]);
 
   // Move selected shape with arrow keys
   const moveSelected = useCallback((dx: number, dy: number) => {
@@ -2950,10 +2963,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       const updated = prev.map((s) =>
         s.id === selectedId ? { ...s, x: s.x + dx, y: s.y + dy } : s
       );
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [selectedId, onShapesChange]);
+  }, [selectedId, notifyShapesChange]);
 
   // Update shape properties (for external use via ref)
   const updateShape = useCallback((id: string, updates: Partial<Shape>) => {
@@ -2961,10 +2974,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       const updated = prev.map((s) =>
         s.id === id ? { ...s, ...updates } : s
       );
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [onShapesChange]);
+  }, [notifyShapesChange]);
 
   // Update connector properties (for external use via ref)
   const updateConnector = useCallback((id: string, updates: Partial<Connector>) => {
@@ -3017,10 +3030,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     setShapes(prev => {
       const updated = prev.map(s => updates[s.id] ? { ...s, ...updates[s.id] } : s);
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [selectedIds, shapes, onShapesChange]);
+  }, [selectedIds, shapes, notifyShapesChange]);
 
   // Distribute selected shapes evenly
   const distributeShapes = useCallback((type: DistributeType) => {
@@ -3065,10 +3078,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     setShapes(prev => {
       const updated = prev.map(s => updates[s.id] ? { ...s, ...updates[s.id] } : s);
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [selectedIds, shapes, onShapesChange]);
+  }, [selectedIds, shapes, notifyShapesChange]);
 
   // Group selected shapes
   const groupSelected = useCallback(() => {
@@ -3079,10 +3092,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       const updated = prev.map(s =>
         selectedIds.includes(s.id) ? { ...s, groupId } : s
       );
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [selectedIds, onShapesChange]);
+  }, [selectedIds, notifyShapesChange]);
 
   // Ungroup selected shapes
   const ungroupSelected = useCallback(() => {
@@ -3098,10 +3111,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       const updated = prev.map(s =>
         s.groupId && groupIds.has(s.groupId) ? { ...s, groupId: undefined } : s
       );
-      onShapesChange?.(updated);
+      notifyShapesChange(updated);
       return updated;
     });
-  }, [selectedIds, shapes, onShapesChange]);
+  }, [selectedIds, shapes, notifyShapesChange]);
 
   // Export canvas to PNG
   const exportToPNG = useCallback((filename: string = 'canvas.png') => {
@@ -3343,7 +3356,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
                 }
                 let currentY = y - ((children.length - 1) * (nodeHeight + data.nodeSpacing)) / 2;
                 let minY = currentY, maxY = currentY;
-                children.forEach((child) => {
+                children.forEach((child: MindmapNode) => {
                   const result = calculatePositions(child, x + data.levelSpacing, currentY, level + 1);
                   minY = Math.min(minY, result.minY);
                   maxY = Math.max(maxY, result.maxY);
@@ -3357,7 +3370,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
               // Draw connections
               positions.forEach((pos) => {
-                (pos.node.children || []).forEach((child) => {
+                (pos.node.children || []).forEach((child: MindmapNode) => {
                   const childPos = positions.find((p) => p.node.id === child.id);
                   if (childPos) {
                     const parentWidth = Math.max(60, pos.node.text.length * 8 + nodePadding * 2);
@@ -3690,7 +3703,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     getShapes: () => shapes,
     setShapes: (newShapes: Shape[]) => {
       setShapes(newShapes);
-      onShapesChange?.(newShapes);
+      notifyShapesChange(newShapes);
     },
     getSelectedId: () => selectedId,
     getViewport: () => ({
@@ -3719,9 +3732,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     loadFromJSON: (data: { shapes: Shape[]; connectors: Connector[] }) => {
       setShapes(data.shapes || []);
       setConnectors(data.connectors || []);
-      onShapesChange?.(data.shapes || []);
+      notifyShapesChange(data.shapes || []);
     },
-  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, onShapesChange, alignShapes, distributeShapes, groupSelected, ungroupSelected, exportToPNG, exportToSVG, setZoom, zoomToFit, zoomTo100, setViewportPosition, canvasSize]);
+  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, notifyShapesChange, alignShapes, distributeShapes, groupSelected, ungroupSelected, exportToPNG, exportToSVG, setZoom, zoomToFit, zoomTo100, setViewportPosition, canvasSize]);
 
   // Handle escape key
   const handleEscape = useCallback(() => {
@@ -3899,7 +3912,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
           }
           return s;
         });
-        onShapesChange?.(updated);
+        notifyShapesChange(updated);
         return updated;
       });
     });
@@ -4054,11 +4067,23 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         group.getLayer()?.batchDraw();
       });
 
+      // Handle click on connection point to create connector
+      circle.on('click tap', (e) => {
+        e.cancelBubble = true;
+        const currentConnectingFrom = connectingFromRef.current;
+        if (!currentConnectingFrom) {
+          setConnectingFrom(shape.id);
+        } else if (currentConnectingFrom !== shape.id) {
+          addConnectorRef.current(currentConnectingFrom, shape.id);
+          setConnectingFrom(null);
+        }
+      });
+
       group.add(circle);
     });
 
     group.getLayer()?.batchDraw();
-  }, [tool, hoveredShapeId, shapes, getConnectionPoints]);
+  }, [tool, hoveredShapeId, shapes, getConnectionPoints, setConnectingFrom]);
 
   // Clear hovered shape when tool changes
   useEffect(() => {
@@ -4245,7 +4270,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             // Delete the freedraw shape
             setShapes(prev => {
               const updated = prev.filter(s => s.id !== clickedShape.id);
-              onShapesChange?.(updated);
+              notifyShapesChange(updated);
               return updated;
             });
           }
@@ -4370,7 +4395,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       // Add shape
       setShapes(prev => {
         const updated = [...prev, newShape];
-        onShapesChange?.(updated);
+        notifyShapesChange(updated);
         return updated;
       });
 
@@ -4386,7 +4411,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       stage.off('mousemove touchmove', handleDrawMove);
       stage.off('mouseup touchend', handleDrawEnd);
     };
-  }, [tool, isPanning, isDrawing, setIsDrawing, currentStrokeColor, shapes, onShapesChange]);
+  }, [tool, isPanning, isDrawing, setIsDrawing, currentStrokeColor, shapes, notifyShapesChange]);
 
   // Marquee selection handlers
   useEffect(() => {

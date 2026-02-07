@@ -22,7 +22,7 @@
   "scripts": {
     "build": "tsdown && npm run copy-styles",
     "copy-styles": "node --input-type=module -e \"import fs from 'fs';fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('src/styles/index.css','dist/styles.css');fs.copyFileSync('src/styles/variables.css','dist/variables.css');console.log('Copied CSS files to dist/')\"",
-    "dev": "tsdown --watch",
+    "dev": "npm run copy-styles && tsdown --watch",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist"
   },

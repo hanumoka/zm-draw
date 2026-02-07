@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback } from 'react';
+import type { Shape, TableCell } from '../types';
 import { useEditorStore } from '../stores/editorStore';
 
 interface UseTableOperationsOptions {
-  onShapesChange?: (shapes: import('@zm-draw/core').Shape[]) => void;
+  onShapesChange?: (shapes: Shape[]) => void;
 }
 
 /**
@@ -28,8 +29,8 @@ export function useTableOperations(options: UseTableOperationsOptions = {}) {
   const updateCellText = useCallback((shapeId: string, row: number, col: number, text: string) => {
     const updated = shapes.map((s) => {
       if (s.id !== shapeId || !s.tableData) return s;
-      const newCells = s.tableData.cells.map((r, ri) =>
-        ri === row ? r.map((c, ci) => (ci === col ? { ...c, text } : c)) : r
+      const newCells = s.tableData.cells.map((r: TableCell[], ri: number) =>
+        ri === row ? r.map((c: TableCell, ci: number) => (ci === col ? { ...c, text } : c)) : r
       );
       return { ...s, tableData: { ...s.tableData, cells: newCells } };
     });
@@ -67,8 +68,8 @@ export function useTableOperations(options: UseTableOperationsOptions = {}) {
     const updated = shapes.map((s) => {
       if (s.id !== shapeId || !s.tableData || s.tableData.rows <= 1) return s;
       const deletedRowHeight = s.tableData.rowHeights[rowIndex] || 40;
-      const newCells = s.tableData.cells.filter((_, i) => i !== rowIndex);
-      const newRowHeights = s.tableData.rowHeights.filter((_, i) => i !== rowIndex);
+      const newCells = s.tableData.cells.filter((_: TableCell[], i: number) => i !== rowIndex);
+      const newRowHeights = s.tableData.rowHeights.filter((_: number, i: number) => i !== rowIndex);
       return {
         ...s,
         height: s.height - deletedRowHeight,
@@ -83,7 +84,7 @@ export function useTableOperations(options: UseTableOperationsOptions = {}) {
     const updated = shapes.map((s) => {
       if (s.id !== shapeId || !s.tableData) return s;
       const insertIndex = afterCol !== undefined ? afterCol + 1 : s.tableData.cols;
-      const newCells = s.tableData.cells.map((row) => [
+      const newCells = s.tableData.cells.map((row: TableCell[]) => [
         ...row.slice(0, insertIndex),
         { text: '' },
         ...row.slice(insertIndex),
@@ -107,8 +108,8 @@ export function useTableOperations(options: UseTableOperationsOptions = {}) {
     const updated = shapes.map((s) => {
       if (s.id !== shapeId || !s.tableData || s.tableData.cols <= 1) return s;
       const deletedColWidth = s.tableData.colWidths[colIndex] || 100;
-      const newCells = s.tableData.cells.map((row) => row.filter((_, i) => i !== colIndex));
-      const newColWidths = s.tableData.colWidths.filter((_, i) => i !== colIndex);
+      const newCells = s.tableData.cells.map((row: TableCell[]) => row.filter((_: TableCell, i: number) => i !== colIndex));
+      const newColWidths = s.tableData.colWidths.filter((_: number, i: number) => i !== colIndex);
       return {
         ...s,
         width: s.width - deletedColWidth,
@@ -131,8 +132,8 @@ export function useTableOperations(options: UseTableOperationsOptions = {}) {
   const setCellBackground = useCallback((shapeId: string, row: number, col: number, color: string) => {
     const updated = shapes.map((s) => {
       if (s.id !== shapeId || !s.tableData) return s;
-      const newCells = s.tableData.cells.map((r, ri) =>
-        ri === row ? r.map((c, ci) => (ci === col ? { ...c, fill: color } : c)) : r
+      const newCells = s.tableData.cells.map((r: TableCell[], ri: number) =>
+        ri === row ? r.map((c: TableCell, ci: number) => (ci === col ? { ...c, fill: color } : c)) : r
       );
       return { ...s, tableData: { ...s.tableData, cells: newCells } };
     });
