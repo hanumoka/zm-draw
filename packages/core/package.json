@@ -1,7 +1,7 @@
 {
   "name": "@zm-draw/core",
   "version": "0.1.0",
-  "description": "Core shapes and utilities for zm-draw diagram editor",
+  "description": "Core types, constants, and utilities for zm-draw diagram editor",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -17,26 +17,19 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "tsdown",
+    "dev": "tsdown --watch",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
-  "dependencies": {
-    "konva": "^10.0.0"
-  },
   "devDependencies": {
-    "tsup": "^8.3.0",
+    "tsdown": "^0.20.3",
     "typescript": "^5.7.0"
   },
-  "peerDependencies": {
-    "konva": "^10.0.0"
-  },
   "keywords": [
-    "konva",
     "diagram",
-    "erd",
-    "flowchart",
-    "canvas"
+    "types",
+    "canvas",
+    "whiteboard"
   ]
 }

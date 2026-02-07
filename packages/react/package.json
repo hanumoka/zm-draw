@@ -20,18 +20,18 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup && npm run copy-styles",
-    "copy-styles": "node -e \"const fs=require('fs');const path=require('path');fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('src/styles/index.css','dist/styles.css');fs.copyFileSync('src/styles/variables.css','dist/variables.css');console.log('Copied CSS files to dist/')\"",
-    "dev": "tsup --watch",
+    "build": "tsdown && npm run copy-styles",
+    "copy-styles": "node --input-type=module -e \"import fs from 'fs';fs.mkdirSync('dist',{recursive:true});fs.copyFileSync('src/styles/index.css','dist/styles.css');fs.copyFileSync('src/styles/variables.css','dist/variables.css');console.log('Copied CSS files to dist/')\"",
+    "dev": "tsdown --watch",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-tooltip": "^1.1.8",
     "@zm-draw/core": "workspace:*",
     "konva": "^10.0.0",
-    "y-indexeddb": "^9.0.12",
-    "y-websocket": "^3.0.0",
-    "yjs": "^13.6.29",
+    "react-colorful": "^5.6.1",
     "zustand": "^5.0.10"
   },
   "devDependencies": {
@@ -39,12 +39,15 @@
     "@types/react-dom": "^19",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tsup": "^8.3.0",
+    "tsdown": "^0.20.3",
     "typescript": "^5.7.0"
   },
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
+  },
+  "optionalDependencies": {
+    "@zm-draw/collaboration": "workspace:*"
   },
   "keywords": [
     "react",

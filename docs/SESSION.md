@@ -1,111 +1,66 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-01-29 (Phase 15-17 완료)
+> 최종 업데이트: 2026-02-07 (구조 재설계 Phase A-G 완료)
 
 ---
 
 ## 현재 상태
 
-**Phase**: **Phase 17 완료** ✅ (모든 미구현 기능 완료)
-**목표**: FigJam 스타일 실시간 협업 화이트보드
-**진행률**: Phase 1-17 완료
+**Phase**: **구조 재설계 Phase A-G 모두 완료** ✅
+**목표**: 7가지 구조적 문제 해결 (A-G Phase)
+**진행률**: 전체 완료
 
-### 마지막 작업 (2026-01-29)
+### 완료된 작업 (2026-02-07)
 
-- **Phase 15: Mindmap 도형** ✅ 완료
-  - MindmapNode, MindmapData 타입 추가
-  - defaultMindmapProps 추가
-  - Konva 렌더링 구현 (노드 + 연결선)
-  - SVG export 지원
-  - 데모 페이지 버튼 추가
+- **Phase A: @zm-draw/core 재설계** ✅ 완료
+  - 타입/상수/유틸을 core로 통합 (~1,100줄)
+  - zero-dependency 패키지
 
-- **Phase 9.2: Link Preview/Embed** ✅ 완료
-  - EmbedData 타입 추가
-  - 'embed' ShapeType 추가
-  - defaultEmbedProps 추가
-  - Konva 렌더링 구현 (카드 스타일)
-  - SVG export 지원
-  - 데모 페이지 버튼 추가
+- **Phase B: Shape Renderer 플러그인 아키텍처** ✅ 완료
+  - 28종 도형 렌더러를 개별 파일로 분리
+  - ShapeRendererRegistry + renderShape 디스패처
 
-- **Phase 16: Template System** ✅ 완료
-  - Template, TemplateCategory 타입 추가
-  - templateStore.ts 생성 (6개 built-in 템플릿)
-    - Blank Canvas, Brainstorm Session, Meeting Agenda
-    - Retrospective, Basic Flowchart, Kanban Board
-  - DrawCanvasHandle에 loadFromJSON, setConnectors 메서드 추가
-  - 데모 페이지에 템플릿 picker UI 추가
-  - CSS 스타일 추가
+- **Phase C: 훅 추출 + 스토어 통합** ✅ 완료
+  - editorStore 생성 (canvas+selection+tool+viewport 통합)
+  - 13개 새 훅 추출
 
-- **Phase 17: Performance/Accessibility** ✅ 완료
-  - **성능 최적화**: Viewport culling (뷰포트 외부 도형 렌더링 스킵)
-  - **접근성**:
-    - ARIA 속성 (role, aria-label, aria-describedby)
-    - tabIndex={0} 추가
-    - 스크린 리더 안내 텍스트 (시각적으로 숨김)
-    - ARIA live region 추가
-    - 도형 추가/삭제 시 스크린 리더 발표
+- **Phase D: @zm-draw/collaboration 분리** ✅ 완료
+  - @zm-draw/collaboration 패키지 생성 (19.9KB)
+  - react에서 yjs 의존성 제거
 
-### 수정 파일
+- **Phase E: UI 컴포넌트 + DrawEditor 조합** ✅ 완료
+  - ColorPicker, Tooltip, PanelResizer → 라이브러리로 이동
+  - `<DrawEditor />` 조합 컴포넌트 생성 (~320줄)
 
-- `packages/react/src/types.ts`: MindmapData, EmbedData, Template 타입
-- `packages/react/src/stores/canvasStore.ts`: defaultMindmapProps, defaultEmbedProps
-- `packages/react/src/stores/templateStore.ts`: (신규) 템플릿 스토어
-- `packages/react/src/stores/index.ts`: 새 export 추가
-- `packages/react/src/components/DrawCanvas.tsx`:
-  - Mindmap, Embed 렌더링
-  - loadFromJSON, setConnectors 메서드
-  - Viewport culling
-  - ARIA 접근성
-- `apps/demo/src/app/page.tsx`: Mindmap, Embed, Template picker UI
-- `apps/demo/src/app/globals.css`: 템플릿 picker 스타일
+- **Phase F: 빌드/프레임워크 업그레이드** ✅ 완료
+  - tsup → tsdown 마이그레이션
+  - Next.js 16.1.6 + React 19.2.4 업그레이드
+  - pnpm 10 업그레이드는 MSYS2 환경 호환성 이슈로 보류
+
+- **Phase G: Konva 레이어 통합** ✅ 완료
+  - 9개 → 5개 레이어 통합
+  - staticLayer (bg + grid, listening: false)
+  - contentLayer (connectors + shapes + connectionPoints, listening: true)
+  - selectionLayer (transformer + marquee, listening: true)
+  - overlayLayer (guides + freedraw, listening: false)
+  - cursorLayer (remote cursors, listening: false)
+  - 기존 코드 호환을 위해 Konva.Group 사용 (ref 이름 유지)
 
 ---
 
-## 완료된 기능
+## 빌드 상태
 
-### 기본 기능
-- [x] 캔버스 (Konva.js)
-- [x] 팬/줌
-- [x] 도형 생성/편집/삭제
-- [x] 커넥터 (4종)
-- [x] 텍스트 편집
-- [x] Undo/Redo
-- [x] Copy/Paste
-- [x] Save/Load (JSON)
-- [x] PNG/SVG Export
+```bash
+pnpm build --filter @zm-draw/core --filter @zm-draw/collaboration --filter @zm-draw/react  # ✅ 성공
+```
 
-### 도형 (23종)
-- [x] Basic: Rectangle, Rounded Rectangle, Ellipse, Diamond, Triangle, Pentagon, Hexagon, Star, Cross
-- [x] Flowchart: Parallelogram, Database, Document
-- [x] FigJam: Sticky Note, Section, Stamp, Freedraw
-- [x] Advanced: Table (셀 편집), Mindmap, Link Embed
-
-### 협업
-- [x] Yjs 기반 실시간 동기화
-- [x] 커서 공유
-- [x] 댓글 시스템
-- [x] 스포트라이트
-
-### UI/UX
-- [x] FigJam 스타일 UI
-- [x] 다크/라이트 모드
-- [x] Minimap
-- [x] 템플릿 시스템
-
-### 접근성
-- [x] ARIA labels
-- [x] 스크린 리더 지원
-- [x] 키보드 네비게이션
+### 번들 크기
+| 패키지 | 크기 | Gzip |
+|--------|------|------|
+| @zm-draw/core | 37.7 KB | 8.2 KB |
+| @zm-draw/collaboration | 19.9 KB | 4.6 KB |
+| @zm-draw/react | 305.5 KB | 59.4 KB |
 
 ---
 
-## 다음 단계 (선택적)
-
-- 국제화 (i18n)
-- 대규모 보드 테스트 (1000+ 도형)
-- WebWorker로 Yjs 처리 오프로드
-- 고대비 모드
-
----
-
-*마지막 업데이트: 2026-01-29*
+*마지막 업데이트: 2026-02-07*

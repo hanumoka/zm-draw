@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState, forwardRef, useImperativeHandle, useMemo } from 'react';
 import Konva from 'konva';
-import type { Shape, ShapeType, Connector, FreeDrawPoint, StickyNoteColor, StampType, SectionColor } from '../types';
+import type { Shape, ShapeType, Connector, FreeDrawPoint, StickyNoteColor, StampType, SectionColor, AlignType, DistributeType } from '../types';
 import { STICKY_COLORS, STAMP_EMOJIS, SECTION_COLORS } from '../types';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { useCollaboration } from '../hooks/useCollaboration';
@@ -48,11 +48,7 @@ export interface ViewportInfo {
   position: { x: number; y: number };
 }
 
-/** Alignment type */
-export type AlignType = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom';
-
-/** Distribution type */
-export type DistributeType = 'horizontal' | 'vertical';
+// AlignType and DistributeType imported from @zm-draw/core via ../types
 
 /** Imperative handle for DrawCanvas */
 export interface DrawCanvasHandle {
@@ -197,9 +193,17 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
-  const shapesLayerRef = useRef<Konva.Layer | null>(null);
-  const bgLayerRef = useRef<Konva.Layer | null>(null);
-  const gridLayerRef = useRef<Konva.Layer | null>(null);
+  // Consolidated layers (Phase G: 9→5 layers)
+  const staticLayerRef = useRef<Konva.Layer | null>(null);   // bg + grid (listening: false)
+  const contentLayerRef = useRef<Konva.Layer | null>(null);  // connectors + shapes + connectionPoints (listening: true)
+  const overlayLayerRef = useRef<Konva.Layer | null>(null);  // guides + freedraw (listening: false)
+  // selectionLayerRef declared below (listening: true)
+  // cursorsLayerRef declared below (listening: false)
+
+  // Groups within consolidated layers (keep old names for minimal code changes)
+  const shapesLayerRef = useRef<Konva.Group | null>(null);
+  const bgLayerRef = useRef<Konva.Group | null>(null);
+  const gridLayerRef = useRef<Konva.Group | null>(null);
 
   const [shapes, setShapes] = useState<Shape[]>(initialShapes);
   const [connectors, setConnectors] = useState<Connector[]>([]);
@@ -352,7 +356,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     }
   }, [selectedId, addComment, openThread]);
 
-  const connectorsLayerRef = useRef<Konva.Layer | null>(null);
+  const connectorsLayerRef = useRef<Konva.Group | null>(null);
   const selectionLayerRef = useRef<Konva.Layer | null>(null);
   const transformerRef = useRef<Konva.Transformer | null>(null);
   const marqueeRectRef = useRef<Konva.Rect | null>(null);
@@ -365,16 +369,16 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const marqueeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Freedraw state
-  const drawingLayerRef = useRef<Konva.Layer | null>(null);
+  const drawingLayerRef = useRef<Konva.Group | null>(null);
   const currentDrawingRef = useRef<FreeDrawPoint[]>([]);
   const currentDrawingLineRef = useRef<Konva.Line | null>(null);
 
   // Connection points layer ref
-  const connectionPointsLayerRef = useRef<Konva.Layer | null>(null);
+  const connectionPointsLayerRef = useRef<Konva.Group | null>(null);
   const [hoveredShapeId, setHoveredShapeId] = useState<string | null>(null);
 
   // Smart guides layer ref and state
-  const guidesLayerRef = useRef<Konva.Layer | null>(null);
+  const guidesLayerRef = useRef<Konva.Group | null>(null);
   const [activeGuides, setActiveGuides] = useState<{ horizontal: number[]; vertical: number[] }>({ horizontal: [], vertical: [] });
 
   // Smart guides threshold (in pixels)
@@ -499,13 +503,13 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
   // Render smart guide lines
   const renderGuideLines = useCallback(() => {
-    const layer = guidesLayerRef.current;
-    if (!layer) return;
+    const group = guidesLayerRef.current;
+    if (!group) return;
 
-    layer.destroyChildren();
+    group.destroyChildren();
 
     if (!showSmartGuides || (activeGuides.horizontal.length === 0 && activeGuides.vertical.length === 0)) {
-      layer.batchDraw();
+      group.getLayer()?.batchDraw();
       return;
     }
 
@@ -533,7 +537,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         strokeWidth: 1 / viewportScale,
         dash: [4 / viewportScale, 4 / viewportScale],
       });
-      layer.add(line);
+      group.add(line);
     });
 
     // Draw vertical guide lines
@@ -544,10 +548,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         strokeWidth: 1 / viewportScale,
         dash: [4 / viewportScale, 4 / viewportScale],
       });
-      layer.add(line);
+      group.add(line);
     });
 
-    layer.batchDraw();
+    group.getLayer()?.batchDraw();
   }, [showSmartGuides, activeGuides]);
 
   // Update guide lines when activeGuides change
@@ -730,7 +734,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     gridShapeRef.current = gridShape;
     layer.add(gridShape);
-    layer.batchDraw();
+    layer.getLayer()?.batchDraw();
   }, [backgroundColor, gridSize]);
 
   // Update background for infinite canvas
@@ -754,7 +758,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       listening: false,
     }));
 
-    layer.batchDraw();
+    layer.getLayer()?.batchDraw();
   }, [backgroundColor]);
 
   // Update viewport (background + grid)
@@ -1984,7 +1988,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       transformer.nodes([]);
     }
 
-    layer.batchDraw();
+    layer.getLayer()?.batchDraw();
   }, [shapes, selectedIds, selectionType, onShapesChange, tool, connectingFrom, addConnector, editingId, toggleSelection, snapToGridValue, snapToGrid, showSmartGuides, snapToGuides, calculateSmartGuides, remoteUsers, getThreadForShape, openThread, isShapeInViewport]);
 
   // Add shape at position
@@ -2678,7 +2682,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       }
     });
 
-    layer.batchDraw();
+    layer.getLayer()?.batchDraw();
   }, [connectors, shapes, getShapeCenter, getShapeEdgePoint, getConnectionPoint, getOrthogonalPath, getLineDash, selectedId, selectionType, selectConnector]);
 
   // Update shape text
@@ -3139,24 +3143,24 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     stage.scale({ x: 1, y: 1 });
     stage.position({ x: -minX, y: -minY });
 
-    // Hide grid and background layers for export
-    const gridLayer = gridLayerRef.current;
-    const bgLayer = bgLayerRef.current;
-    const guidesLayer = guidesLayerRef.current;
+    // Hide non-content layers for export (keep only shapes + connectors)
+    const staticLayer = staticLayerRef.current;
+    const overlayLayer = overlayLayerRef.current;
     const selectionLayer = selectionLayerRef.current;
-    const connectionPointsLayer = connectionPointsLayerRef.current;
+    const cursorLayer = cursorsLayerRef.current;
+    const connectionPointsGroup = connectionPointsLayerRef.current;
 
-    const gridVisible = gridLayer?.visible() ?? false;
-    const bgVisible = bgLayer?.visible() ?? false;
-    const guidesVisible = guidesLayer?.visible() ?? false;
+    const staticVisible = staticLayer?.visible() ?? false;
+    const overlayVisible = overlayLayer?.visible() ?? false;
     const selectionVisible = selectionLayer?.visible() ?? false;
-    const connectionPointsVisible = connectionPointsLayer?.visible() ?? false;
+    const cursorVisible = cursorLayer?.visible() ?? false;
+    const connectionPointsVisible = connectionPointsGroup?.visible() ?? false;
 
-    gridLayer?.visible(false);
-    bgLayer?.visible(false);
-    guidesLayer?.visible(false);
+    staticLayer?.visible(false);
+    overlayLayer?.visible(false);
     selectionLayer?.visible(false);
-    connectionPointsLayer?.visible(false);
+    cursorLayer?.visible(false);
+    connectionPointsGroup?.visible(false);
 
     // Redraw
     stage.batchDraw();
@@ -3173,11 +3177,11 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       });
     } finally {
       // Restore layers visibility (always runs)
-      gridLayer?.visible(gridVisible);
-      bgLayer?.visible(bgVisible);
-      guidesLayer?.visible(guidesVisible);
+      staticLayer?.visible(staticVisible);
+      overlayLayer?.visible(overlayVisible);
       selectionLayer?.visible(selectionVisible);
-      connectionPointsLayer?.visible(connectionPointsVisible);
+      cursorLayer?.visible(cursorVisible);
+      connectionPointsGroup?.visible(connectionPointsVisible);
 
       // Restore transform
       stage.scale({ x: currentScale, y: currentScale });
@@ -3792,47 +3796,50 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     });
     stageRef.current = stage;
 
-    // Background layer (large rect for infinite canvas)
-    const bgLayer = new Konva.Layer({ listening: false });
-    stage.add(bgLayer);
-    bgLayerRef.current = bgLayer;
+    // === Consolidated Layers (Phase G: 9→5) ===
 
-    // Grid layer (infinite)
-    const gridLayer = new Konva.Layer({ listening: false });
-    stage.add(gridLayer);
-    gridLayerRef.current = gridLayer;
+    // Layer 1: Static layer (background + grid, non-interactive)
+    const staticLayer = new Konva.Layer({ listening: false });
+    stage.add(staticLayer);
+    staticLayerRef.current = staticLayer;
+    const bgGroup = new Konva.Group();
+    const gridGroup = new Konva.Group();
+    staticLayer.add(bgGroup);
+    staticLayer.add(gridGroup);
+    bgLayerRef.current = bgGroup;
+    gridLayerRef.current = gridGroup;
 
-    // Connectors layer
-    const connectorsLayer = new Konva.Layer();
-    stage.add(connectorsLayer);
-    connectorsLayerRef.current = connectorsLayer;
+    // Layer 2: Content layer (connectors + shapes + connection points, interactive)
+    const contentLayer = new Konva.Layer();
+    stage.add(contentLayer);
+    contentLayerRef.current = contentLayer;
+    const connectorsGroup = new Konva.Group();
+    const shapesGroup = new Konva.Group();
+    const connectionPointsGroup = new Konva.Group();
+    contentLayer.add(connectorsGroup);
+    contentLayer.add(shapesGroup);
+    contentLayer.add(connectionPointsGroup);
+    connectorsLayerRef.current = connectorsGroup;
+    shapesLayerRef.current = shapesGroup;
+    connectionPointsLayerRef.current = connectionPointsGroup;
 
-    // Shapes layer
-    const shapesLayer = new Konva.Layer();
-    stage.add(shapesLayer);
-    shapesLayerRef.current = shapesLayer;
-
-    // Selection layer (for transformer)
+    // Layer 3: Selection layer (transformer + marquee, interactive)
     const selectionLayer = new Konva.Layer();
     stage.add(selectionLayer);
     selectionLayerRef.current = selectionLayer;
 
-    // Connection points layer (for connector mode)
-    const connectionPointsLayer = new Konva.Layer();
-    stage.add(connectionPointsLayer);
-    connectionPointsLayerRef.current = connectionPointsLayer;
+    // Layer 4: Overlay layer (guides + freedraw preview, non-interactive)
+    const overlayLayer = new Konva.Layer({ listening: false });
+    stage.add(overlayLayer);
+    overlayLayerRef.current = overlayLayer;
+    const guidesGroup = new Konva.Group();
+    const drawingGroup = new Konva.Group();
+    overlayLayer.add(guidesGroup);
+    overlayLayer.add(drawingGroup);
+    guidesLayerRef.current = guidesGroup;
+    drawingLayerRef.current = drawingGroup;
 
-    // Smart guides layer (for alignment guides during drag)
-    const guidesLayer = new Konva.Layer({ listening: false });
-    stage.add(guidesLayer);
-    guidesLayerRef.current = guidesLayer;
-
-    // Drawing layer (for active freedraw lines)
-    const drawingLayer = new Konva.Layer();
-    stage.add(drawingLayer);
-    drawingLayerRef.current = drawingLayer;
-
-    // Cursors layer (for remote collaboration cursors)
+    // Layer 5: Cursor layer (remote collaboration cursors, non-interactive)
     const cursorsLayer = new Konva.Layer({ listening: false });
     stage.add(cursorsLayer);
     cursorsLayerRef.current = cursorsLayer;
@@ -3951,47 +3958,40 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         transformerRef.current = null;
       }
 
-      // Destroy all children in each layer to prevent memory leaks
-      if (shapesLayerRef.current) {
-        shapesLayerRef.current.destroyChildren();
-        shapesLayerRef.current = null;
-      }
-      if (connectorsLayerRef.current) {
-        connectorsLayerRef.current.destroyChildren();
-        connectorsLayerRef.current = null;
-      }
+      // Destroy all children in consolidated layers to prevent memory leaks
       if (marqueeRectRef.current) {
         marqueeRectRef.current.destroy();
         marqueeRectRef.current = null;
-      }
-      if (selectionLayerRef.current) {
-        selectionLayerRef.current.destroyChildren();
-        selectionLayerRef.current = null;
-      }
-      if (connectionPointsLayerRef.current) {
-        connectionPointsLayerRef.current.destroyChildren();
-        connectionPointsLayerRef.current = null;
       }
       if (gridShapeRef.current) {
         gridShapeRef.current.destroy();
         gridShapeRef.current = null;
       }
-      if (gridLayerRef.current) {
-        gridLayerRef.current.destroyChildren();
-        gridLayerRef.current = null;
-      }
-      if (bgLayerRef.current) {
-        bgLayerRef.current.destroyChildren();
-        bgLayerRef.current = null;
-      }
-      if (drawingLayerRef.current) {
-        drawingLayerRef.current.destroyChildren();
-        drawingLayerRef.current = null;
-      }
       if (currentDrawingLineRef.current) {
         currentDrawingLineRef.current.destroy();
         currentDrawingLineRef.current = null;
       }
+
+      // Null out group refs (groups are destroyed with their parent layers)
+      shapesLayerRef.current = null;
+      connectorsLayerRef.current = null;
+      connectionPointsLayerRef.current = null;
+      bgLayerRef.current = null;
+      gridLayerRef.current = null;
+      guidesLayerRef.current = null;
+      drawingLayerRef.current = null;
+
+      // Destroy the 5 consolidated layers (destroy removes from parent + children)
+      staticLayerRef.current?.destroy();
+      staticLayerRef.current = null;
+      contentLayerRef.current?.destroy();
+      contentLayerRef.current = null;
+      selectionLayerRef.current?.destroy();
+      selectionLayerRef.current = null;
+      overlayLayerRef.current?.destroy();
+      overlayLayerRef.current = null;
+      cursorsLayerRef.current?.destroy();
+      cursorsLayerRef.current = null;
 
       // Finally destroy the stage
       stage.destroy();
@@ -4006,20 +4006,20 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
   // Render connection points when hovering in connector mode
   useEffect(() => {
-    const layer = connectionPointsLayerRef.current;
-    if (!layer) return;
+    const group = connectionPointsLayerRef.current;
+    if (!group) return;
 
-    layer.destroyChildren();
+    group.destroyChildren();
 
     // Only show connection points in connector mode when hovering
     if (tool !== 'connector' || !hoveredShapeId) {
-      layer.batchDraw();
+      group.getLayer()?.batchDraw();
       return;
     }
 
     const shape = shapes.find((s) => s.id === hoveredShapeId);
     if (!shape) {
-      layer.batchDraw();
+      group.getLayer()?.batchDraw();
       return;
     }
 
@@ -4045,19 +4045,19 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       circle.on('mouseenter', () => {
         circle.fill('#3b82f6');
         circle.stroke('#1d4ed8');
-        layer.batchDraw();
+        group.getLayer()?.batchDraw();
       });
 
       circle.on('mouseleave', () => {
         circle.fill('#ffffff');
         circle.stroke('#3b82f6');
-        layer.batchDraw();
+        group.getLayer()?.batchDraw();
       });
 
-      layer.add(circle);
+      group.add(circle);
     });
 
-    layer.batchDraw();
+    group.getLayer()?.batchDraw();
   }, [tool, hoveredShapeId, shapes, getConnectionPoints]);
 
   // Clear hovered shape when tool changes
@@ -4125,11 +4125,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       if (isPanning) return;
       if (isDrawingTool) return; // Drawing tools handle their own events
 
-      const bgLayer = bgLayerRef.current;
-      const gridLayer = gridLayerRef.current;
+      const staticLayer = staticLayerRef.current;
 
-      // Click on stage background, bg layer, or grid layer
-      if (e.target === stage || e.target.getLayer() === bgLayer || e.target.getLayer() === gridLayer) {
+      // Click on stage background or static layer (bg + grid)
+      if (e.target === stage || e.target.getLayer() === staticLayer) {
         if (tool === 'connector') {
           setConnectingFrom(null);
         } else if (tool !== 'select') {
@@ -4228,7 +4227,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
       // Don't start on shapes
       const target = e.target;
-      if (target !== stage && target.getLayer() !== bgLayerRef.current && target.getLayer() !== gridLayerRef.current) {
+      if (target !== stage && target.getLayer() !== staticLayerRef.current) {
         // Check if eraser is clicking on a freedraw shape
         if (isEraserTool) {
           const clickedShape = shapes.find(s => {
@@ -4282,7 +4281,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
       currentDrawingLineRef.current = line;
       drawingLayer.add(line);
-      drawingLayer.batchDraw();
+      drawingLayer.getLayer()?.batchDraw();
     };
 
     const handleDrawMove = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
@@ -4304,7 +4303,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         flatPoints.push(p.x, p.y);
       });
       currentDrawingLineRef.current.points(flatPoints);
-      drawingLayer.batchDraw();
+      drawingLayer.getLayer()?.batchDraw();
     };
 
     const handleDrawEnd = () => {
@@ -4366,7 +4365,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         currentDrawingLineRef.current = null;
       }
       currentDrawingRef.current = [];
-      drawingLayer.batchDraw();
+      drawingLayer.getLayer()?.batchDraw();
 
       // Add shape
       setShapes(prev => {
@@ -4420,13 +4419,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       if (isPanning) return;
 
       // Check if clicking on background (not on a shape)
-      const bgLayer = bgLayerRef.current;
-      const gridLayer = gridLayerRef.current;
       const target = e.target;
 
       const isBackground = target === stage ||
-        target.getLayer() === bgLayer ||
-        target.getLayer() === gridLayer;
+        target.getLayer() === staticLayerRef.current;
 
       if (!isBackground) return;
 

@@ -15,3 +15,6 @@ export * from './context';
 
 // Utils
 export * from './utils';
+
+// Renderers (Plugin Architecture)
+export * from './renderers';

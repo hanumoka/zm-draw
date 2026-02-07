@@ -1,12 +1,13 @@
-import { defineConfig } from 'tsup';
+import { defineConfig } from 'tsdown';
 
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],
   dts: true,
   clean: true,
-  external: ['react', 'react-dom', 'konva', 'react-konva', 'zustand'],
   treeshake: true,
   splitting: false,
-  injectStyle: false,
+  outputOptions: {
+    entryFileNames: '[name].js',
+  },
 });

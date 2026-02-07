@@ -1,14 +1,8 @@
 import { useEffect, useCallback } from 'react';
-import type { Shape, StampType } from '../types';
-import {
-  useCanvasStore,
-  useSelectionStore,
-  useToolStore,
-  useHistoryStore,
-  useViewportStore,
-  useClipboardStore,
-  generateId,
-} from '../stores';
+import type { Shape, StampType } from '@zm-draw/core';
+import { generateId } from '@zm-draw/core';
+import { useEditorStore } from '../stores/editorStore';
+import { useClipboardStore } from '../stores/clipboardStore';
 
 interface UseKeyboardOptions {
   /** Callback to get shapes (for components not using store directly) */
@@ -90,26 +84,25 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     enabled = true,
   } = options;
 
-  // Store hooks (used as fallbacks when external values not provided)
-  const storeSelectedId = useSelectionStore((s) => s.selectedIds[0] ?? null);
-  const clearSelection = useSelectionStore((s) => s.clearSelection);
-  const selectMultiple = useSelectionStore((s) => s.selectMultiple);
-  const shapes = useCanvasStore((s) => s.shapes);
-  const updateShape = useCanvasStore((s) => s.updateShape);
-  const addShape = useCanvasStore((s) => s.addShape);
-  const deleteShape = useCanvasStore((s) => s.deleteShape);
-  const deleteConnectorsByShapeId = useCanvasStore((s) => s.deleteConnectorsByShapeId);
-  const setTool = useToolStore((s) => s.setTool);
-  const resetTool = useToolStore((s) => s.resetTool);
-  const cancelConnecting = useToolStore((s) => s.cancelConnecting);
-  const stopEditing = useToolStore((s) => s.stopEditing);
-  const storeSetIsPanning = useViewportStore((s) => s.setIsPanning);
-  const storeIsPanning = useViewportStore((s) => s.isPanning);
+  // Unified editor store (replaces 4 separate stores)
+  const storeSelectedId = useEditorStore((s) => s.selectedIds[0] ?? null);
+  const clearSelection = useEditorStore((s) => s.clearSelection);
+  const selectMultiple = useEditorStore((s) => s.selectMultiple);
+  const shapes = useEditorStore((s) => s.shapes);
+  const updateShape = useEditorStore((s) => s.updateShape);
+  const addShape = useEditorStore((s) => s.addShape);
+  const deleteShape = useEditorStore((s) => s.deleteShape);
+  const deleteConnectorsByShapeId = useEditorStore((s) => s.deleteConnectorsByShapeId);
+  const setTool = useEditorStore((s) => s.setTool);
+  const resetTool = useEditorStore((s) => s.resetTool);
+  const cancelConnecting = useEditorStore((s) => s.cancelConnecting);
+  const stopEditing = useEditorStore((s) => s.stopEditing);
+  const storeSetIsPanning = useEditorStore((s) => s.setIsPanning);
+  const storeIsPanning = useEditorStore((s) => s.isPanning);
+
+  // Clipboard store stays separate
   const copy = useClipboardStore((s) => s.copy);
   const paste = useClipboardStore((s) => s.paste);
-
-  // Unused but available for future use
-  // const hasCopied = useClipboardStore((s) => s.hasCopied);
 
   // Use external values if provided, otherwise fall back to store values
   const selectedId = externalSelectedId !== undefined ? externalSelectedId : storeSelectedId;
@@ -144,7 +137,6 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     const pastedShapes = paste();
     if (!pastedShapes || pastedShapes.length === 0) return;
 
-    // Add each pasted shape with a new ID
     pastedShapes.forEach((shapeWithoutId) => {
       const newShape: Shape = {
         ...shapeWithoutId,
@@ -152,16 +144,14 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
       } as Shape;
 
       if (setShapes && getShapes) {
-        // Use external setShapes if provided
         setShapes([...getShapes(), newShape]);
       } else {
-        // Use store
         addShape(newShape);
       }
     });
   }, [paste, addShape, setShapes, getShapes, onPaste]);
 
-  // Duplicate selected shape (copy + paste in one action)
+  // Duplicate selected shape
   const handleDuplicate = useCallback(() => {
     if (onDuplicate) {
       onDuplicate();
@@ -239,10 +229,8 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle when typing in input fields
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        // Allow Escape in input fields
         if (e.key !== 'Escape') return;
       }
 
@@ -281,7 +269,6 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
             e.preventDefault();
             handlePaste();
           } else {
-            // V without modifier: select tool
             e.preventDefault();
             setTool('select');
           }
@@ -335,7 +322,6 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
           handleMove(e.shiftKey ? MOVE_STEP_SHIFT : MOVE_STEP, 0);
           break;
 
-        // Tool shortcuts (only without modifier keys)
         case 'r':
         case 'R':
           if (!modKey) {
@@ -367,7 +353,6 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
         case 'A':
           if (modKey) {
             e.preventDefault();
-            // Select all shapes
             const allShapes = getShapes?.() ?? shapes;
             if (allShapes.length > 0) {
               const allIds = allShapes.map(s => s.id);
@@ -381,33 +366,27 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
           if (modKey) {
             e.preventDefault();
             if (e.shiftKey) {
-              // Ctrl+Shift+G: Ungroup
               onUngroup?.();
             } else {
-              // Ctrl+G: Group
               onGroup?.();
             }
           }
           break;
 
-        // File shortcuts
         case 's':
         case 'S':
           if (modKey) {
             e.preventDefault();
             onSave?.();
           } else if (e.shiftKey) {
-            // Shift+S: section tool
             e.preventDefault();
             setTool('section');
           } else {
-            // S without modifier: sticky note tool
             e.preventDefault();
             setTool('sticky');
           }
           break;
 
-        // FigJam drawing tools
         case 'p':
         case 'P':
           if (!modKey) {
@@ -448,54 +427,29 @@ export function useKeyboard(options: UseKeyboardOptions = {}) {
           }
           break;
 
-        // Stamp shortcuts (1-8)
         case '1':
-          if (!modKey) {
-            e.preventDefault();
-            onStampSelect?.('thumbsUp');
-          }
+          if (!modKey) { e.preventDefault(); onStampSelect?.('thumbsUp'); }
           break;
         case '2':
-          if (!modKey) {
-            e.preventDefault();
-            onStampSelect?.('thumbsDown');
-          }
+          if (!modKey) { e.preventDefault(); onStampSelect?.('thumbsDown'); }
           break;
         case '3':
-          if (!modKey) {
-            e.preventDefault();
-            onStampSelect?.('heart');
-          }
+          if (!modKey) { e.preventDefault(); onStampSelect?.('heart'); }
           break;
         case '4':
-          if (!modKey) {
-            e.preventDefault();
-            onStampSelect?.('star');
-          }
+          if (!modKey) { e.preventDefault(); onStampSelect?.('star'); }
           break;
         case '5':
-          if (!modKey) {
-            e.preventDefault();
-            onStampSelect?.('check');
-          }
+          if (!modKey) { e.preventDefault(); onStampSelect?.('check'); }
           break;
         case '6':
-          if (!modKey) {
-            e.preventDefault();
-            onStampSelect?.('question');
-          }
+          if (!modKey) { e.preventDefault(); onStampSelect?.('question'); }
           break;
         case '7':
-          if (!modKey) {
-            e.preventDefault();
-            onStampSelect?.('exclamation');
-          }
+          if (!modKey) { e.preventDefault(); onStampSelect?.('exclamation'); }
           break;
         case '8':
-          if (!modKey) {
-            e.preventDefault();
-            onStampSelect?.('celebration');
-          }
+          if (!modKey) { e.preventDefault(); onStampSelect?.('celebration'); }
           break;
       }
     };

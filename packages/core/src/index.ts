@@ -1,11 +1,14 @@
-// Shapes
-export * from './shapes';
+// Types
+export * from './types';
 
-// Connectors
-export * from './connectors';
+// Constants
+export * from './constants';
+
+// Geometry utilities
+export * from './geometry';
+
+// Serialization
+export * from './serialization';
 
 // Utils
 export * from './utils';
-
-// Types
-export type { ShapeConfig, ConnectorConfig, CanvasConfig } from './types';
