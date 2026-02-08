@@ -572,31 +572,27 @@ const ShapeIcons = {
   ),
   // Connection icons
   connectorStraight: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="4" y1="20" x2="20" y2="4" />
-      <circle cx="4" cy="20" r="2" fill="currentColor" />
-      <circle cx="20" cy="4" r="2" fill="currentColor" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <path d="M4,18 C8,18 16,6 20,6" />
     </svg>
   ),
   connectorElbow: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <polyline points="4,20 4,4 20,4" />
-      <circle cx="4" cy="20" r="2" fill="currentColor" />
-      <circle cx="20" cy="4" r="2" fill="currentColor" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <path d="M4,18 C8,18 16,6 20,6" />
+      <polyline points="16,4 20,6 16,8" fill="none" />
     </svg>
   ),
   connectorArrow: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="4" y1="20" x2="20" y2="4" />
-      <polyline points="14,4 20,4 20,10" />
-      <circle cx="4" cy="20" r="2" fill="currentColor" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <line x1="4" y1="18" x2="20" y2="6" />
+      <polyline points="16,4 20,6 16,8" fill="none" />
     </svg>
   ),
   connectorDashed: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="3 2">
-      <line x1="4" y1="20" x2="20" y2="4" />
-      <circle cx="4" cy="20" r="2" fill="currentColor" strokeDasharray="none" />
-      <circle cx="20" cy="4" r="2" fill="currentColor" strokeDasharray="none" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="14" width="6" height="6" rx="1" fill="currentColor" opacity="0.15" />
+      <rect x="16" y="4" width="6" height="6" rx="1" fill="currentColor" opacity="0.15" />
+      <path d="M8,17 L12,17 L12,7 L16,7" />
     </svg>
   ),
   // Icon shapes
@@ -1389,10 +1385,10 @@ export default function Home() {
               {(() => {
                 const q = searchQuery.toLowerCase();
                 const connectionItems = [
-                  { icon: ShapeIcons.connectorStraight, label: 'Straight Connector', tool: 'connector' as ToolType },
-                  { icon: ShapeIcons.connectorElbow, label: 'Elbow Connector', tool: 'connector' as ToolType },
-                  { icon: ShapeIcons.connectorArrow, label: 'Arrow Connector', tool: 'connector' as ToolType },
-                  { icon: ShapeIcons.connectorDashed, label: 'Dashed Connector', tool: 'connector' as ToolType },
+                  { icon: ShapeIcons.connectorStraight, label: 'Curve Connector', tool: 'connector' as ToolType },
+                  { icon: ShapeIcons.connectorElbow, label: 'Curve Arrow Connector', tool: 'connector' as ToolType },
+                  { icon: ShapeIcons.connectorArrow, label: 'Straight Arrow Connector', tool: 'connector' as ToolType },
+                  { icon: ShapeIcons.connectorDashed, label: 'Elbow Connector', tool: 'connector' as ToolType },
                 ];
                 const filtered = q ? connectionItems.filter(item => item.label.toLowerCase().includes(q)) : connectionItems;
                 return (

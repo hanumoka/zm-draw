@@ -171,23 +171,35 @@ const Icons = {
 
 // FigJam variant icons
 const FigJamIcons = {
-  shapes: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
+  hand: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 11V6a2 2 0 0 0-4 0v1" />
+      <path d="M14 7V4a2 2 0 0 0-4 0v6" />
+      <path d="M10 10V5a2 2 0 0 0-4 0v9" />
+      <path d="M18 11a2 2 0 0 1 4 0v3a8 8 0 0 1-8 8h-2c-2.5 0-4.3-1-5.7-2.8L3.8 16a2 2 0 0 1 3-2.5L8 15" />
+    </svg>
+  ),
+  shapesStacked: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="3" width="14" height="12" rx="2" />
+      <circle cx="14" cy="18" r="4" />
+    </svg>
+  ),
+  connectorCurved: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5" cy="19" r="2.5" />
+      <path d="M7.5 17L18 6" />
+      <polyline points="13 5 19 5 19 11" />
     </svg>
   ),
   sticky: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="1" />
-      <path d="M15 3v6h6" />
-      <path d="M15 9l6-6" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3z" />
+      <polyline points="14 3 14 9 21 9" />
     </svg>
   ),
   pen: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 19l7-7 3 3-7 7-3-3z" />
       <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
       <path d="M2 2l7.586 7.586" />
@@ -195,16 +207,24 @@ const FigJamIcons = {
     </svg>
   ),
   table: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="1" />
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
       <line x1="3" y1="9" x2="21" y2="9" />
       <line x1="3" y1="15" x2="21" y2="15" />
       <line x1="9" y1="3" x2="9" y2="21" />
       <line x1="15" y1="3" x2="15" y2="21" />
     </svg>
   ),
+  widgets: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="6" y="2" width="6" height="6" rx="1" transform="rotate(45 9 5)" />
+      <rect x="12" y="2" width="6" height="6" rx="1" transform="rotate(45 15 5)" />
+      <rect x="6" y="10" width="6" height="6" rx="1" transform="rotate(45 9 13)" />
+      <rect x="12" y="10" width="6" height="6" rx="1" transform="rotate(45 15 13)" />
+    </svg>
+  ),
   more: (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
     </svg>
@@ -254,112 +274,186 @@ export function Toolbar({
     onAddStamp?.();
   };
 
-  // FigJam variant: 9-button minimal toolbar
+  // FigJam variant: Figma-style pill toolbar
   if (variant === 'figjam') {
+    // FigJam button style: 36x36 with 8px active radius
+    const fjBtnSize = 36;
+    const fjActiveRadius = 8;
+    const fjAccent = 'var(--zm-accent, #9747ff)';
+
+    const fjBtnStyle = (isActive?: boolean): React.CSSProperties => ({
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: fjBtnSize,
+      height: fjBtnSize,
+      padding: 0,
+      backgroundColor: isActive ? fjAccent : 'transparent',
+      border: 'none',
+      borderRadius: fjActiveRadius,
+      color: isActive ? '#ffffff' : 'var(--zm-text-secondary, #6b6b6b)',
+      cursor: 'pointer',
+      transition: 'all 0.12s ease',
+    });
+
+    const fjHover = (e: React.MouseEvent<HTMLButtonElement>, isActive?: boolean) => {
+      if (!isActive) {
+        e.currentTarget.style.backgroundColor = 'var(--zm-bg-hover, #f0f0f0)';
+        e.currentTarget.style.color = 'var(--zm-text-primary, #1e1e1e)';
+      }
+    };
+
+    const fjLeave = (e: React.MouseEvent<HTMLButtonElement>, isActive?: boolean) => {
+      if (!isActive) {
+        e.currentTarget.style.backgroundColor = 'transparent';
+        e.currentTarget.style.color = 'var(--zm-text-secondary, #6b6b6b)';
+      }
+    };
+
+    const fjPress = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.style.transform = 'scale(0.95)';
+    };
+
+    const fjRelease = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.currentTarget.style.transform = 'scale(1)';
+    };
+
     return (
       <div className="zm-toolbar" style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 4,
-        padding: '6px 8px',
+        gap: 2,
+        padding: '8px 10px',
         backgroundColor: 'var(--zm-bg-primary, #ffffff)',
-        borderRadius: 12,
+        borderRadius: 16,
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--zm-border, #e5e5e5)',
       }}>
-        {/* 1. Select */}
-        <ToolButton
-          icon={Icons.cursor}
-          label="Select"
-          shortcut="V"
-          active={tool === 'select'}
+        {/* Group 1: Navigation — Cursor + Hand */}
+        <button
           onClick={() => setTool('select')}
-        />
+          title="Select (V)"
+          style={fjBtnStyle(tool === 'select')}
+          onMouseEnter={(e) => fjHover(e, tool === 'select')}
+          onMouseLeave={(e) => fjLeave(e, tool === 'select')}
+          onMouseDown={fjPress}
+          onMouseUp={fjRelease}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill={tool === 'select' ? '#ffffff' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+            <path d="M13 13l6 6" />
+          </svg>
+        </button>
+
+        <button
+          onClick={() => { /* Hand/pan — visual only, will be wired later */ }}
+          title="Hand (H) — Pan with Space+drag"
+          style={fjBtnStyle(false)}
+          onMouseEnter={(e) => fjHover(e, false)}
+          onMouseLeave={(e) => fjLeave(e, false)}
+          onMouseDown={fjPress}
+          onMouseUp={fjRelease}
+        >
+          {FigJamIcons.hand}
+        </button>
 
         <Divider />
 
-        {/* 2. Shapes — toggles left panel, NOT a tool */}
-        <ToolButton
-          icon={FigJamIcons.shapes}
-          label="Shapes"
-          active={isShapesPanelOpen}
-          onClick={() => onShapesToggle?.()}
-        />
-
-        <Divider />
-
-        {/* 3. Text */}
-        <ToolButton
-          icon={Icons.text}
-          label="Text"
-          shortcut="T"
-          active={tool === 'text'}
-          onClick={() => setTool('text')}
-        />
-
-        {/* 4. Sticky */}
-        <ToolButton
-          icon={FigJamIcons.sticky}
-          label="Sticky Note"
-          shortcut="S"
-          active={tool === 'sticky'}
-          onClick={() => setTool('sticky')}
-        />
-
-        {/* 5. Connector */}
-        <ToolButton
-          icon={Icons.connector}
-          label="Connector"
-          shortcut="C"
-          active={tool === 'connector'}
-          onClick={() => { setTool('connector'); cancelConnecting(); }}
-        />
-
-        {/* 6. Pen */}
-        <ToolButton
-          icon={FigJamIcons.pen}
-          label="Pen"
-          shortcut="P"
-          active={tool === 'pen'}
+        {/* Group 2: Drawing — Marker/Pen */}
+        <button
           onClick={() => setTool('pen')}
-        />
+          title="Pen (P)"
+          style={fjBtnStyle(tool === 'pen')}
+          onMouseEnter={(e) => fjHover(e, tool === 'pen')}
+          onMouseLeave={(e) => fjLeave(e, tool === 'pen')}
+          onMouseDown={fjPress}
+          onMouseUp={fjRelease}
+        >
+          {FigJamIcons.pen}
+        </button>
 
-        {/* 7. Table */}
-        <ToolButton
-          icon={FigJamIcons.table}
-          label="Table"
-          active={tool === 'table'}
+        <Divider />
+
+        {/* Group 3: Creation — Shapes + Connector */}
+        <button
+          onClick={() => onShapesToggle?.()}
+          title="Shapes"
+          style={fjBtnStyle(isShapesPanelOpen)}
+          onMouseEnter={(e) => fjHover(e, isShapesPanelOpen)}
+          onMouseLeave={(e) => fjLeave(e, isShapesPanelOpen)}
+          onMouseDown={fjPress}
+          onMouseUp={fjRelease}
+        >
+          {FigJamIcons.shapesStacked}
+        </button>
+
+        <button
+          onClick={() => { setTool('connector'); cancelConnecting(); }}
+          title="Connector (C)"
+          style={fjBtnStyle(tool === 'connector')}
+          onMouseEnter={(e) => fjHover(e, tool === 'connector')}
+          onMouseLeave={(e) => fjLeave(e, tool === 'connector')}
+          onMouseDown={fjPress}
+          onMouseUp={fjRelease}
+        >
+          {FigJamIcons.connectorCurved}
+        </button>
+
+        <Divider />
+
+        {/* Group 4: Objects — Text, Sticky, Table, Stamp, Comment, Widgets */}
+        <button
+          onClick={() => setTool('text')}
+          title="Text (T)"
+          style={fjBtnStyle(tool === 'text')}
+          onMouseEnter={(e) => fjHover(e, tool === 'text')}
+          onMouseLeave={(e) => fjLeave(e, tool === 'text')}
+          onMouseDown={fjPress}
+          onMouseUp={fjRelease}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="4 7 4 4 20 4 20 7" />
+            <line x1="9" y1="20" x2="15" y2="20" />
+            <line x1="12" y1="4" x2="12" y2="20" />
+          </svg>
+        </button>
+
+        <button
+          onClick={() => setTool('sticky')}
+          title="Sticky Note (S)"
+          style={fjBtnStyle(tool === 'sticky')}
+          onMouseEnter={(e) => fjHover(e, tool === 'sticky')}
+          onMouseLeave={(e) => fjLeave(e, tool === 'sticky')}
+          onMouseDown={fjPress}
+          onMouseUp={fjRelease}
+        >
+          {FigJamIcons.sticky}
+        </button>
+
+        <button
           onClick={() => setTool('table')}
-        />
+          title="Table"
+          style={fjBtnStyle(tool === 'table')}
+          onMouseEnter={(e) => fjHover(e, tool === 'table')}
+          onMouseLeave={(e) => fjLeave(e, tool === 'table')}
+          onMouseDown={fjPress}
+          onMouseUp={fjRelease}
+        >
+          {FigJamIcons.table}
+        </button>
 
-        {/* 8. Stamp */}
+        {/* Stamp with picker */}
         <div style={{ position: 'relative' }}>
           <button
             onClick={() => setShowStampPicker(!showStampPicker)}
             title="Stamp (1-8)"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 32,
-              height: 32,
-              padding: 0,
-              backgroundColor: tool === 'stamp' ? 'var(--zm-accent, #9747ff)' : 'transparent',
-              border: 'none',
-              borderRadius: 4,
+              ...fjBtnStyle(tool === 'stamp'),
               fontSize: 18,
-              cursor: 'pointer',
-              transition: 'all 0.12s ease',
             }}
-            onMouseEnter={(e) => {
-              if (tool !== 'stamp') {
-                e.currentTarget.style.backgroundColor = 'var(--zm-bg-hover, #f0f0f0)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (tool !== 'stamp') {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }
-            }}
+            onMouseEnter={(e) => fjHover(e, tool === 'stamp')}
+            onMouseLeave={(e) => fjLeave(e, tool === 'stamp')}
+            onMouseDown={fjPress}
+            onMouseUp={fjRelease}
           >
             {STAMP_EMOJIS[currentStampType]}
           </button>
@@ -387,9 +481,9 @@ export function Toolbar({
                     width: 36,
                     height: 36,
                     padding: 0,
-                    backgroundColor: currentStampType === type ? 'var(--zm-accent, #9747ff)' : 'transparent',
+                    backgroundColor: currentStampType === type ? fjAccent : 'transparent',
                     border: 'none',
-                    borderRadius: 4,
+                    borderRadius: fjActiveRadius,
                     fontSize: 20,
                     cursor: 'pointer',
                     transition: 'background-color 0.1s',
@@ -413,16 +507,70 @@ export function Toolbar({
           )}
         </div>
 
+        {/* Comment */}
+        <button
+          onClick={() => onToggleComments?.()}
+          title="Comments"
+          style={fjBtnStyle(isCommentPanelOpen)}
+          onMouseEnter={(e) => fjHover(e, isCommentPanelOpen)}
+          onMouseLeave={(e) => fjLeave(e, isCommentPanelOpen)}
+          onMouseDown={fjPress}
+          onMouseUp={fjRelease}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </button>
+
+        {/* Widgets */}
+        <button
+          onClick={() => { /* Widgets — visual only for now */ }}
+          title="Widgets"
+          style={fjBtnStyle(false)}
+          onMouseEnter={(e) => fjHover(e, false)}
+          onMouseLeave={(e) => fjLeave(e, false)}
+          onMouseDown={fjPress}
+          onMouseUp={fjRelease}
+        >
+          {FigJamIcons.widgets}
+        </button>
+
         <Divider />
 
-        {/* 9. More (+) — overflow menu */}
+        {/* Group 5: Add (+) — dark filled circular button with overflow menu */}
         <div style={{ position: 'relative' }}>
-          <ToolButton
-            icon={FigJamIcons.more}
-            label="More"
-            active={showMoreMenu}
+          <button
             onClick={() => setShowMoreMenu(!showMoreMenu)}
-          />
+            title="More actions"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              padding: 0,
+              backgroundColor: showMoreMenu ? fjAccent : '#333333',
+              border: 'none',
+              borderRadius: '50%',
+              color: '#ffffff',
+              cursor: 'pointer',
+              transition: 'all 0.12s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (!showMoreMenu) {
+                e.currentTarget.style.backgroundColor = '#1a1a1a';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!showMoreMenu) {
+                e.currentTarget.style.backgroundColor = '#333333';
+              }
+            }}
+            onMouseDown={fjPress}
+            onMouseUp={fjRelease}
+          >
+            {FigJamIcons.more}
+          </button>
           {showMoreMenu && (
             <div className="zm-toolbar-overflow-menu" style={{
               position: 'absolute',
