@@ -1,7 +1,7 @@
 # CLAUDE.md - zm-draw 프로젝트 가이드
 
 > **Claude Code를 위한 zm-draw 프로젝트 지침서**
-> 최종 업데이트: 2026-01-25 (문서 재검토 완료)
+> 최종 업데이트: 2026-02-08 (서브에이전트 아키텍처 추가)
 
 ---
 
@@ -14,6 +14,8 @@
 1. **docs/SESSION.md** - 현재 세션 상황 (가장 중요)
 2. **docs/PROGRESS.md** - 전체 진행상황
 3. **docs/PROJECT.md** - 프로젝트 아키텍처
+4. **docs/AGENT-ARCHITECTURE.md** - 서브에이전트 아키텍처 (필수)
+5. **docs/FIGMA-FEATURES.md** - Figma 기능 분석 결과 (누적)
 
 ### 세션 복원 시 자동 확인 명령어
 
@@ -58,11 +60,11 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3200
 - **데모 서버**: http://localhost:3200
 - **GitHub**: origin/main
 
-### 현재 상태 (2026-01-25)
+### 현재 상태 (2026-02-08)
 
-- **Phase**: Phase 2 (UI 레이아웃) 95% 완료 → Phase 2.5 준비
-- **구현 완료**: 도형, 커넥터, 텍스트, Undo/Redo, Save/Load, Zustand, Copy/Paste, Figma UI
-- **다음 Phase**: Phase 2.5 (속성 패널 기본)
+- **Phase**: FigJam UI 레이아웃 개편 완료, Figma 기능 모사 진행 중
+- **구현 완료**: 도형, 커넥터, 텍스트, Undo/Redo, Save/Load, Zustand, Copy/Paste, Figma UI, 스티키노트, 펜, 테이블, 마인드맵, 실시간 협업, 접근성
+- **작업 방식**: 서브에이전트 오케스트레이터 패턴 (docs/AGENT-ARCHITECTURE.md 참조)
 
 ### 기술 스택
 
@@ -84,15 +86,19 @@ zm-draw/
 ├── CLAUDE.md                   # 이 파일 (Claude 진입점)
 ├── docs/                       # 문서 (Claude 필독)
 │   ├── SESSION.md             # 세션 상태 ⭐ 가장 중요
-│   ├── PROGRESS.md            # 진행상황 (7 Phase 로드맵)
+│   ├── PROGRESS.md            # 진행상황 로드맵
 │   ├── PROJECT.md             # 아키텍처
+│   ├── AGENT-ARCHITECTURE.md  # 서브에이전트 아키텍처 ⭐ 필수
+│   ├── FIGMA-FEATURES.md      # Figma 기능 분석 누적 ⭐ 필수
 │   └── FIGMA-STYLE-ROADMAP.md # Figma 스타일 상세 계획
 │
+├── scripts/
+│   └── extract-gif-frames.py  # GIF 프레임 추출 (Python+Pillow)
+│
 ├── packages/
-│   ├── core/                   # @zm-draw/core (타입)
-│   └── react/                  # @zm-draw/react (컴포넌트)
-│       └── src/components/
-│           └── DrawCanvas.tsx  # 메인 컴포넌트 (~990 lines)
+│   ├── core/                   # @zm-draw/core (타입, 상수, 유틸)
+│   ├── react/                  # @zm-draw/react (컴포넌트, 훅, 스토어)
+│   └── collaboration/          # @zm-draw/collaboration (Yjs 실시간)
 │
 ├── apps/
 │   └── demo/                   # Next.js 15 데모 (port 3200)
@@ -192,6 +198,54 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 ---
 
+## 서브에이전트 워크플로우
+
+> **CRITICAL**: 모든 작업은 서브에이전트를 통해 수행합니다.
+> 상세 아키텍처: `docs/AGENT-ARCHITECTURE.md`
+
+### 에이전트 구성
+
+| # | 에이전트 | 타입 | 역할 |
+|---|---------|------|------|
+| 1 | **오케스트레이터** | 메인 | 사용자 대화, 전체 관리 |
+| 2 | **Figma 기능파악** | general-purpose | Figma 기능 갭 분석, 스크린샷/GIF 요청 생성 |
+| 3 | **GIF 프레임 분석** | general-purpose | GIF → 프레임 추출 → 이미지 분석 |
+| 4 | **FE 개발** | general-purpose | 코드 수정/구현 |
+| 5 | **재검토** | general-purpose | 빌드/타입체크/코드리뷰 |
+| 6 | **문서 갱신** | general-purpose (bg) | SESSION.md, PROGRESS.md 자동 갱신 |
+
+### GIF 분석 방법
+
+```bash
+# 1. 프레임 추출
+python scripts/extract-gif-frames.py <input.gif> --max-frames 20
+
+# 2. 추출된 PNG 프레임을 Read 도구로 이미지 인식
+# 3. 프레임별 UI 상태/애니메이션 변화 분석
+```
+
+### Figma 기능 분석 결과 저장
+
+- 파일: `docs/FIGMA-FEATURES.md`
+- 세션 간 유지, 중복 분석 방지
+- 사용자 제공 스크린샷/GIF마다 누적 업데이트
+
+### 작업 순서
+
+1. Figma 기능파악 → 사용자에게 스크린샷/GIF 요청
+2. GIF 분석 (GIF 제공 시) ‖ Figma 분석 → 구현 요구사항 정리
+3. FE 개발 → 코드 구현
+4. 재검토 ‖ 문서 갱신 (병렬)
+
+### 핵심 최적화 규칙 (MUST)
+
+1. **Figma 분석 에이전트는 resume으로 컨텍스트 유지** — 매번 새로 생성 금지, agentId 기록 후 resume 사용
+2. **재검토 + 문서 갱신은 FE 개발 완료 후 동시 병렬 실행** — 재검토(foreground) + 문서갱신(background)
+3. **FIGMA-FEATURES.md 세션 간 누적** — 새 세션 시작 시 기존 분석 확인, 중복 분석 방지
+4. **오케스트레이터 작업 사이클 체크리스트** 준수 → `docs/AGENT-ARCHITECTURE.md` 참조
+
+---
+
 ## 참고 자료
 
 - **Konva.js**: https://konvajs.org/docs/
@@ -199,4 +253,4 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 ---
 
-*마지막 업데이트: 2026-01-25*
+*마지막 업데이트: 2026-02-08*

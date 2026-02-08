@@ -56,6 +56,12 @@ export interface ToolbarProps {
   onTidyUp?: (layout: TidyUpLayout) => void;
   /** Number of selected shapes (for tidy up button state) */
   selectedCount?: number;
+  /** Toolbar variant: 'full' shows all buttons, 'figjam' shows minimal 9-button bar */
+  variant?: 'full' | 'figjam';
+  /** Toggle shapes panel (figjam variant) */
+  onShapesToggle?: () => void;
+  /** Whether shapes panel is open (figjam variant) */
+  isShapesPanelOpen?: boolean;
 }
 
 // Icons
@@ -163,6 +169,48 @@ const Icons = {
   ),
 };
 
+// FigJam variant icons
+const FigJamIcons = {
+  shapes: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  ),
+  sticky: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="1" />
+      <path d="M15 3v6h6" />
+      <path d="M15 9l6-6" />
+    </svg>
+  ),
+  pen: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 19l7-7 3 3-7 7-3-3z" />
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+      <path d="M2 2l7.586 7.586" />
+      <circle cx="11" cy="11" r="2" />
+    </svg>
+  ),
+  table: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="1" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="3" y1="15" x2="21" y2="15" />
+      <line x1="9" y1="3" x2="9" y2="21" />
+      <line x1="15" y1="3" x2="15" y2="21" />
+    </svg>
+  ),
+  more: (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  ),
+};
+
 /**
  * Figma-style Toolbar component for DrawCanvas
  */
@@ -192,9 +240,13 @@ export function Toolbar({
   commentCount = 0,
   onTidyUp,
   selectedCount = 0,
+  variant = 'full',
+  onShapesToggle,
+  isShapesPanelOpen,
 }: ToolbarProps) {
   const [showStampPicker, setShowStampPicker] = useState(false);
   const [showTidyUpMenu, setShowTidyUpMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const handleStampSelect = (type: StampType) => {
     onStampTypeChange?.(type);
@@ -202,6 +254,231 @@ export function Toolbar({
     onAddStamp?.();
   };
 
+  // FigJam variant: 9-button minimal toolbar
+  if (variant === 'figjam') {
+    return (
+      <div className="zm-toolbar" style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: '6px 8px',
+        backgroundColor: 'var(--zm-bg-primary, #ffffff)',
+        borderRadius: 12,
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px var(--zm-border, #e5e5e5)',
+      }}>
+        {/* 1. Select */}
+        <ToolButton
+          icon={Icons.cursor}
+          label="Select"
+          shortcut="V"
+          active={tool === 'select'}
+          onClick={() => setTool('select')}
+        />
+
+        <Divider />
+
+        {/* 2. Shapes — toggles left panel, NOT a tool */}
+        <ToolButton
+          icon={FigJamIcons.shapes}
+          label="Shapes"
+          active={isShapesPanelOpen}
+          onClick={() => onShapesToggle?.()}
+        />
+
+        <Divider />
+
+        {/* 3. Text */}
+        <ToolButton
+          icon={Icons.text}
+          label="Text"
+          shortcut="T"
+          active={tool === 'text'}
+          onClick={() => setTool('text')}
+        />
+
+        {/* 4. Sticky */}
+        <ToolButton
+          icon={FigJamIcons.sticky}
+          label="Sticky Note"
+          shortcut="S"
+          active={tool === 'sticky'}
+          onClick={() => setTool('sticky')}
+        />
+
+        {/* 5. Connector */}
+        <ToolButton
+          icon={Icons.connector}
+          label="Connector"
+          shortcut="C"
+          active={tool === 'connector'}
+          onClick={() => { setTool('connector'); cancelConnecting(); }}
+        />
+
+        {/* 6. Pen */}
+        <ToolButton
+          icon={FigJamIcons.pen}
+          label="Pen"
+          shortcut="P"
+          active={tool === 'pen'}
+          onClick={() => setTool('pen')}
+        />
+
+        {/* 7. Table */}
+        <ToolButton
+          icon={FigJamIcons.table}
+          label="Table"
+          active={tool === 'table'}
+          onClick={() => setTool('table')}
+        />
+
+        {/* 8. Stamp */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setShowStampPicker(!showStampPicker)}
+            title="Stamp (1-8)"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              padding: 0,
+              backgroundColor: tool === 'stamp' ? 'var(--zm-accent, #9747ff)' : 'transparent',
+              border: 'none',
+              borderRadius: 4,
+              fontSize: 18,
+              cursor: 'pointer',
+              transition: 'all 0.12s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (tool !== 'stamp') {
+                e.currentTarget.style.backgroundColor = 'var(--zm-bg-hover, #f0f0f0)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (tool !== 'stamp') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
+          >
+            {STAMP_EMOJIS[currentStampType]}
+          </button>
+          {showStampPicker && (
+            <div style={{
+              position: 'absolute',
+              bottom: '100%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              marginBottom: 8,
+              padding: 8,
+              backgroundColor: 'var(--zm-bg-primary, #ffffff)',
+              borderRadius: 12,
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--zm-border, #e5e5e5)',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: 4,
+              zIndex: 1000,
+            }}>
+              {(Object.keys(STAMP_EMOJIS) as StampType[]).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => handleStampSelect(type)}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    padding: 0,
+                    backgroundColor: currentStampType === type ? 'var(--zm-accent, #9747ff)' : 'transparent',
+                    border: 'none',
+                    borderRadius: 4,
+                    fontSize: 20,
+                    cursor: 'pointer',
+                    transition: 'background-color 0.1s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (currentStampType !== type) {
+                      e.currentTarget.style.backgroundColor = 'var(--zm-bg-hover, #f0f0f0)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (currentStampType !== type) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                  title={type}
+                >
+                  {STAMP_EMOJIS[type]}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <Divider />
+
+        {/* 9. More (+) — overflow menu */}
+        <div style={{ position: 'relative' }}>
+          <ToolButton
+            icon={FigJamIcons.more}
+            label="More"
+            active={showMoreMenu}
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+          />
+          {showMoreMenu && (
+            <div className="zm-toolbar-overflow-menu" style={{
+              position: 'absolute',
+              bottom: '100%',
+              right: 0,
+              marginBottom: 8,
+              padding: 4,
+              backgroundColor: 'var(--zm-bg-primary, #ffffff)',
+              borderRadius: 12,
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--zm-border, #e5e5e5)',
+              zIndex: 1000,
+              minWidth: 180,
+            }}>
+              <OverflowMenuItem
+                icon={Icons.undo}
+                label="Undo"
+                shortcut="Ctrl+Z"
+                disabled={!canUndo}
+                onClick={() => { onUndo(); setShowMoreMenu(false); }}
+              />
+              <OverflowMenuItem
+                icon={Icons.redo}
+                label="Redo"
+                shortcut="Ctrl+Shift+Z"
+                disabled={!canRedo}
+                onClick={() => { onRedo(); setShowMoreMenu(false); }}
+              />
+              <div style={{ height: 1, backgroundColor: 'var(--zm-border, #e5e5e5)', margin: '4px 8px' }} />
+              <OverflowMenuItem
+                icon={Icons.trash}
+                label="Delete"
+                shortcut="Del"
+                disabled={!hasSelection}
+                onClick={() => { onDelete(); setShowMoreMenu(false); }}
+              />
+              <div style={{ height: 1, backgroundColor: 'var(--zm-border, #e5e5e5)', margin: '4px 8px' }} />
+              <OverflowMenuItem
+                icon={Icons.download}
+                label="Save"
+                shortcut="Ctrl+S"
+                onClick={() => { onSave(); setShowMoreMenu(false); }}
+              />
+              <OverflowMenuItem
+                icon={Icons.upload}
+                label="Load"
+                shortcut="Ctrl+O"
+                onClick={() => { onLoad(); setShowMoreMenu(false); }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Full variant (default) — existing toolbar
   return (
     <div className="zm-toolbar" style={{
       display: 'flex',
@@ -258,7 +535,7 @@ export function Toolbar({
         />
         <ToolButton
           icon={Icons.connector}
-          label={connectingFrom ? 'Click target...' : 'Connector'}
+          label="Connector"
           shortcut="C"
           active={tool === 'connector'}
           onClick={() => { setTool('connector'); cancelConnecting(); }}
@@ -718,5 +995,57 @@ function CircleIcon() {
       <circle cx="12" cy="19" r="2" fill="currentColor" />
       <circle cx="6" cy="12" r="2" fill="currentColor" />
     </svg>
+  );
+}
+
+/** Overflow menu item for FigJam More(+) button */
+function OverflowMenuItem({
+  icon,
+  label,
+  shortcut,
+  disabled,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  shortcut?: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        width: '100%',
+        padding: '8px 12px',
+        backgroundColor: 'transparent',
+        border: 'none',
+        borderRadius: 6,
+        color: disabled ? 'var(--zm-text-muted, #999999)' : 'var(--zm-text-secondary, #6b6b6b)',
+        fontSize: 13,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        transition: 'all 0.1s',
+      }}
+      onMouseEnter={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.backgroundColor = 'var(--zm-bg-hover, #f0f0f0)';
+          e.currentTarget.style.color = 'var(--zm-text-primary, #1e1e1e)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+        e.currentTarget.style.color = disabled ? 'var(--zm-text-muted, #999999)' : 'var(--zm-text-secondary, #6b6b6b)';
+      }}
+    >
+      <span style={{ display: 'flex', alignItems: 'center', width: 16 }}>{icon}</span>
+      <span style={{ flex: 1 }}>{label}</span>
+      {shortcut && (
+        <span style={{ fontSize: 11, color: 'var(--zm-text-muted, #999999)' }}>{shortcut}</span>
+      )}
+    </button>
   );
 }

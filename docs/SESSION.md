@@ -1,57 +1,63 @@
 # zm-draw 세션 상태
 
-> 최종 업데이트: 2026-02-07 (구조 재설계 Phase A-G 완료)
+> 최종 업데이트: 2026-02-08 (커넥터 플로팅 툴바 + 자유 커넥터)
 
 ---
 
 ## 현재 상태
 
-**Phase**: **구조 재설계 Phase A-G 모두 완료** ✅
-**목표**: 7가지 구조적 문제 해결 (A-G Phase)
-**진행률**: 전체 완료
+**Phase**: 커넥터 UX 대폭 개선 완료
+**목표**: FigJam 수준 커넥터 편집 UX
+**진행률**: 100% 완료, 빌드 확인됨
 
-### 완료된 작업 (2026-02-07)
+### 완료된 작업 (2026-02-08)
 
-- **Phase A: @zm-draw/core 재설계** ✅ 완료
-  - 타입/상수/유틸을 core로 통합 (~1,100줄)
-  - zero-dependency 패키지
+#### 1. 커넥터 전용 플로팅 툴바 ✅
 
-- **Phase B: Shape Renderer 플러그인 아키텍처** ✅ 완료
-  - 28종 도형 렌더러를 개별 파일로 분리
-  - ShapeRendererRegistry + renderShape 디스패처
+커넥터 선택 시 중점 위에 플로팅 툴바 표시:
+- **라우팅** (2): Straight / Orthogonal (Elbow)
+- **라인 스타일** (3): Solid / Dashed / Dotted
+- **화살표** (2): None / Arrow
+- **삭제** (1): Delete (danger 스타일)
+- SVG 인라인 아이콘 8개, CSS 애니메이션, 줌/패닝 추적
 
-- **Phase C: 훅 추출 + 스토어 통합** ✅ 완료
-  - editorStore 생성 (canvas+selection+tool+viewport 통합)
-  - 13개 새 훅 추출
+#### 2. 자유 커넥터 (Free-floating Connector) ✅
 
-- **Phase D: @zm-draw/collaboration 분리** ✅ 완료
-  - @zm-draw/collaboration 패키지 생성 (19.9KB)
-  - react에서 yjs 의존성 제거
+Figma처럼 도형 없이 빈 캔버스에서 커넥터 직접 그리기:
+- `Connector` 타입: `fromShapeId`/`toShapeId` optional화, `fromPos`/`toPos` 추가
+- 4가지 조합: 도형→도형, 도형→자유, 자유→도형, 자유→자유
+- 끝점 핸들 드래그로 자유↔도형 재연결 가능
+- renderConnectors, connectorToolbarPos 모두 자유 끝점 지원
 
-- **Phase E: UI 컴포넌트 + DrawEditor 조합** ✅ 완료
-  - ColorPicker, Tooltip, PanelResizer → 라이브러리로 이동
-  - `<DrawEditor />` 조합 컴포넌트 생성 (~320줄)
+#### 3. 이전 완료 (같은 날)
 
-- **Phase F: 빌드/프레임워크 업그레이드** ✅ 완료
-  - tsup → tsdown 마이그레이션
-  - Next.js 16.1.6 + React 19.2.4 업그레이드
-  - pnpm 10 업그레이드는 MSYS2 환경 호환성 이슈로 보류
+- **캔버스 하단 공백 버그 수정** ✅
+- **41개 신규 도형 타입 추가** ✅
+- **Shapes 패널 UI 개선** ✅
 
-- **Phase G: Konva 레이어 통합** ✅ 완료
-  - 9개 → 5개 레이어 통합
-  - staticLayer (bg + grid, listening: false)
-  - contentLayer (connectors + shapes + connectionPoints, listening: true)
-  - selectionLayer (transformer + marquee, listening: true)
-  - overlayLayer (guides + freedraw, listening: false)
-  - cursorLayer (remote cursors, listening: false)
-  - 기존 코드 호환을 위해 Konva.Group 사용 (ref 이름 유지)
+### 이전 완료
+
+- **FigJam UI 레이아웃 개편** ✅ (2026-02-08)
+- **구조 재설계 Phase A-G** ✅ (2026-02-07)
+- **커넥터 드래그 생성 UX** ✅ (2026-02-08)
+- **Select 모드 커넥터 + 끝점 편집** ✅ (2026-02-08)
+
+---
+
+## 수정 파일
+
+| 파일 | 변경 | 상태 |
+|------|------|------|
+| `packages/core/src/types/connector.ts` | fromShapeId/toShapeId optional + fromPos/toPos 추가 | ✅ |
+| `packages/react/src/components/DrawCanvas.tsx` | 플로팅 툴바, 자유 커넥터, SVG 아이콘 | ✅ |
+| `packages/react/src/styles/index.css` | .zm-connector-toolbar CSS | ✅ |
 
 ---
 
 ## 빌드 상태
 
 ```bash
-pnpm build --filter @zm-draw/core --filter @zm-draw/collaboration --filter @zm-draw/react  # ✅ 성공
+pnpm build --filter @zm-draw/core --filter @zm-draw/react  # ✅ 성공
 ```
 
 ### 번들 크기
@@ -59,8 +65,16 @@ pnpm build --filter @zm-draw/core --filter @zm-draw/collaboration --filter @zm-d
 |--------|------|------|
 | @zm-draw/core | 37.7 KB | 8.2 KB |
 | @zm-draw/collaboration | 19.9 KB | 4.6 KB |
-| @zm-draw/react | 305.5 KB | 59.4 KB |
+| @zm-draw/react | 365.5 KB | 67.5 KB |
 
 ---
 
-*마지막 업데이트: 2026-02-07*
+## 다음 작업
+
+1. **커넥터 UX 추가 개선**: 중간점 핸들, curved 라우팅
+2. **속성 패널 개선**: Phase 2.5
+3. **데모 앱 빌드 수정**: Next.js 16 Turbopack 설정
+
+---
+
+*마지막 업데이트: 2026-02-08*

@@ -22,6 +22,16 @@ import { CommentPanel } from './CommentPanel';
 import { useCommentStore } from '../stores/commentStore';
 import { tidyUp, TidyUpLayout } from '../utils/tidyUp';
 
+// Connector toolbar inline SVG icons (16x16)
+const ConnectorStraightIcon = <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="14" x2="14" y2="2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>;
+const ConnectorElbowIcon = <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="2,14 2,2 14,2" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const ConnectorSolidIcon = <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
+const ConnectorDashedIcon = <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="4 3"/></svg>;
+const ConnectorDottedIcon = <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="1.5 3"/></svg>;
+const ConnectorArrowNoneIcon = <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="14" cy="8" r="2" fill="none" stroke="currentColor" strokeWidth="1.2"/></svg>;
+const ConnectorArrowIcon = <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><polyline points="9,5 13,8 9,11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const ConnectorTrashIcon = <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 3V2.5C5 1.67 5.67 1 6.5 1h3C10.33 1 11 1.67 11 2.5V3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M2.5 3.5h11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><path d="M4 3.5l.7 10.15c.05.74.67 1.35 1.42 1.35h3.76c.75 0 1.37-.61 1.42-1.35L12 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><line x1="6.5" y1="6" x2="6.5" y2="12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/><line x1="9.5" y1="6" x2="9.5" y2="12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>;
+
 /** Selected shape info for external consumption */
 export interface SelectedShapeInfo {
   id: string;
@@ -98,6 +108,18 @@ export interface DrawCanvasHandle {
   setConnectors: (connectors: Connector[]) => void;
   /** Load shapes and connectors from JSON data */
   loadFromJSON: (data: { shapes: Shape[]; connectors: Connector[] }) => void;
+  /** Save canvas to JSON file (download) */
+  saveToJSON: () => void;
+  /** Load canvas from JSON file (file dialog) */
+  loadFromJSONFile: () => void;
+  /** Undo last action */
+  undo: () => void;
+  /** Redo last undone action */
+  redo: () => void;
+  /** Whether undo is available */
+  canUndo: boolean;
+  /** Whether redo is available */
+  canRedo: boolean;
 }
 
 /** Theme options for DrawCanvas */
@@ -114,6 +136,8 @@ export interface DrawCanvasUIOptions {
   commentPanel?: boolean;
   /** Show collaboration status indicator when collaborationEnabled (default: true) */
   collaborationIndicator?: boolean;
+  /** Show the connector floating toolbar when a connector is selected (default: true) */
+  connectorToolbar?: boolean;
 }
 
 export interface DrawCanvasProps {
@@ -227,6 +251,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
   // Accessibility: Screen reader announcements
   const [announcement, setAnnouncement] = useState('');
+
+  // Viewport tick counter for updating connector toolbar position during pan
+  const [viewportTick, setViewportTick] = useState(0);
 
   // Collaboration cursors layer
   const cursorsLayerRef = useRef<Konva.Layer | null>(null);
@@ -383,6 +410,26 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   // Connection points layer ref
   const connectionPointsLayerRef = useRef<Konva.Group | null>(null);
   const [hoveredShapeId, setHoveredShapeId] = useState<string | null>(null);
+
+  // Connector drag state refs (drag-to-connect UX)
+  const isDraggingConnectorRef = useRef(false);
+  const connectorDragFromRef = useRef<string | null>(null);
+  const connectorDragFromPointRef = useRef<{ x: number; y: number } | null>(null);
+  const connectorDragEndRef = useRef<{ x: number; y: number } | null>(null);
+  const connectorDragSnapTargetRef = useRef<string | null>(null);
+  const connectorPreviewArrowRef = useRef<Konva.Arrow | null>(null);
+  const connectorSnapIndicatorRef = useRef<Konva.Circle | null>(null);
+  const shapesRef = useRef(shapes);
+  shapesRef.current = shapes;
+  const connectorVariantRef = useRef(connectorVariant);
+  connectorVariantRef.current = connectorVariant;
+
+  // Connector drag mode: 'create' for new connector, 'reconnect' for editing endpoint
+  const connectorDragModeRef = useRef<'create' | 'reconnect' | null>(null);
+
+  // Connector reconnect state refs
+  const connectorReconnectIdRef = useRef<string | null>(null);
+  const connectorReconnectEndRef = useRef<'from' | 'to' | null>(null);
 
   // Smart guides layer ref and state
   const guidesLayerRef = useRef<Konva.Group | null>(null);
@@ -802,14 +849,26 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   }, [updateBackground, showGrid, drawInfiniteGrid, onViewportChange]);
 
   // Add connector between shapes
-  const addConnector = useCallback((fromId: string, toId: string) => {
-    if (fromId === toId) return;
+  const addConnector = useCallback((
+    fromId: string | null,
+    toId: string | null,
+    fromPos?: { x: number; y: number },
+    toPos?: { x: number; y: number },
+  ) => {
+    if (fromId && toId && fromId === toId) return;
 
-    const exists = connectors.some(
-      (c) => (c.fromShapeId === fromId && c.toShapeId === toId) ||
-             (c.fromShapeId === toId && c.toShapeId === fromId)
-    );
-    if (exists) return;
+    // Duplicate check only for shape-to-shape connectors
+    if (fromId && toId) {
+      const exists = connectors.some(
+        (c) => (c.fromShapeId === fromId && c.toShapeId === toId) ||
+               (c.fromShapeId === toId && c.toShapeId === fromId)
+      );
+      if (exists) return;
+    }
+
+    // Must have at least one valid endpoint
+    if (!fromId && !fromPos) return;
+    if (!toId && !toPos) return;
 
     // Configure connector based on variant
     let arrowStart: 'none' | 'arrow' = 'none';
@@ -836,8 +895,10 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     const newConnector: Connector = {
       id: `conn-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      fromShapeId: fromId,
-      toShapeId: toId,
+      ...(fromId ? { fromShapeId: fromId } : {}),
+      ...(toId ? { toShapeId: toId } : {}),
+      ...(fromPos && !fromId ? { fromPos } : {}),
+      ...(toPos && !toId ? { toPos } : {}),
       stroke: '#6b7280',
       strokeWidth: 2,
       arrow: arrowEnd === 'arrow',
@@ -896,7 +957,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         id: shape.id,
         x: shape.x,
         y: shape.y,
-        draggable: !shape.locked, // Locked shapes can't be dragged
+        draggable: !shape.locked && tool !== 'connector', // Locked shapes and connector mode can't drag
         rotation: shape.rotation || 0,
         opacity: shape.opacity ?? 1,
       });
@@ -1656,6 +1717,756 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             });
           }
           break;
+        case 'leftRightArrow':
+          // Left-right arrow shape
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const arrowHead = w * 0.2;
+            const bodyH = h * 0.35;
+            const bodyTop = (h - bodyH) / 2;
+            konvaShape = new Konva.Line({
+              points: [
+                0, h / 2,
+                arrowHead, 0,
+                arrowHead, bodyTop,
+                w - arrowHead, bodyTop,
+                w - arrowHead, 0,
+                w, h / 2,
+                w - arrowHead, h,
+                w - arrowHead, bodyTop + bodyH,
+                arrowHead, bodyTop + bodyH,
+                arrowHead, h,
+              ],
+              closed: true,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+          }
+          break;
+        case 'rightArrow':
+          // Right arrow shape
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const arrowHead = w * 0.3;
+            const bodyH = h * 0.4;
+            const bodyTop = (h - bodyH) / 2;
+            konvaShape = new Konva.Line({
+              points: [
+                0, bodyTop,
+                w - arrowHead, bodyTop,
+                w - arrowHead, 0,
+                w, h / 2,
+                w - arrowHead, h,
+                w - arrowHead, bodyTop + bodyH,
+                0, bodyTop + bodyH,
+              ],
+              closed: true,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+          }
+          break;
+        case 'chevron':
+          // Chevron / arrow-like shape
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const notch = w * 0.2;
+            konvaShape = new Konva.Line({
+              points: [
+                0, 0,
+                w - notch, 0,
+                w, h / 2,
+                w - notch, h,
+                0, h,
+                notch, h / 2,
+              ],
+              closed: true,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+          }
+          break;
+        case 'speechBubble':
+          // Speech bubble shape
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const bubbleH = h * 0.75;
+            const tailW = w * 0.15;
+            const tailH = h * 0.25;
+            const cr = Math.min(w, bubbleH) * 0.15;
+            const speechGroup = new Konva.Group();
+            const speechShape = new Konva.Shape({
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+              sceneFunc: (ctx, shp) => {
+                ctx.beginPath();
+                ctx.moveTo(cr, 0);
+                ctx.lineTo(w - cr, 0);
+                ctx.arcTo(w, 0, w, cr, cr);
+                ctx.lineTo(w, bubbleH - cr);
+                ctx.arcTo(w, bubbleH, w - cr, bubbleH, cr);
+                ctx.lineTo(w * 0.35 + tailW, bubbleH);
+                ctx.lineTo(w * 0.25, h);
+                ctx.lineTo(w * 0.35, bubbleH);
+                ctx.lineTo(cr, bubbleH);
+                ctx.arcTo(0, bubbleH, 0, bubbleH - cr, cr);
+                ctx.lineTo(0, cr);
+                ctx.arcTo(0, 0, cr, 0, cr);
+                ctx.closePath();
+                ctx.fillStrokeShape(shp);
+              },
+            });
+            speechGroup.add(speechShape);
+            group.add(speechGroup);
+            konvaShape = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h, fill: 'transparent',
+            });
+          }
+          break;
+        case 'pill':
+          // Pill / stadium shape (fully rounded ends)
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const r = h / 2;
+            konvaShape = new Konva.Rect({
+              ...shapeConfig,
+              cornerRadius: r,
+            });
+          }
+          break;
+        case 'folder':
+          // Folder shape
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const tabW = w * 0.35;
+            const tabH = h * 0.15;
+            const folderGroup = new Konva.Group();
+            const folderShape = new Konva.Shape({
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+              sceneFunc: (ctx, shp) => {
+                ctx.beginPath();
+                ctx.moveTo(0, tabH);
+                ctx.lineTo(0, 0);
+                ctx.lineTo(tabW, 0);
+                ctx.lineTo(tabW + tabH, tabH);
+                ctx.lineTo(w, tabH);
+                ctx.lineTo(w, h);
+                ctx.lineTo(0, h);
+                ctx.closePath();
+                ctx.fillStrokeShape(shp);
+              },
+            });
+            folderGroup.add(folderShape);
+            group.add(folderGroup);
+            konvaShape = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h, fill: 'transparent',
+            });
+          }
+          break;
+        case 'comment':
+          // Comment / note shape (rectangle with folded corner)
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const fold = Math.min(w, h) * 0.2;
+            const commentGroup = new Konva.Group();
+            const commentShape = new Konva.Shape({
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+              sceneFunc: (ctx, shp) => {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(w - fold, 0);
+                ctx.lineTo(w, fold);
+                ctx.lineTo(w, h);
+                ctx.lineTo(0, h);
+                ctx.closePath();
+                ctx.fillStrokeShape(shp);
+                // Draw fold line
+                ctx.beginPath();
+                ctx.moveTo(w - fold, 0);
+                ctx.lineTo(w - fold, fold);
+                ctx.lineTo(w, fold);
+                ctx.strokeShape(shp);
+              },
+            });
+            commentGroup.add(commentShape);
+            group.add(commentGroup);
+            konvaShape = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h, fill: 'transparent',
+            });
+          }
+          break;
+        case 'callout':
+          // Callout shape (rectangle with pointer at bottom-left)
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const boxH = h * 0.75;
+            const pointerW = w * 0.1;
+            const pointerOffset = w * 0.15;
+            const calloutGroup = new Konva.Group();
+            const calloutShape = new Konva.Shape({
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+              sceneFunc: (ctx, shp) => {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(w, 0);
+                ctx.lineTo(w, boxH);
+                ctx.lineTo(pointerOffset + pointerW, boxH);
+                ctx.lineTo(pointerOffset, h);
+                ctx.lineTo(pointerOffset, boxH);
+                ctx.lineTo(0, boxH);
+                ctx.closePath();
+                ctx.fillStrokeShape(shp);
+              },
+            });
+            calloutGroup.add(calloutShape);
+            group.add(calloutGroup);
+            konvaShape = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h, fill: 'transparent',
+            });
+          }
+          break;
+        case 'dividedBox':
+          // Divided box (rectangle with horizontal line in the middle)
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const dividedGroup = new Konva.Group();
+            const outerRect = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h,
+              fill: shape.fill, stroke: shape.stroke, strokeWidth: shape.strokeWidth,
+            });
+            const divLine = new Konva.Line({
+              points: [0, h / 2, w, h / 2],
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+            dividedGroup.add(outerRect);
+            dividedGroup.add(divLine);
+            group.add(dividedGroup);
+            konvaShape = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h, fill: 'transparent',
+            });
+          }
+          break;
+        case 'pentagonLabel':
+          // Pentagon label / home plate shape
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const pointW = w * 0.2;
+            konvaShape = new Konva.Line({
+              points: [
+                0, 0,
+                w - pointW, 0,
+                w, h / 2,
+                w - pointW, h,
+                0, h,
+              ],
+              closed: true,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+          }
+          break;
+        case 'trapezoid':
+          // Trapezoid shape
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const inset = w * 0.2;
+            konvaShape = new Konva.Line({
+              points: [
+                inset, 0,
+                w - inset, 0,
+                w, h,
+                0, h,
+              ],
+              closed: true,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+          }
+          break;
+        case 'hexagonHorizontal':
+          // Horizontal hexagon (wider than tall, flat on top/bottom)
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const inset = w * 0.15;
+            konvaShape = new Konva.Line({
+              points: [
+                inset, 0,
+                w - inset, 0,
+                w, h / 2,
+                w - inset, h,
+                inset, h,
+                0, h / 2,
+              ],
+              closed: true,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+            });
+          }
+          break;
+        case 'dividedSquare':
+          // Divided square (rectangle with both vertical and horizontal dividers)
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const dsGroup = new Konva.Group();
+            const dsRect = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h,
+              fill: shape.fill, stroke: shape.stroke, strokeWidth: shape.strokeWidth,
+            });
+            const hLine = new Konva.Line({
+              points: [0, h / 2, w, h / 2],
+              stroke: shape.stroke, strokeWidth: shape.strokeWidth,
+            });
+            const vLine = new Konva.Line({
+              points: [w / 2, 0, w / 2, h],
+              stroke: shape.stroke, strokeWidth: shape.strokeWidth,
+            });
+            dsGroup.add(dsRect);
+            dsGroup.add(hLine);
+            dsGroup.add(vLine);
+            group.add(dsGroup);
+            konvaShape = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h, fill: 'transparent',
+            });
+          }
+          break;
+        case 'circleCross':
+          // Circle with cross inside
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const ccGroup = new Konva.Group();
+            const ccCircle = new Konva.Ellipse({
+              x: w / 2, y: h / 2,
+              radiusX: w / 2, radiusY: h / 2,
+              fill: shape.fill, stroke: shape.stroke, strokeWidth: shape.strokeWidth,
+            });
+            const ccHLine = new Konva.Line({
+              points: [0, h / 2, w, h / 2],
+              stroke: shape.stroke, strokeWidth: shape.strokeWidth,
+            });
+            const ccVLine = new Konva.Line({
+              points: [w / 2, 0, w / 2, h],
+              stroke: shape.stroke, strokeWidth: shape.strokeWidth,
+            });
+            ccGroup.add(ccCircle);
+            ccGroup.add(ccHLine);
+            ccGroup.add(ccVLine);
+            group.add(ccGroup);
+            konvaShape = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h, fill: 'transparent',
+            });
+          }
+          break;
+        case 'circleX':
+          // Circle with X inside
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const cxGroup = new Konva.Group();
+            const cxCircle = new Konva.Ellipse({
+              x: w / 2, y: h / 2,
+              radiusX: w / 2, radiusY: h / 2,
+              fill: shape.fill, stroke: shape.stroke, strokeWidth: shape.strokeWidth,
+            });
+            const cxLine1 = new Konva.Line({
+              points: [w * 0.15, h * 0.15, w * 0.85, h * 0.85],
+              stroke: shape.stroke, strokeWidth: shape.strokeWidth,
+            });
+            const cxLine2 = new Konva.Line({
+              points: [w * 0.85, h * 0.15, w * 0.15, h * 0.85],
+              stroke: shape.stroke, strokeWidth: shape.strokeWidth,
+            });
+            cxGroup.add(cxCircle);
+            cxGroup.add(cxLine1);
+            cxGroup.add(cxLine2);
+            group.add(cxGroup);
+            konvaShape = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h, fill: 'transparent',
+            });
+          }
+          break;
+        // Icon shapes - rendered using simple Konva shapes for recognizable icons
+        case 'iconHeartbeat':
+        case 'iconArchive':
+        case 'iconKey':
+        case 'iconChat':
+        case 'iconCloud':
+        case 'iconArchiveBox':
+        case 'iconDatabase':
+        case 'iconMonitor':
+        case 'iconMail':
+        case 'iconDocument':
+        case 'iconCode':
+        case 'iconLightning':
+        case 'iconLocation':
+        case 'iconPhone':
+        case 'iconBox3d':
+        case 'iconDollar':
+        case 'iconShield':
+        case 'iconSend':
+        case 'iconServer':
+        case 'iconCube3d':
+        case 'iconGear':
+        case 'iconGrid':
+        case 'iconTerminal':
+        case 'iconUser':
+        case 'iconList':
+        case 'iconGlobe':
+          // Icon shapes are rendered as a rounded rect with a simple icon drawn inside
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const iconGroup = new Konva.Group();
+            // Background rounded rectangle
+            const iconBg = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h,
+              fill: shape.fill,
+              stroke: shape.stroke,
+              strokeWidth: shape.strokeWidth,
+              cornerRadius: Math.min(w, h) * 0.15,
+            });
+            iconGroup.add(iconBg);
+            // Draw icon symbol using Konva.Shape sceneFunc
+            const padding = Math.min(w, h) * 0.2;
+            const iw = w - padding * 2;
+            const ih = h - padding * 2;
+            const iconSymbol = new Konva.Shape({
+              x: padding,
+              y: padding,
+              stroke: shape.textColor || shape.stroke,
+              strokeWidth: Math.max(1.5, Math.min(w, h) * 0.04),
+              fill: 'transparent',
+              sceneFunc: (ctx, shp) => {
+                ctx.beginPath();
+                switch (shape.type) {
+                  case 'iconHeartbeat':
+                    // Heartbeat / pulse line
+                    ctx.moveTo(0, ih / 2);
+                    ctx.lineTo(iw * 0.2, ih / 2);
+                    ctx.lineTo(iw * 0.3, ih * 0.1);
+                    ctx.lineTo(iw * 0.4, ih * 0.9);
+                    ctx.lineTo(iw * 0.5, ih * 0.3);
+                    ctx.lineTo(iw * 0.6, ih / 2);
+                    ctx.lineTo(iw, ih / 2);
+                    break;
+                  case 'iconArchive':
+                    // Archive box with lid
+                    ctx.rect(0, 0, iw, ih * 0.25);
+                    ctx.rect(iw * 0.1, ih * 0.25, iw * 0.8, ih * 0.75);
+                    ctx.moveTo(iw * 0.35, ih * 0.5);
+                    ctx.lineTo(iw * 0.65, ih * 0.5);
+                    break;
+                  case 'iconKey':
+                    // Key shape
+                    ctx.arc(iw * 0.7, ih * 0.35, ih * 0.25, 0, Math.PI * 2);
+                    ctx.moveTo(iw * 0.45, ih * 0.35);
+                    ctx.lineTo(0, ih * 0.35);
+                    ctx.lineTo(0, ih * 0.6);
+                    ctx.moveTo(iw * 0.15, ih * 0.35);
+                    ctx.lineTo(iw * 0.15, ih * 0.55);
+                    break;
+                  case 'iconChat':
+                    // Chat bubble
+                    ctx.moveTo(iw * 0.15, 0);
+                    ctx.lineTo(iw * 0.85, 0);
+                    ctx.arcTo(iw, 0, iw, ih * 0.15, iw * 0.1);
+                    ctx.lineTo(iw, ih * 0.55);
+                    ctx.arcTo(iw, ih * 0.7, iw * 0.85, ih * 0.7, iw * 0.1);
+                    ctx.lineTo(iw * 0.35, ih * 0.7);
+                    ctx.lineTo(iw * 0.15, ih);
+                    ctx.lineTo(iw * 0.25, ih * 0.7);
+                    ctx.lineTo(iw * 0.15, ih * 0.7);
+                    ctx.arcTo(0, ih * 0.7, 0, ih * 0.55, iw * 0.1);
+                    ctx.lineTo(0, ih * 0.15);
+                    ctx.arcTo(0, 0, iw * 0.15, 0, iw * 0.1);
+                    break;
+                  case 'iconCloud':
+                    // Cloud shape
+                    ctx.arc(iw * 0.3, ih * 0.55, ih * 0.3, Math.PI * 0.7, Math.PI * 1.9);
+                    ctx.arc(iw * 0.5, ih * 0.35, ih * 0.35, Math.PI * 1.1, Math.PI * 1.95);
+                    ctx.arc(iw * 0.7, ih * 0.5, ih * 0.3, Math.PI * 1.3, Math.PI * 0.4);
+                    ctx.lineTo(iw * 0.85, ih * 0.75);
+                    ctx.lineTo(iw * 0.15, ih * 0.75);
+                    break;
+                  case 'iconArchiveBox':
+                    // Box with open top
+                    ctx.rect(0, ih * 0.2, iw, ih * 0.8);
+                    ctx.moveTo(0, ih * 0.2);
+                    ctx.lineTo(iw * 0.1, 0);
+                    ctx.lineTo(iw * 0.9, 0);
+                    ctx.lineTo(iw, ih * 0.2);
+                    break;
+                  case 'iconDatabase':
+                    // Database cylinder
+                    ctx.ellipse(iw / 2, ih * 0.15, iw / 2, ih * 0.15, 0, 0, Math.PI * 2);
+                    ctx.moveTo(0, ih * 0.15);
+                    ctx.lineTo(0, ih * 0.85);
+                    ctx.ellipse(iw / 2, ih * 0.85, iw / 2, ih * 0.15, 0, Math.PI, 0);
+                    ctx.moveTo(iw, ih * 0.15);
+                    ctx.lineTo(iw, ih * 0.85);
+                    break;
+                  case 'iconMonitor':
+                    // Monitor / screen
+                    ctx.rect(0, 0, iw, ih * 0.7);
+                    ctx.moveTo(iw * 0.3, ih * 0.85);
+                    ctx.lineTo(iw * 0.7, ih * 0.85);
+                    ctx.moveTo(iw / 2, ih * 0.7);
+                    ctx.lineTo(iw / 2, ih * 0.85);
+                    ctx.moveTo(iw * 0.25, ih);
+                    ctx.lineTo(iw * 0.75, ih);
+                    break;
+                  case 'iconMail':
+                    // Envelope
+                    ctx.rect(0, ih * 0.1, iw, ih * 0.8);
+                    ctx.moveTo(0, ih * 0.1);
+                    ctx.lineTo(iw / 2, ih * 0.55);
+                    ctx.lineTo(iw, ih * 0.1);
+                    break;
+                  case 'iconDocument':
+                    // Document with lines
+                    ctx.moveTo(iw * 0.65, 0);
+                    ctx.lineTo(iw * 0.1, 0);
+                    ctx.lineTo(iw * 0.1, ih);
+                    ctx.lineTo(iw * 0.9, ih);
+                    ctx.lineTo(iw * 0.9, iw * 0.25);
+                    ctx.lineTo(iw * 0.65, 0);
+                    ctx.moveTo(iw * 0.65, 0);
+                    ctx.lineTo(iw * 0.65, iw * 0.25);
+                    ctx.lineTo(iw * 0.9, iw * 0.25);
+                    ctx.moveTo(iw * 0.25, ih * 0.45);
+                    ctx.lineTo(iw * 0.75, ih * 0.45);
+                    ctx.moveTo(iw * 0.25, ih * 0.6);
+                    ctx.lineTo(iw * 0.75, ih * 0.6);
+                    ctx.moveTo(iw * 0.25, ih * 0.75);
+                    ctx.lineTo(iw * 0.55, ih * 0.75);
+                    break;
+                  case 'iconCode':
+                    // Code brackets < / >
+                    ctx.moveTo(iw * 0.35, ih * 0.15);
+                    ctx.lineTo(iw * 0.1, ih * 0.5);
+                    ctx.lineTo(iw * 0.35, ih * 0.85);
+                    ctx.moveTo(iw * 0.65, ih * 0.15);
+                    ctx.lineTo(iw * 0.9, ih * 0.5);
+                    ctx.lineTo(iw * 0.65, ih * 0.85);
+                    break;
+                  case 'iconLightning':
+                    // Lightning bolt
+                    ctx.moveTo(iw * 0.55, 0);
+                    ctx.lineTo(iw * 0.2, ih * 0.5);
+                    ctx.lineTo(iw * 0.45, ih * 0.5);
+                    ctx.lineTo(iw * 0.4, ih);
+                    ctx.lineTo(iw * 0.8, ih * 0.4);
+                    ctx.lineTo(iw * 0.55, ih * 0.4);
+                    ctx.lineTo(iw * 0.55, 0);
+                    break;
+                  case 'iconLocation':
+                    // Location pin
+                    ctx.arc(iw / 2, ih * 0.35, iw * 0.35, Math.PI, 0);
+                    ctx.lineTo(iw / 2, ih);
+                    ctx.lineTo(iw * 0.15, ih * 0.35);
+                    ctx.moveTo(iw / 2, ih * 0.35);
+                    ctx.arc(iw / 2, ih * 0.35, iw * 0.12, 0, Math.PI * 2);
+                    break;
+                  case 'iconPhone':
+                    // Phone handset
+                    ctx.rect(iw * 0.2, 0, iw * 0.6, ih);
+                    ctx.moveTo(iw * 0.35, ih * 0.06);
+                    ctx.lineTo(iw * 0.65, ih * 0.06);
+                    ctx.arc(iw / 2, ih * 0.88, iw * 0.08, 0, Math.PI * 2);
+                    break;
+                  case 'iconBox3d':
+                    // 3D box
+                    ctx.moveTo(iw / 2, 0);
+                    ctx.lineTo(iw, ih * 0.25);
+                    ctx.lineTo(iw, ih * 0.75);
+                    ctx.lineTo(iw / 2, ih);
+                    ctx.lineTo(0, ih * 0.75);
+                    ctx.lineTo(0, ih * 0.25);
+                    ctx.closePath();
+                    ctx.moveTo(iw / 2, ih * 0.5);
+                    ctx.lineTo(iw, ih * 0.25);
+                    ctx.moveTo(iw / 2, ih * 0.5);
+                    ctx.lineTo(0, ih * 0.25);
+                    ctx.moveTo(iw / 2, ih * 0.5);
+                    ctx.lineTo(iw / 2, ih);
+                    break;
+                  case 'iconDollar':
+                    // Dollar sign
+                    ctx.arc(iw / 2, ih * 0.3, iw * 0.3, Math.PI * 0.2, Math.PI * 1.1);
+                    ctx.arc(iw / 2, ih * 0.65, iw * 0.3, Math.PI * 1.2, Math.PI * 0.1);
+                    ctx.moveTo(iw / 2, 0);
+                    ctx.lineTo(iw / 2, ih);
+                    break;
+                  case 'iconShield':
+                    // Shield shape
+                    ctx.moveTo(iw / 2, 0);
+                    ctx.lineTo(iw, ih * 0.15);
+                    ctx.lineTo(iw, ih * 0.55);
+                    ctx.quadraticCurveTo(iw / 2, ih * 1.1, iw / 2, ih);
+                    ctx.quadraticCurveTo(iw / 2, ih * 1.1, 0, ih * 0.55);
+                    ctx.lineTo(0, ih * 0.15);
+                    ctx.closePath();
+                    break;
+                  case 'iconSend':
+                    // Send / paper plane
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(iw, ih / 2);
+                    ctx.lineTo(0, ih);
+                    ctx.lineTo(iw * 0.2, ih / 2);
+                    ctx.closePath();
+                    break;
+                  case 'iconServer':
+                    // Server rack
+                    ctx.rect(0, 0, iw, ih * 0.3);
+                    ctx.rect(0, ih * 0.35, iw, ih * 0.3);
+                    ctx.rect(0, ih * 0.7, iw, ih * 0.3);
+                    ctx.moveTo(iw * 0.7, ih * 0.15);
+                    ctx.arc(iw * 0.75, ih * 0.15, iw * 0.04, 0, Math.PI * 2);
+                    ctx.moveTo(iw * 0.7, ih * 0.5);
+                    ctx.arc(iw * 0.75, ih * 0.5, iw * 0.04, 0, Math.PI * 2);
+                    ctx.moveTo(iw * 0.7, ih * 0.85);
+                    ctx.arc(iw * 0.75, ih * 0.85, iw * 0.04, 0, Math.PI * 2);
+                    break;
+                  case 'iconCube3d':
+                    // 3D cube (isometric)
+                    ctx.moveTo(iw / 2, 0);
+                    ctx.lineTo(iw, ih * 0.25);
+                    ctx.lineTo(iw / 2, ih * 0.5);
+                    ctx.lineTo(0, ih * 0.25);
+                    ctx.closePath();
+                    ctx.moveTo(0, ih * 0.25);
+                    ctx.lineTo(0, ih * 0.75);
+                    ctx.lineTo(iw / 2, ih);
+                    ctx.lineTo(iw / 2, ih * 0.5);
+                    ctx.moveTo(iw, ih * 0.25);
+                    ctx.lineTo(iw, ih * 0.75);
+                    ctx.lineTo(iw / 2, ih);
+                    break;
+                  case 'iconGear':
+                    // Gear / settings
+                    {
+                      const gcx = iw / 2;
+                      const gcy = ih / 2;
+                      const outerR = Math.min(iw, ih) * 0.45;
+                      const innerR = outerR * 0.65;
+                      const teeth = 8;
+                      for (let i = 0; i < teeth; i++) {
+                        const a1 = (i / teeth) * Math.PI * 2 - Math.PI / 2;
+                        const a2 = ((i + 0.3) / teeth) * Math.PI * 2 - Math.PI / 2;
+                        const a3 = ((i + 0.5) / teeth) * Math.PI * 2 - Math.PI / 2;
+                        const a4 = ((i + 0.8) / teeth) * Math.PI * 2 - Math.PI / 2;
+                        if (i === 0) {
+                          ctx.moveTo(gcx + innerR * Math.cos(a1), gcy + innerR * Math.sin(a1));
+                        } else {
+                          ctx.lineTo(gcx + innerR * Math.cos(a1), gcy + innerR * Math.sin(a1));
+                        }
+                        ctx.lineTo(gcx + outerR * Math.cos(a2), gcy + outerR * Math.sin(a2));
+                        ctx.lineTo(gcx + outerR * Math.cos(a3), gcy + outerR * Math.sin(a3));
+                        ctx.lineTo(gcx + innerR * Math.cos(a4), gcy + innerR * Math.sin(a4));
+                      }
+                      ctx.closePath();
+                      // Inner circle
+                      ctx.moveTo(gcx + outerR * 0.35, gcy);
+                      ctx.arc(gcx, gcy, outerR * 0.35, 0, Math.PI * 2);
+                    }
+                    break;
+                  case 'iconGrid':
+                    // Grid (4x4)
+                    {
+                      const gs = 0.05;
+                      const gw = (1 - gs * 3) / 3;
+                      for (let r = 0; r < 3; r++) {
+                        for (let c = 0; c < 3; c++) {
+                          ctx.rect(
+                            (c * (gw + gs)) * iw,
+                            (r * (gw + gs)) * ih,
+                            gw * iw,
+                            gw * ih
+                          );
+                        }
+                      }
+                    }
+                    break;
+                  case 'iconTerminal':
+                    // Terminal / console
+                    ctx.rect(0, 0, iw, ih);
+                    ctx.moveTo(iw * 0.15, ih * 0.3);
+                    ctx.lineTo(iw * 0.35, ih * 0.5);
+                    ctx.lineTo(iw * 0.15, ih * 0.7);
+                    ctx.moveTo(iw * 0.4, ih * 0.7);
+                    ctx.lineTo(iw * 0.65, ih * 0.7);
+                    break;
+                  case 'iconUser':
+                    // User / person icon
+                    ctx.arc(iw / 2, ih * 0.3, iw * 0.2, 0, Math.PI * 2);
+                    ctx.moveTo(iw * 0.85, ih);
+                    ctx.arc(iw / 2, ih * 1.05, iw * 0.4, Math.PI * 1.8, Math.PI * 1.2, true);
+                    break;
+                  case 'iconList':
+                    // List / lines
+                    ctx.rect(0, ih * 0.05, iw * 0.08, ih * 0.08);
+                    ctx.moveTo(iw * 0.2, ih * 0.1);
+                    ctx.lineTo(iw, ih * 0.1);
+                    ctx.rect(0, ih * 0.28, iw * 0.08, ih * 0.08);
+                    ctx.moveTo(iw * 0.2, ih * 0.33);
+                    ctx.lineTo(iw, ih * 0.33);
+                    ctx.rect(0, ih * 0.5, iw * 0.08, ih * 0.08);
+                    ctx.moveTo(iw * 0.2, ih * 0.55);
+                    ctx.lineTo(iw, ih * 0.55);
+                    ctx.rect(0, ih * 0.72, iw * 0.08, ih * 0.08);
+                    ctx.moveTo(iw * 0.2, ih * 0.77);
+                    ctx.lineTo(iw, ih * 0.77);
+                    break;
+                  case 'iconGlobe':
+                    // Globe / world
+                    {
+                      const gr = Math.min(iw, ih) / 2;
+                      ctx.arc(iw / 2, ih / 2, gr, 0, Math.PI * 2);
+                      // Horizontal lines
+                      ctx.moveTo(0, ih / 2);
+                      ctx.lineTo(iw, ih / 2);
+                      // Vertical ellipse
+                      ctx.ellipse(iw / 2, ih / 2, gr * 0.4, gr, 0, 0, Math.PI * 2);
+                    }
+                    break;
+                }
+                ctx.strokeShape(shp);
+              },
+            });
+            iconGroup.add(iconSymbol);
+            group.add(iconGroup);
+            konvaShape = new Konva.Rect({
+              x: 0, y: 0, width: w, height: h, fill: 'transparent',
+            });
+          }
+          break;
         default:
           konvaShape = new Konva.Rect({
             ...shapeConfig,
@@ -1685,6 +2496,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         }
       }
 
+      // Legacy: green highlight for click-to-connect source shape (kept for external API compatibility)
       if (connectingFrom === shape.id) {
         konvaShape.stroke('#22c55e');
         konvaShape.strokeWidth(3);
@@ -1851,17 +2663,44 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         });
       });
 
+      // Connector drag: start drag on mousedown in connector mode
+      group.on('mousedown touchstart', (e) => {
+        if (tool !== 'connector') return;
+        e.cancelBubble = true;
+
+        const stage = e.target.getStage();
+        if (!stage) return;
+
+        // Get the center of the shape as drag start point
+        const center = {
+          x: shape.x + shape.width / 2,
+          y: shape.y + shape.height / 2,
+        };
+        isDraggingConnectorRef.current = true;
+        connectorDragModeRef.current = 'create';
+        connectorDragFromRef.current = shape.id;
+        connectorDragFromPointRef.current = center;
+        connectorDragEndRef.current = center;
+        connectorDragSnapTargetRef.current = null;
+
+        // Show preview arrow
+        const preview = connectorPreviewArrowRef.current;
+        if (preview) {
+          preview.points([center.x, center.y, center.x, center.y]);
+          preview.visible(true);
+          preview.getLayer()?.batchDraw();
+        }
+
+        stage.container().style.cursor = 'crosshair';
+      });
+
       group.on('click tap', (e) => {
         // Locked shapes can't be selected (except for connectors)
         if (shape.locked && tool !== 'connector') return;
 
         if (tool === 'connector') {
-          if (!connectingFrom) {
-            setConnectingFrom(shape.id);
-          } else {
-            addConnector(connectingFrom, shape.id);
-            setConnectingFrom(null);
-          }
+          // Connector creation now handled by drag (mousedown→mousemove→mouseup)
+          return;
         } else {
           // Support Shift+Click for multi-select
           const evt = e.evt as MouseEvent | TouchEvent;
@@ -1913,16 +2752,19 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         }
       });
 
-      // Hover events for connection points in connector mode
+      // Hover events for connection points in connector/select mode
       group.on('mouseenter', () => {
-        if (tool === 'connector') {
+        if (tool === 'connector' || tool === 'select') {
           setHoveredShapeId(shape.id);
         }
       });
 
       group.on('mouseleave', () => {
-        if (tool === 'connector') {
-          setHoveredShapeId(null);
+        if (tool === 'connector' || tool === 'select') {
+          // Keep hoveredShapeId while dragging a connector so snap targets work
+          if (!isDraggingConnectorRef.current) {
+            setHoveredShapeId(null);
+          }
         }
       });
 
@@ -2608,10 +3450,12 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     layer.destroyChildren();
 
     connectors.forEach((connector) => {
-      const fromShape = shapes.find((s) => s.id === connector.fromShapeId);
-      const toShape = shapes.find((s) => s.id === connector.toShapeId);
+      const fromShape = connector.fromShapeId ? shapes.find((s) => s.id === connector.fromShapeId) : undefined;
+      const toShape = connector.toShapeId ? shapes.find((s) => s.id === connector.toShapeId) : undefined;
 
-      if (!fromShape || !toShape) return;
+      // Need at least a shape or a position for each end
+      if (!fromShape && !connector.fromPos) return;
+      if (!toShape && !connector.toPos) return;
 
       // Get connection points (use specified points or auto)
       const fromPoint = connector.fromPoint || 'auto';
@@ -2620,18 +3464,26 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       let from: { x: number; y: number };
       let to: { x: number; y: number };
 
-      if (fromPoint === 'auto') {
-        const toCenter = getShapeCenter(toShape);
-        from = getShapeEdgePoint(fromShape, toCenter);
+      if (fromShape) {
+        if (fromPoint === 'auto') {
+          const toCenter = toShape ? getShapeCenter(toShape) : connector.toPos!;
+          from = getShapeEdgePoint(fromShape, toCenter);
+        } else {
+          from = getConnectionPoint(fromShape, fromPoint);
+        }
       } else {
-        from = getConnectionPoint(fromShape, fromPoint);
+        from = connector.fromPos!;
       }
 
-      if (toPoint === 'auto') {
-        const fromCenter = getShapeCenter(fromShape);
-        to = getShapeEdgePoint(toShape, fromCenter);
+      if (toShape) {
+        if (toPoint === 'auto') {
+          const fromCenter = fromShape ? getShapeCenter(fromShape) : connector.fromPos!;
+          to = getShapeEdgePoint(toShape, fromCenter);
+        } else {
+          to = getConnectionPoint(toShape, toPoint);
+        }
       } else {
-        to = getConnectionPoint(toShape, toPoint);
+        to = connector.toPos!;
       }
 
       const isSelected = selectedId === connector.id && selectionType === 'connector';
@@ -2693,10 +3545,144 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
         layer.add(line);
       }
+
+      // Render endpoint handles for selected connectors (reconnect feature)
+      if (isSelected) {
+        const endpoints: Array<{ pos: { x: number; y: number }; end: 'from' | 'to'; anchorShapeId?: string; oppositeShapeId?: string; oppositePos?: { x: number; y: number } }> = [
+          { pos: from, end: 'from', anchorShapeId: connector.fromShapeId, oppositeShapeId: connector.toShapeId, oppositePos: !connector.toShapeId ? to : undefined },
+          { pos: to, end: 'to', anchorShapeId: connector.toShapeId, oppositeShapeId: connector.fromShapeId, oppositePos: !connector.fromShapeId ? from : undefined },
+        ];
+
+        endpoints.forEach(({ pos, end, oppositeShapeId, oppositePos }) => {
+          const handle = new Konva.Circle({
+            x: pos.x,
+            y: pos.y,
+            radius: 6,
+            fill: '#ffffff',
+            stroke: '#ef4444',
+            strokeWidth: 2,
+            shadowColor: '#000000',
+            shadowBlur: 4,
+            shadowOpacity: 0.2,
+          });
+
+          handle.on('mouseenter', () => {
+            handle.fill('#ef4444');
+            const st = stageRef.current;
+            if (st) st.container().style.cursor = 'grab';
+            layer.getLayer()?.batchDraw();
+          });
+
+          handle.on('mouseleave', () => {
+            if (!isDraggingConnectorRef.current) {
+              handle.fill('#ffffff');
+              const st = stageRef.current;
+              if (st) st.container().style.cursor = 'default';
+              layer.getLayer()?.batchDraw();
+            }
+          });
+
+          handle.on('mousedown touchstart', (e) => {
+            e.cancelBubble = true;
+
+            // Find the opposite (fixed) end's position for the preview arrow
+            let oppositeCenter: { x: number; y: number };
+            if (oppositeShapeId) {
+              const oppositeShape = shapesRef.current.find((s) => s.id === oppositeShapeId);
+              if (!oppositeShape) return;
+              oppositeCenter = {
+                x: oppositeShape.x + oppositeShape.width / 2,
+                y: oppositeShape.y + oppositeShape.height / 2,
+              };
+            } else if (oppositePos) {
+              oppositeCenter = oppositePos;
+            } else {
+              return;
+            }
+
+            connectorDragModeRef.current = 'reconnect';
+            connectorReconnectIdRef.current = connector.id;
+            connectorReconnectEndRef.current = end;
+            isDraggingConnectorRef.current = true;
+            // The "from" for the preview is the fixed opposite end
+            connectorDragFromRef.current = oppositeShapeId || null;
+            connectorDragFromPointRef.current = oppositeCenter;
+            connectorDragEndRef.current = { x: pos.x, y: pos.y };
+            connectorDragSnapTargetRef.current = null;
+
+            // Show preview arrow from the fixed end
+            const preview = connectorPreviewArrowRef.current;
+            if (preview) {
+              preview.points([oppositeCenter.x, oppositeCenter.y, pos.x, pos.y]);
+              preview.visible(true);
+              preview.getLayer()?.batchDraw();
+            }
+
+            const st = stageRef.current;
+            if (st) st.container().style.cursor = 'grabbing';
+          });
+
+          layer.add(handle);
+        });
+      }
     });
 
     layer.getLayer()?.batchDraw();
   }, [connectors, shapes, getShapeCenter, getShapeEdgePoint, getConnectionPoint, getOrthogonalPath, getLineDash, selectedId, selectionType, selectConnector]);
+
+  // Calculate connector toolbar screen position
+  const connectorToolbarPos = useMemo(() => {
+    if (selectionType !== 'connector' || !selectedId) return null;
+    const connector = connectors.find((c) => c.id === selectedId);
+    if (!connector) return null;
+    const fromShape = connector.fromShapeId ? shapes.find((s) => s.id === connector.fromShapeId) : undefined;
+    const toShape = connector.toShapeId ? shapes.find((s) => s.id === connector.toShapeId) : undefined;
+    if (!fromShape && !connector.fromPos) return null;
+    if (!toShape && !connector.toPos) return null;
+
+    const fromPoint = connector.fromPoint || 'auto';
+    const toPoint = connector.toPoint || 'auto';
+
+    let from: { x: number; y: number };
+    let to: { x: number; y: number };
+
+    if (fromShape) {
+      const target = toShape ? getShapeCenter(toShape) : connector.toPos!;
+      from = fromPoint === 'auto' ? getShapeEdgePoint(fromShape, target) : getConnectionPoint(fromShape, fromPoint);
+    } else {
+      from = connector.fromPos!;
+    }
+    if (toShape) {
+      const target = fromShape ? getShapeCenter(fromShape) : connector.fromPos!;
+      to = toPoint === 'auto' ? getShapeEdgePoint(toShape, target) : getConnectionPoint(toShape, toPoint);
+    } else {
+      to = connector.toPos!;
+    }
+
+    // Calculate midpoint based on routing
+    let mid: { x: number; y: number };
+    if (connector.routing === 'orthogonal') {
+      const pts = getOrthogonalPath(from, to, fromPoint, toPoint);
+      // Middle segment midpoint (pts has 8 values = 4 points, middle segment is pts[2..5])
+      const segIdx = Math.floor(pts.length / 4) * 2; // index 4 for 8-length
+      const mx = (pts[segIdx - 2] + pts[segIdx]) / 2;
+      const my = (pts[segIdx - 1] + pts[segIdx + 1]) / 2;
+      mid = { x: mx, y: my };
+    } else {
+      mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+    }
+
+    // Canvas coords → screen coords
+    const stage = stageRef.current;
+    if (!stage) return null;
+    const stageScale = stage.scaleX();
+    const stagePos = stage.position();
+    return {
+      x: mid.x * stageScale + stagePos.x,
+      y: mid.y * stageScale + stagePos.y - 48,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectionType, selectedId, connectors, shapes, scale, viewportTick, getShapeCenter, getShapeEdgePoint, getConnectionPoint, getOrthogonalPath]);
 
   // Update shape text
   const updateShapeText = useCallback((id: string, text: string) => {
@@ -2987,6 +3973,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       )
     );
   }, []);
+
+  const updateConnectorRef = useRef(updateConnector);
+  updateConnectorRef.current = updateConnector;
 
   // Align selected shapes
   const alignShapes = useCallback((type: AlignType) => {
@@ -3538,6 +4527,78 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             svgContent += `  <path d="${d}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
           }
           break;
+        case 'leftRightArrow':
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const ah = w * 0.2;
+            const bh = h * 0.35;
+            const bt = (h - bh) / 2;
+            const pts = `${shape.x},${shape.y + h / 2} ${shape.x + ah},${shape.y} ${shape.x + ah},${shape.y + bt} ${shape.x + w - ah},${shape.y + bt} ${shape.x + w - ah},${shape.y} ${shape.x + w},${shape.y + h / 2} ${shape.x + w - ah},${shape.y + h} ${shape.x + w - ah},${shape.y + bt + bh} ${shape.x + ah},${shape.y + bt + bh} ${shape.x + ah},${shape.y + h}`;
+            svgContent += `  <polygon points="${pts}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
+        case 'rightArrow':
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const ah = w * 0.3;
+            const bh = h * 0.4;
+            const bt = (h - bh) / 2;
+            const pts = `${shape.x},${shape.y + bt} ${shape.x + w - ah},${shape.y + bt} ${shape.x + w - ah},${shape.y} ${shape.x + w},${shape.y + h / 2} ${shape.x + w - ah},${shape.y + h} ${shape.x + w - ah},${shape.y + bt + bh} ${shape.x},${shape.y + bt + bh}`;
+            svgContent += `  <polygon points="${pts}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
+        case 'chevron':
+          {
+            const w = shape.width;
+            const h = shape.height;
+            const notch = w * 0.2;
+            const pts = `${shape.x},${shape.y} ${shape.x + w - notch},${shape.y} ${shape.x + w},${shape.y + h / 2} ${shape.x + w - notch},${shape.y + h} ${shape.x},${shape.y + h} ${shape.x + notch},${shape.y + h / 2}`;
+            svgContent += `  <polygon points="${pts}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" opacity="${opacity}"${transform} />\n`;
+          }
+          break;
+        case 'speechBubble':
+        case 'folder':
+        case 'comment':
+        case 'callout':
+        case 'pill':
+        case 'dividedBox':
+        case 'pentagonLabel':
+        case 'trapezoid':
+        case 'hexagonHorizontal':
+        case 'dividedSquare':
+        case 'circleCross':
+        case 'circleX':
+        case 'iconHeartbeat':
+        case 'iconArchive':
+        case 'iconKey':
+        case 'iconChat':
+        case 'iconCloud':
+        case 'iconArchiveBox':
+        case 'iconDatabase':
+        case 'iconMonitor':
+        case 'iconMail':
+        case 'iconDocument':
+        case 'iconCode':
+        case 'iconLightning':
+        case 'iconLocation':
+        case 'iconPhone':
+        case 'iconBox3d':
+        case 'iconDollar':
+        case 'iconShield':
+        case 'iconSend':
+        case 'iconServer':
+        case 'iconCube3d':
+        case 'iconGear':
+        case 'iconGrid':
+        case 'iconTerminal':
+        case 'iconUser':
+        case 'iconList':
+        case 'iconGlobe':
+          // Fallback SVG rendering for complex shapes - render as rounded rect
+          svgContent += `  <rect x="${shape.x}" y="${shape.y}" width="${shape.width}" height="${shape.height}" fill="${shape.fill}" stroke="${shape.stroke}" stroke-width="${shape.strokeWidth}" rx="4" opacity="${opacity}"${transform} />\n`;
+          break;
       }
 
       // Add text overlay for non-text shapes
@@ -3734,10 +4795,40 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       setConnectors(data.connectors || []);
       notifyShapesChange(data.shapes || []);
     },
-  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, notifyShapesChange, alignShapes, distributeShapes, groupSelected, ungroupSelected, exportToPNG, exportToSVG, setZoom, zoomToFit, zoomTo100, setViewportPosition, canvasSize]);
+    saveToJSON: exportToJson,
+    loadFromJSONFile: importFromJson,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  }), [updateShape, shapes, selectedId, deleteSelected, duplicateSelected, copySelected, connectors, updateConnector, notifyShapesChange, alignShapes, distributeShapes, groupSelected, ungroupSelected, exportToPNG, exportToSVG, setZoom, zoomToFit, zoomTo100, setViewportPosition, canvasSize, exportToJson, importFromJson, undo, redo, canUndo, canRedo]);
 
   // Handle escape key
   const handleEscape = useCallback(() => {
+    // Cancel active connector drag if in progress
+    if (isDraggingConnectorRef.current) {
+      isDraggingConnectorRef.current = false;
+      connectorDragModeRef.current = null;
+      connectorDragFromRef.current = null;
+      connectorDragFromPointRef.current = null;
+      connectorDragEndRef.current = null;
+      connectorDragSnapTargetRef.current = null;
+      connectorReconnectIdRef.current = null;
+      connectorReconnectEndRef.current = null;
+
+      const preview = connectorPreviewArrowRef.current;
+      if (preview) {
+        preview.visible(false);
+        preview.getLayer()?.batchDraw();
+      }
+      const indicator = connectorSnapIndicatorRef.current;
+      if (indicator) {
+        indicator.visible(false);
+        indicator.getLayer()?.batchDraw();
+      }
+      return;
+    }
+
     setSelectedId(null);
     resetTool();
   }, [resetTool]);
@@ -3851,6 +4942,34 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     overlayLayer.add(drawingGroup);
     guidesLayerRef.current = guidesGroup;
     drawingLayerRef.current = drawingGroup;
+
+    // Connector drag preview elements (on overlay layer so they don't block events)
+    const previewArrow = new Konva.Arrow({
+      points: [0, 0, 0, 0],
+      stroke: '#3b82f6',
+      strokeWidth: 2,
+      dash: [6, 4],
+      opacity: 0.7,
+      pointerLength: 10,
+      pointerWidth: 8,
+      visible: false,
+      listening: false,
+    });
+    overlayLayer.add(previewArrow);
+    connectorPreviewArrowRef.current = previewArrow;
+
+    const snapIndicator = new Konva.Circle({
+      x: 0,
+      y: 0,
+      radius: 12,
+      stroke: '#3b82f6',
+      strokeWidth: 2,
+      fill: 'rgba(59, 130, 246, 0.15)',
+      visible: false,
+      listening: false,
+    });
+    overlayLayer.add(snapIndicator);
+    connectorSnapIndicatorRef.current = snapIndicator;
 
     // Layer 5: Cursor layer (remote collaboration cursors, non-interactive)
     const cursorsLayer = new Konva.Layer({ listening: false });
@@ -3989,6 +5108,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       shapesLayerRef.current = null;
       connectorsLayerRef.current = null;
       connectionPointsLayerRef.current = null;
+      connectorPreviewArrowRef.current = null;
+      connectorSnapIndicatorRef.current = null;
       bgLayerRef.current = null;
       gridLayerRef.current = null;
       guidesLayerRef.current = null;
@@ -4024,8 +5145,8 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     group.destroyChildren();
 
-    // Only show connection points in connector mode when hovering
-    if (tool !== 'connector' || !hoveredShapeId) {
+    // Only show connection points in connector/select mode when hovering
+    if ((tool !== 'connector' && tool !== 'select') || !hoveredShapeId) {
       group.getLayer()?.batchDraw();
       return;
     }
@@ -4038,7 +5159,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
     // Get connection points for the hovered shape
     const points = getConnectionPoints(shape);
-    const pointSize = 8;
+    // Select mode: smaller/subtler; Connector mode: full size
+    const pointSize = tool === 'select' ? 6 : 8;
+    const pointOpacity = tool === 'select' ? 0.7 : 1.0;
 
     // Draw connection point circles
     Object.entries(points).forEach(([position, point]) => {
@@ -4052,6 +5175,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         shadowColor: '#000000',
         shadowBlur: 4,
         shadowOpacity: 0.2,
+        opacity: pointOpacity,
       });
 
       // Add hover effect
@@ -4067,15 +5191,34 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
         group.getLayer()?.batchDraw();
       });
 
-      // Handle click on connection point to create connector
-      circle.on('click tap', (e) => {
+      // Handle mousedown on connection point to start connector drag from specific point
+      circle.on('mousedown touchstart', (e) => {
         e.cancelBubble = true;
-        const currentConnectingFrom = connectingFromRef.current;
-        if (!currentConnectingFrom) {
-          setConnectingFrom(shape.id);
-        } else if (currentConnectingFrom !== shape.id) {
-          addConnectorRef.current(currentConnectingFrom, shape.id);
-          setConnectingFrom(null);
+
+        // In select mode, stop any in-progress shape drag to prevent conflicts
+        if (tool === 'select') {
+          const hoveredGroup = shapesLayerRef.current?.findOne(`#${shape.id}`);
+          if (hoveredGroup) (hoveredGroup as Konva.Group).stopDrag();
+        }
+
+        isDraggingConnectorRef.current = true;
+        connectorDragModeRef.current = 'create';
+        connectorDragFromRef.current = shape.id;
+        connectorDragFromPointRef.current = { x: point.x, y: point.y };
+        connectorDragEndRef.current = { x: point.x, y: point.y };
+        connectorDragSnapTargetRef.current = null;
+
+        // Show preview arrow starting from this connection point
+        const preview = connectorPreviewArrowRef.current;
+        if (preview) {
+          preview.points([point.x, point.y, point.x, point.y]);
+          preview.visible(true);
+          preview.getLayer()?.batchDraw();
+        }
+
+        const stage = stageRef.current;
+        if (stage) {
+          stage.container().style.cursor = 'crosshair';
         }
       });
 
@@ -4083,12 +5226,35 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     });
 
     group.getLayer()?.batchDraw();
-  }, [tool, hoveredShapeId, shapes, getConnectionPoints, setConnectingFrom]);
+  }, [tool, hoveredShapeId, shapes, getConnectionPoints]);
 
-  // Clear hovered shape when tool changes
+  // Clear hovered shape and cancel any active connector drag when tool changes
   useEffect(() => {
-    if (tool !== 'connector') {
+    if (tool !== 'connector' && tool !== 'select') {
       setHoveredShapeId(null);
+
+      // Cancel any active connector drag
+      if (isDraggingConnectorRef.current) {
+        isDraggingConnectorRef.current = false;
+        connectorDragModeRef.current = null;
+        connectorDragFromRef.current = null;
+        connectorDragFromPointRef.current = null;
+        connectorDragEndRef.current = null;
+        connectorDragSnapTargetRef.current = null;
+        connectorReconnectIdRef.current = null;
+        connectorReconnectEndRef.current = null;
+
+        const preview = connectorPreviewArrowRef.current;
+        if (preview) {
+          preview.visible(false);
+          preview.getLayer()?.batchDraw();
+        }
+        const indicator = connectorSnapIndicatorRef.current;
+        if (indicator) {
+          indicator.visible(false);
+          indicator.getLayer()?.batchDraw();
+        }
+      }
     }
   }, [tool]);
 
@@ -4149,13 +5315,15 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
 
       if (isPanning) return;
       if (isDrawingTool) return; // Drawing tools handle their own events
+      // Ignore clicks that are the tail end of a connector drag
+      if (isDraggingConnectorRef.current) return;
 
       const staticLayer = staticLayerRef.current;
 
       // Click on stage background or static layer (bg + grid)
       if (e.target === stage || e.target.getLayer() === staticLayer) {
         if (tool === 'connector') {
-          setConnectingFrom(null);
+          // No-op: connector creation now uses drag, not click
         } else if (tool !== 'select') {
           const pos = stage.getPointerPosition();
           if (pos) {
@@ -4169,6 +5337,241 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       }
     });
   }, [tool, addShape, isPanning, clearSelection]);
+
+  // Free connector: start drag from empty canvas
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    if (tool !== 'connector') return;
+
+    const handleStageMouseDown = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+      if (isPanning) return;
+      // Only trigger on empty canvas (stage itself or static layer)
+      const staticLayer = staticLayerRef.current;
+      if (e.target !== stage && e.target.getLayer() !== staticLayer) return;
+
+      const pos = stage.getPointerPosition();
+      if (!pos) return;
+      const transform = stage.getAbsoluteTransform().copy().invert();
+      const canvasPos = transform.point(pos);
+
+      isDraggingConnectorRef.current = true;
+      connectorDragModeRef.current = 'create';
+      connectorDragFromRef.current = null; // No shape — free-floating start
+      connectorDragFromPointRef.current = canvasPos;
+      connectorDragEndRef.current = canvasPos;
+      connectorDragSnapTargetRef.current = null;
+
+      const preview = connectorPreviewArrowRef.current;
+      if (preview) {
+        preview.points([canvasPos.x, canvasPos.y, canvasPos.x, canvasPos.y]);
+        preview.visible(true);
+        preview.getLayer()?.batchDraw();
+      }
+      stage.container().style.cursor = 'crosshair';
+    };
+
+    stage.on('mousedown touchstart', handleStageMouseDown);
+    return () => {
+      stage.off('mousedown touchstart', handleStageMouseDown);
+    };
+  }, [tool, isPanning]);
+
+  // Connector drag: mousemove + mouseup on stage (core drag-to-connect logic)
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    if (tool !== 'connector' && tool !== 'select') return;
+
+    const SNAP_DISTANCE = 30;
+
+    const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+      if (!isDraggingConnectorRef.current) return;
+
+      const pos = stage.getPointerPosition();
+      if (!pos) return;
+      const transform = stage.getAbsoluteTransform().copy().invert();
+      const canvasPos = transform.point(pos);
+
+      connectorDragEndRef.current = canvasPos;
+
+      // Find closest snap target
+      let bestDist = SNAP_DISTANCE;
+      let snapTarget: string | null = null;
+      let snapPoint: { x: number; y: number } | null = null;
+
+      for (const s of shapesRef.current) {
+        if (s.id === connectorDragFromRef.current) continue;
+        if (s.visible === false) continue;
+
+        const center = {
+          x: s.x + s.width / 2,
+          y: s.y + s.height / 2,
+        };
+        const connectionPoints = {
+          top: { x: center.x, y: s.y },
+          right: { x: s.x + s.width, y: center.y },
+          bottom: { x: center.x, y: s.y + s.height },
+          left: { x: s.x, y: center.y },
+        };
+
+        for (const cp of Object.values(connectionPoints)) {
+          const dist = Math.sqrt(
+            (canvasPos.x - cp.x) ** 2 + (canvasPos.y - cp.y) ** 2
+          );
+          if (dist < bestDist) {
+            bestDist = dist;
+            snapTarget = s.id;
+            snapPoint = cp;
+          }
+        }
+      }
+
+      connectorDragSnapTargetRef.current = snapTarget;
+
+      // Update preview arrow
+      const preview = connectorPreviewArrowRef.current;
+      const fromPt = connectorDragFromPointRef.current;
+      if (preview && fromPt) {
+        const endPt = snapPoint || canvasPos;
+        preview.points([fromPt.x, fromPt.y, endPt.x, endPt.y]);
+
+        // Reflect connector variant in preview
+        const variant = connectorVariantRef.current;
+        if (variant === 'line') {
+          preview.pointerLength(0);
+          preview.pointerWidth(0);
+          preview.pointerAtBeginning(false);
+        } else if (variant === 'bidirectional') {
+          preview.pointerLength(10);
+          preview.pointerWidth(8);
+          preview.pointerAtBeginning(true);
+        } else {
+          preview.pointerLength(10);
+          preview.pointerWidth(8);
+          preview.pointerAtBeginning(false);
+        }
+
+        preview.getLayer()?.batchDraw();
+      }
+
+      // Update snap indicator
+      const indicator = connectorSnapIndicatorRef.current;
+      if (indicator) {
+        if (snapPoint) {
+          indicator.x(snapPoint.x);
+          indicator.y(snapPoint.y);
+          indicator.visible(true);
+        } else {
+          indicator.visible(false);
+        }
+        indicator.getLayer()?.batchDraw();
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (!isDraggingConnectorRef.current) return;
+
+      const mode = connectorDragModeRef.current;
+      const fromId = connectorDragFromRef.current;
+      const toId = connectorDragSnapTargetRef.current;
+
+      if (mode === 'create') {
+        const dragEnd = connectorDragEndRef.current;
+        if (fromId && toId && fromId !== toId) {
+          // Shape-to-shape
+          addConnectorRef.current(fromId, toId);
+        } else if (fromId && !toId && dragEnd) {
+          // Shape-to-free (end on empty canvas)
+          addConnectorRef.current(fromId, null, undefined, dragEnd);
+        } else if (!fromId && toId) {
+          // Free-to-shape (started from empty canvas, ended on shape)
+          const fromPt = connectorDragFromPointRef.current;
+          if (fromPt) addConnectorRef.current(null, toId, fromPt, undefined);
+        } else if (!fromId && !toId && dragEnd) {
+          // Free-to-free (both on empty canvas)
+          const fromPt = connectorDragFromPointRef.current;
+          if (fromPt) addConnectorRef.current(null, null, fromPt, dragEnd);
+        }
+      } else if (mode === 'reconnect') {
+        const reconnectId = connectorReconnectIdRef.current;
+        const reconnectEnd = connectorReconnectEndRef.current;
+        const dragEnd = connectorDragEndRef.current;
+        if (reconnectId && reconnectEnd) {
+          if (toId) {
+            // Reconnect to a shape
+            if (reconnectEnd === 'from') {
+              updateConnectorRef.current(reconnectId, { fromShapeId: toId, fromPos: undefined, fromPoint: undefined });
+            } else {
+              updateConnectorRef.current(reconnectId, { toShapeId: toId, toPos: undefined, toPoint: undefined });
+            }
+          } else if (dragEnd) {
+            // Reconnect to free position (empty canvas)
+            if (reconnectEnd === 'from') {
+              updateConnectorRef.current(reconnectId, { fromShapeId: undefined, fromPos: dragEnd, fromPoint: undefined });
+            } else {
+              updateConnectorRef.current(reconnectId, { toShapeId: undefined, toPos: dragEnd, toPoint: undefined });
+            }
+          }
+        }
+      }
+
+      // Reset drag state
+      isDraggingConnectorRef.current = false;
+      connectorDragModeRef.current = null;
+      connectorDragFromRef.current = null;
+      connectorDragFromPointRef.current = null;
+      connectorDragEndRef.current = null;
+      connectorDragSnapTargetRef.current = null;
+      connectorReconnectIdRef.current = null;
+      connectorReconnectEndRef.current = null;
+
+      // Hide preview elements
+      const preview = connectorPreviewArrowRef.current;
+      if (preview) {
+        preview.visible(false);
+        preview.getLayer()?.batchDraw();
+      }
+      const indicator = connectorSnapIndicatorRef.current;
+      if (indicator) {
+        indicator.visible(false);
+        indicator.getLayer()?.batchDraw();
+      }
+
+      // Reset cursor based on current tool
+      stage.container().style.cursor = tool === 'connector' ? 'crosshair' : 'default';
+    };
+
+    stage.on('mousemove touchmove', handleMouseMove);
+    stage.on('mouseup touchend', handleMouseUp);
+
+    return () => {
+      stage.off('mousemove touchmove', handleMouseMove);
+      stage.off('mouseup touchend', handleMouseUp);
+
+      // Clean up drag state when effect re-runs (e.g. tool change)
+      if (isDraggingConnectorRef.current) {
+        isDraggingConnectorRef.current = false;
+        connectorDragModeRef.current = null;
+        connectorDragFromRef.current = null;
+        connectorDragFromPointRef.current = null;
+        connectorDragEndRef.current = null;
+        connectorDragSnapTargetRef.current = null;
+        connectorReconnectIdRef.current = null;
+        connectorReconnectEndRef.current = null;
+      }
+      const preview = connectorPreviewArrowRef.current;
+      if (preview) {
+        preview.visible(false);
+        preview.getLayer()?.batchDraw();
+      }
+      const indicator = connectorSnapIndicatorRef.current;
+      if (indicator) {
+        indicator.visible(false);
+        indicator.getLayer()?.batchDraw();
+      }
+    };
+  }, [tool]);
 
   // Pan with space + drag (infinite canvas)
   useEffect(() => {
@@ -4203,6 +5606,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
     const handleDragMove = () => {
       if (isPanning) {
         updateViewport();
+        if (selectionType === 'connector') {
+          setViewportTick((v) => v + 1);
+        }
       }
     };
 
@@ -4222,7 +5628,7 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
       stage.off('dragmove', handleDragMove);
       stage.off('dragend', handleDragEnd);
     };
-  }, [isPanning, tool, updateViewport]);
+  }, [isPanning, tool, updateViewport, selectionType]);
 
   // Cancel connecting - use store action directly
   const cancelConnecting = useToolStore((s) => s.cancelConnecting);
@@ -4687,9 +6093,9 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
   const wrapperClassName = ['zm-draw-wrapper', themeClass, className].filter(Boolean).join(' ');
 
   return (
-    <div className={wrapperClassName} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'visible' }}>
+    <div className={wrapperClassName} style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
       {/* Canvas */}
-      <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'visible' }}>
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
         <div
           ref={containerRef}
           className="zm-draw-canvas-container"
@@ -4843,6 +6249,81 @@ export const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function
             />
           </div>
         )}
+
+        {/* Connector Floating Toolbar */}
+        {UIOptions?.connectorToolbar !== false && connectorToolbarPos && selectionType === 'connector' && selectedId && (() => {
+          const conn = connectors.find((c) => c.id === selectedId);
+          if (!conn) return null;
+          const isArrow = conn.arrow || conn.arrowEnd === 'arrow' || conn.arrowEnd === 'triangle';
+          return (
+            <div
+              className="zm-connector-toolbar"
+              style={{
+                position: 'absolute',
+                left: connectorToolbarPos.x,
+                top: connectorToolbarPos.y,
+                transform: 'translateX(-50%)',
+                zIndex: 200,
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Routing */}
+              <button
+                className={`zm-connector-toolbar-btn${(!conn.routing || conn.routing === 'straight') ? ' active' : ''}`}
+                title="Straight"
+                onClick={() => updateConnector(selectedId, { routing: 'straight' })}
+              >{ConnectorStraightIcon}</button>
+              <button
+                className={`zm-connector-toolbar-btn${conn.routing === 'orthogonal' ? ' active' : ''}`}
+                title="Elbow"
+                onClick={() => updateConnector(selectedId, { routing: 'orthogonal' })}
+              >{ConnectorElbowIcon}</button>
+
+              <div className="zm-connector-toolbar-divider" />
+
+              {/* Line Style */}
+              <button
+                className={`zm-connector-toolbar-btn${(!conn.lineStyle || conn.lineStyle === 'solid') ? ' active' : ''}`}
+                title="Solid"
+                onClick={() => updateConnector(selectedId, { lineStyle: 'solid' })}
+              >{ConnectorSolidIcon}</button>
+              <button
+                className={`zm-connector-toolbar-btn${conn.lineStyle === 'dashed' ? ' active' : ''}`}
+                title="Dashed"
+                onClick={() => updateConnector(selectedId, { lineStyle: 'dashed' })}
+              >{ConnectorDashedIcon}</button>
+              <button
+                className={`zm-connector-toolbar-btn${conn.lineStyle === 'dotted' ? ' active' : ''}`}
+                title="Dotted"
+                onClick={() => updateConnector(selectedId, { lineStyle: 'dotted' })}
+              >{ConnectorDottedIcon}</button>
+
+              <div className="zm-connector-toolbar-divider" />
+
+              {/* Arrow */}
+              <button
+                className={`zm-connector-toolbar-btn${!isArrow ? ' active' : ''}`}
+                title="No arrow"
+                onClick={() => updateConnector(selectedId, { arrow: false, arrowEnd: 'none' })}
+              >{ConnectorArrowNoneIcon}</button>
+              <button
+                className={`zm-connector-toolbar-btn${isArrow ? ' active' : ''}`}
+                title="Arrow"
+                onClick={() => updateConnector(selectedId, { arrow: true, arrowEnd: 'arrow' })}
+              >{ConnectorArrowIcon}</button>
+
+              <div className="zm-connector-toolbar-divider" />
+
+              {/* Delete */}
+              <button
+                className="zm-connector-toolbar-btn zm-connector-toolbar-btn-danger"
+                title="Delete connector"
+                onClick={deleteSelected}
+              >{ConnectorTrashIcon}</button>
+            </div>
+          );
+        })()}
 
         {/* Comment Panel */}
         {UIOptions?.commentPanel !== false && <CommentPanel />}

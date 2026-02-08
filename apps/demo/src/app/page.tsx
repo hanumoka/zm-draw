@@ -3,19 +3,13 @@
 import dynamic from 'next/dynamic';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { TooltipProvider, Tooltip } from '../components/Tooltip';
-import { PanelResizer } from '../components/PanelResizer';
 import { ColorPicker } from '../components/ColorPicker';
-import type { DrawCanvasHandle, ToolType, Connector, Shape, StickyNoteColor, ConnectorVariant, Template, TemplateCategory } from '@zm-draw/react';
-import { useToolStore, useSelectionStore, STICKY_COLORS, useTemplateStore } from '@zm-draw/react';
+import type { DrawCanvasHandle, ToolType, Connector, Shape, Template, TemplateCategory } from '@zm-draw/react';
+import { useToolStore, useSelectionStore, useTemplateStore, Toolbar } from '@zm-draw/react';
 
 // Konva requires window, so we need to dynamically import
 const DrawCanvas = dynamic(
   () => import('@zm-draw/react').then((mod) => mod.DrawCanvas),
-  { ssr: false }
-);
-
-const Minimap = dynamic(
-  () => import('@zm-draw/react').then((mod) => mod.Minimap),
   { ssr: false }
 );
 
@@ -369,64 +363,8 @@ const StickyNoteIcon = () => (
   </svg>
 );
 
-const PenIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M12 19l7-7 3 3-7 7-3-3z" />
-    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-    <path d="M2 2l7.586 7.586" />
-    <circle cx="11" cy="11" r="2" />
-  </svg>
-);
-
-const MarkerIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M18 2l4 4-10 10H8v-4L18 2z" />
-    <path d="M8 12l-4 8 8-4" />
-  </svg>
-);
-
-const HighlighterIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M9 11l-6 6v3h9l3-3" />
-    <path d="M22 12l-4.6 4.6a2 2 0 01-2.8 0l-5.2-5.2a2 2 0 010-2.8L14 4" />
-  </svg>
-);
-
-const EraserIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M20 20H7L3 16c-.6-.6-.6-1.5 0-2.1l9.9-9.9c.6-.6 1.5-.6 2.1 0l5 5c.6.6.6 1.5 0 2.1L13 18" />
-    <path d="M6 11l8 8" />
-    <path d="M4 20h16" />
-  </svg>
-);
-
 // Shape icons for the Shapes panel
 const ShapeIcons = {
-  // Connectors
-  arrowRight: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="5" y1="12" x2="19" y2="12" />
-      <polyline points="12 5 19 12 12 19" />
-    </svg>
-  ),
-  arrowBidirectional: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="5" y1="12" x2="19" y2="12" />
-      <polyline points="12 5 19 12 12 19" />
-      <polyline points="12 5 5 12 12 19" />
-    </svg>
-  ),
-  arrowElbow: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <polyline points="5 5 5 12 19 12" />
-      <polyline points="14 7 19 12 14 17" />
-    </svg>
-  ),
-  line: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="5" y1="19" x2="19" y2="5" />
-    </svg>
-  ),
   // Basic shapes
   rectangle: (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -516,13 +454,6 @@ const ShapeIcons = {
     </svg>
   ),
   // FigJam shapes
-  stickyNote: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="3" y="3" width="18" height="18" rx="1" />
-      <path d="M15 3v6h6" />
-      <path d="M15 9l6-6" />
-    </svg>
-  ),
   table: (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <rect x="3" y="3" width="18" height="18" rx="1" />
@@ -554,42 +485,311 @@ const ShapeIcons = {
       <line x1="12" y1="15" x2="16" y2="15" />
     </svg>
   ),
+  // Additional Basic shapes
+  leftRightArrow: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polygon points="2,12 6,6 6,9 18,9 18,6 22,12 18,18 18,15 6,15 6,18" />
+    </svg>
+  ),
+  rightArrow: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polygon points="2,8 15,8 15,4 22,12 15,20 15,16 2,16" />
+    </svg>
+  ),
+  chevronShape: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polygon points="2,4 18,4 22,12 18,20 2,20 6,12" />
+    </svg>
+  ),
+  speechBubble: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+    </svg>
+  ),
+  // Additional Flowchart shapes
+  pill: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="7" width="20" height="10" rx="5" />
+    </svg>
+  ),
+  folder: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M2 7l0-3h8l2 3h10v14H2z" />
+    </svg>
+  ),
+  commentShape: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 3h14l4 4v14H3z" />
+      <path d="M17 3v4h4" />
+    </svg>
+  ),
+  callout: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M2 3h20v14H8l-3 4v-4H2z" />
+    </svg>
+  ),
+  dividedBox: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="18" height="18" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+    </svg>
+  ),
+  pentagonLabel: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polygon points="2,4 18,4 22,12 18,20 2,20" />
+    </svg>
+  ),
+  trapezoid: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polygon points="6,4 18,4 22,20 2,20" />
+    </svg>
+  ),
+  hexagonHorizontal: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polygon points="5,4 19,4 23,12 19,20 5,20 1,12" />
+    </svg>
+  ),
+  dividedSquare: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="18" height="18" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="12" y1="3" x2="12" y2="21" />
+    </svg>
+  ),
+  circleCross: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="12" y1="3" x2="12" y2="21" />
+    </svg>
+  ),
+  circleX: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+      <line x1="18" y1="6" x2="6" y2="18" />
+    </svg>
+  ),
+  // Connection icons
+  connectorStraight: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="4" y1="20" x2="20" y2="4" />
+      <circle cx="4" cy="20" r="2" fill="currentColor" />
+      <circle cx="20" cy="4" r="2" fill="currentColor" />
+    </svg>
+  ),
+  connectorElbow: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="4,20 4,4 20,4" />
+      <circle cx="4" cy="20" r="2" fill="currentColor" />
+      <circle cx="20" cy="4" r="2" fill="currentColor" />
+    </svg>
+  ),
+  connectorArrow: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="4" y1="20" x2="20" y2="4" />
+      <polyline points="14,4 20,4 20,10" />
+      <circle cx="4" cy="20" r="2" fill="currentColor" />
+    </svg>
+  ),
+  connectorDashed: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="3 2">
+      <line x1="4" y1="20" x2="20" y2="4" />
+      <circle cx="4" cy="20" r="2" fill="currentColor" strokeDasharray="none" />
+      <circle cx="20" cy="4" r="2" fill="currentColor" strokeDasharray="none" />
+    </svg>
+  ),
+  // Icon shapes
+  iconHeartbeat: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3,12 7,12 9,4 12,20 14,8 16,12 21,12" />
+    </svg>
+  ),
+  iconArchive: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="18" height="5" />
+      <rect x="5" y="8" width="14" height="13" />
+      <line x1="9" y1="14" x2="15" y2="14" />
+    </svg>
+  ),
+  iconKey: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="16" cy="8" r="4" />
+      <line x1="12" y1="8" x2="2" y2="8" />
+      <line x1="2" y1="8" x2="2" y2="13" />
+      <line x1="6" y1="8" x2="6" y2="12" />
+    </svg>
+  ),
+  iconChat: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  ),
+  iconCloud: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+    </svg>
+  ),
+  iconArchiveBox: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 8V21H3V8" />
+      <path d="M1 3h22v5H1z" />
+      <line x1="10" y1="12" x2="14" y2="12" />
+    </svg>
+  ),
+  iconDatabase: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <ellipse cx="12" cy="5" rx="9" ry="3" />
+      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+    </svg>
+  ),
+  iconMonitor: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  ),
+  iconMail: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <polyline points="2,4 12,13 22,4" />
+    </svg>
+  ),
+  iconDocument: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14,2 14,8 20,8" />
+      <line x1="8" y1="13" x2="16" y2="13" />
+      <line x1="8" y1="17" x2="14" y2="17" />
+    </svg>
+  ),
+  iconCode: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16,18 22,12 16,6" />
+      <polyline points="8,6 2,12 8,18" />
+    </svg>
+  ),
+  iconLightning: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+      <polygon points="13,2 3,14 12,14 11,22 21,10 12,10" />
+    </svg>
+  ),
+  iconLocation: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  ),
+  iconPhone: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="5" y="2" width="14" height="20" rx="2" />
+      <line x1="9" y1="3" x2="15" y2="3" />
+      <circle cx="12" cy="19" r="1" />
+    </svg>
+  ),
+  iconBox3d: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+      <path d="M12 2l10 5v10l-10 5L2 17V7z" />
+      <path d="M12 12l10-5" />
+      <path d="M12 12L2 7" />
+      <path d="M12 12v10" />
+    </svg>
+  ),
+  iconDollar: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  ),
+  iconShield: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
+  iconSend: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22,2 15,22 11,13 2,9" />
+    </svg>
+  ),
+  iconServer: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="2" width="20" height="8" rx="2" />
+      <rect x="2" y="14" width="20" height="8" rx="2" />
+      <circle cx="17" cy="6" r="1" fill="currentColor" />
+      <circle cx="17" cy="18" r="1" fill="currentColor" />
+    </svg>
+  ),
+  iconCube3d: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+      <polygon points="12,2 22,7 12,12 2,7" />
+      <polyline points="2,7 2,17 12,22 12,12" />
+      <polyline points="22,7 22,17 12,22" />
+    </svg>
+  ),
+  iconGear: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  ),
+  iconGrid: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+    </svg>
+  ),
+  iconTerminal: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="4,17 10,11 4,5" />
+      <line x1="12" y1="19" x2="20" y2="19" />
+    </svg>
+  ),
+  iconUser: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  iconList: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <circle cx="4" cy="6" r="1" fill="currentColor" />
+      <circle cx="4" cy="12" r="1" fill="currentColor" />
+      <circle cx="4" cy="18" r="1" fill="currentColor" />
+    </svg>
+  ),
+  iconGlobe: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  ),
 };
 
 // Sticky Note Color Button Component
-function StickyColorButton({
-  color,
-  hexColor,
-  isActive,
-  onClick,
-}: {
-  color: StickyNoteColor;
-  hexColor: string;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <Tooltip content={color.charAt(0).toUpperCase() + color.slice(1)}>
-      <button
-        className={`zm-sticky-color-btn ${isActive ? 'active' : ''}`}
-        style={{ backgroundColor: hexColor }}
-        onClick={onClick}
-      />
-    </Tooltip>
-  );
-}
-
 // Collapsible Section Component
 function CollapsibleSection({
   title,
   children,
-  defaultOpen = true
+  defaultOpen = true,
+  hidden = false,
 }: {
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  hidden?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  if (hidden) return null;
 
   return (
     <div className="zm-shapes-section">
@@ -597,10 +797,10 @@ function CollapsibleSection({
         className="zm-shapes-section-header"
         onClick={() => setIsOpen(!isOpen)}
       >
+        <span className="zm-shapes-section-title">{title}</span>
         <span className="zm-shapes-section-chevron">
           {isOpen ? <ChevronDownIcon /> : <ChevronRightIcon />}
         </span>
-        <span className="zm-shapes-section-title">{title}</span>
       </button>
       {isOpen && (
         <div className="zm-shapes-section-content">
@@ -696,9 +896,9 @@ export default function Home() {
   const [selectedShape, setSelectedShape] = useState<SelectedShape | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false); // FigJam style: light mode default
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
-  const [leftPanelWidth, setLeftPanelWidth] = useState(240);
-  const [rightPanelWidth, setRightPanelWidth] = useState(280);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
+  const leftPanelWidth = 280;
+  const rightPanelWidth = 280;
   const [searchQuery, setSearchQuery] = useState('');
   const [canvasOffset, setCanvasOffset] = useState({ left: 0, top: 0 });
   const [viewport, setViewport] = useState({ scale: 1, position: { x: 0, y: 0 } });
@@ -712,7 +912,6 @@ export default function Home() {
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const exportDropdownRef = useRef<HTMLDivElement>(null);
-  const [showMinimap, setShowMinimap] = useState(true);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [connectors, setConnectors] = useState<Connector[]>([]);
   // Track which button was clicked to avoid duplicate active states
@@ -785,9 +984,8 @@ export default function Home() {
   // Tool store for shape panel buttons
   const setTool = useToolStore((s) => s.setTool);
   const currentTool = useToolStore((s) => s.tool);
-  const currentStickyColor = useToolStore((s) => s.currentStickyColor);
-  const setStickyColor = useToolStore((s) => s.setStickyColor);
-  const setConnectorVariant = useToolStore((s) => s.setConnectorVariant);
+  const currentStampType = useToolStore((s) => s.currentStampType);
+  const setStampType = useToolStore((s) => s.setStampType);
 
   // Reset selected button label when tool changes to 'select'
   useEffect(() => {
@@ -951,13 +1149,6 @@ export default function Home() {
     setSelectedButtonLabel(buttonLabel);
   }, [setTool]);
 
-  // Handle connector button click - set tool and variant
-  const handleConnectorClick = useCallback((variant: ConnectorVariant, buttonLabel: string) => {
-    setTool('connector');
-    setConnectorVariant(variant);
-    setSelectedButtonLabel(buttonLabel);
-  }, [setTool, setConnectorVariant]);
-
   // Update canvas offset when panels change or window resizes
   useEffect(() => {
     const updateOffset = () => {
@@ -969,7 +1160,7 @@ export default function Home() {
     updateOffset();
     window.addEventListener('resize', updateOffset);
     return () => window.removeEventListener('resize', updateOffset);
-  }, [isLeftPanelOpen, leftPanelWidth, isRightPanelOpen, rightPanelWidth]);
+  }, [isLeftPanelOpen, isRightPanelOpen]);
 
   // Handle viewport changes from canvas (zoom/pan)
   const handleViewportChange = useCallback((newViewport: { scale: number; position: { x: number; y: number } }) => {
@@ -1015,6 +1206,15 @@ export default function Home() {
     }
   }, []);
 
+  // Auto show/hide right panel based on selection
+  useEffect(() => {
+    if (selectedShape || selectedConnector) {
+      setIsRightPanelOpen(true);
+    } else {
+      setIsRightPanelOpen(false);
+    }
+  }, [selectedShape, selectedConnector]);
+
   // Track connector selection
   useEffect(() => {
     if (selectionType === 'connector' && selectedIds.length > 0 && canvasRef.current) {
@@ -1044,106 +1244,282 @@ export default function Home() {
   return (
     <TooltipProvider>
       <div className="zm-draw-editor">
-        {/* Left Panel - Shapes */}
-        {isLeftPanelOpen && (
-          <>
-            <aside className="zm-draw-left-panel" style={{ width: leftPanelWidth, minWidth: leftPanelWidth }}>
-              {/* Panel Header with Close Button */}
-              <div className="zm-draw-panel-header zm-shapes-header">
-                <span>Shapes</span>
-                <button className="zm-panel-close-button" onClick={toggleLeftPanel}>
-                  <CloseIcon />
+        {/* Canvas: full-screen background */}
+        <div ref={canvasAreaRef} className="zm-draw-canvas-area">
+          <DrawCanvas
+            ref={canvasRef}
+            backgroundColor={canvasBgColor}
+            showGrid={true}
+            gridSize={20}
+            snapToGrid={snapToGrid}
+            onSelectionChange={handleSelectionChange}
+            onViewportChange={handleViewportChange}
+            onShapesChange={handleShapesChange}
+            UIOptions={{ toolbar: false }}
+          />
+        </div>
+
+        {/* Floating Header */}
+        <div className="zm-draw-header zm-draw-header-figjam">
+          <div className="zm-draw-header-left">
+            <div className="zm-draw-header-title">
+              <span className="zm-draw-logo">zm-draw</span>
+            </div>
+          </div>
+          <div className="zm-draw-header-actions">
+            <Tooltip content={snapToGrid ? 'Disable Grid Snap' : 'Enable Grid Snap'}>
+              <button
+                className={`zm-draw-icon-button ${snapToGrid ? 'active' : ''}`}
+                onClick={() => setSnapToGrid(!snapToGrid)}
+              >
+                <GridSnapIcon />
+              </button>
+            </Tooltip>
+            <div className="zm-draw-export-dropdown" ref={templatePickerRef}>
+              <Tooltip content="Templates">
+                <button
+                  className="zm-draw-icon-button"
+                  onClick={() => setShowTemplatePicker(!showTemplatePicker)}
+                >
+                  <TemplateIcon />
                 </button>
-              </div>
-
-              {/* Search Bar */}
-              <div className="zm-shapes-search">
-                <SearchIcon />
-                <input
-                  type="text"
-                  placeholder="Search Shapes"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-
-              {/* Shapes Content */}
-              <div className="zm-draw-panel-content zm-shapes-content">
-                {/* FigJam Section */}
-                <CollapsibleSection title="FigJam">
-                  {/* Sticky Notes */}
-                  <div className="zm-figjam-subsection">
-                    <div className="zm-figjam-label">Sticky Notes (S)</div>
-                    <div className="zm-shapes-grid">
-                      <ShapeButton icon={ShapeIcons.stickyNote} label="Sticky Note (S)" onClick={() => handleShapeClick('sticky', 'Sticky Note (S)')} active={selectedButtonLabel === 'Sticky Note (S)'} />
-                    </div>
-                    <div className="zm-sticky-colors">
-                      {(Object.keys(STICKY_COLORS) as StickyNoteColor[]).map((color) => (
-                        <StickyColorButton
-                          key={color}
-                          color={color}
-                          hexColor={STICKY_COLORS[color]}
-                          isActive={currentStickyColor === color}
-                          onClick={() => setStickyColor(color)}
-                        />
+              </Tooltip>
+              {showTemplatePicker && (
+                <div className="zm-draw-dropdown-menu zm-template-picker">
+                  <div className="zm-template-picker-header">
+                    <span className="zm-template-picker-title">Templates</span>
+                    <div className="zm-template-picker-categories">
+                      {(['all', 'brainstorm', 'meeting', 'planning', 'retro', 'flowchart'] as const).map((cat) => (
+                        <button
+                          key={cat}
+                          className={`zm-template-category-btn ${templateCategory === cat ? 'active' : ''}`}
+                          onClick={() => setTemplateCategory(cat)}
+                        >
+                          {cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </button>
                       ))}
                     </div>
                   </div>
-                  {/* Drawing Tools */}
-                  <div className="zm-figjam-subsection">
-                    <div className="zm-figjam-label">Drawing</div>
+                  <div className="zm-template-picker-grid">
+                    {getTemplatesByCategory(templateCategory).map((template) => (
+                      <button
+                        key={template.id}
+                        className="zm-template-card"
+                        onClick={() => loadTemplate(template)}
+                      >
+                        <span className="zm-template-thumbnail">{template.thumbnail}</span>
+                        <span className="zm-template-name">{template.name}</span>
+                        <span className="zm-template-desc">{template.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="zm-draw-export-dropdown" ref={exportDropdownRef}>
+              <Tooltip content="Export">
+                <button
+                  className="zm-draw-icon-button"
+                  onClick={() => setShowExportDropdown(!showExportDropdown)}
+                >
+                  <DownloadIcon />
+                </button>
+              </Tooltip>
+              {showExportDropdown && (
+                <div className="zm-draw-dropdown-menu">
+                  <button onClick={() => {
+                    canvasRef.current?.exportToPNG();
+                    setShowExportDropdown(false);
+                  }}>
+                    Export as PNG
+                  </button>
+                  <button onClick={() => {
+                    canvasRef.current?.exportToSVG();
+                    setShowExportDropdown(false);
+                  }}>
+                    Export as SVG
+                  </button>
+                </div>
+              )}
+            </div>
+            <Tooltip content={isDarkMode ? 'Light Mode' : 'Dark Mode'}>
+              <button
+                className="zm-draw-icon-button"
+                onClick={toggleDarkMode}
+              >
+                {isDarkMode ? <SunIcon /> : <MoonIcon />}
+              </button>
+            </Tooltip>
+            <Tooltip content={isRightPanelOpen ? 'Hide Design' : 'Show Design'}>
+              <button
+                className={`zm-draw-icon-button ${isRightPanelOpen ? 'active' : ''}`}
+                onClick={toggleRightPanel}
+              >
+                {isRightPanelOpen ? <PanelRightCloseIcon /> : <PanelRightIcon />}
+              </button>
+            </Tooltip>
+          </div>
+        </div>
+
+        {/* Left Panel - Shapes (floating) */}
+        {isLeftPanelOpen && (
+          <aside className="zm-draw-left-panel" style={{ width: leftPanelWidth }}>
+            {/* Panel Header with Close Button */}
+            <div className="zm-draw-panel-header zm-shapes-header">
+              <span>Shapes</span>
+              <button className="zm-panel-close-button" onClick={toggleLeftPanel}>
+                <CloseIcon />
+              </button>
+            </div>
+
+            {/* Search Bar */}
+            <div className="zm-shapes-search">
+              <SearchIcon />
+              <input
+                type="text"
+                placeholder="Search Shapes"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Shapes Content — shape library with search filtering */}
+            <div className="zm-draw-panel-content zm-shapes-content">
+              {/* Connections Section */}
+              {(() => {
+                const q = searchQuery.toLowerCase();
+                const connectionItems = [
+                  { icon: ShapeIcons.connectorStraight, label: 'Straight Connector', tool: 'connector' as ToolType },
+                  { icon: ShapeIcons.connectorElbow, label: 'Elbow Connector', tool: 'connector' as ToolType },
+                  { icon: ShapeIcons.connectorArrow, label: 'Arrow Connector', tool: 'connector' as ToolType },
+                  { icon: ShapeIcons.connectorDashed, label: 'Dashed Connector', tool: 'connector' as ToolType },
+                ];
+                const filtered = q ? connectionItems.filter(item => item.label.toLowerCase().includes(q)) : connectionItems;
+                return (
+                  <CollapsibleSection title="Connections" hidden={filtered.length === 0}>
                     <div className="zm-shapes-grid">
-                      <ShapeButton icon={<PenIcon />} label="Pen (P)" onClick={() => handleShapeClick('pen', 'Pen (P)')} active={selectedButtonLabel === 'Pen (P)'} />
-                      <ShapeButton icon={<MarkerIcon />} label="Marker (M)" onClick={() => handleShapeClick('marker', 'Marker (M)')} active={selectedButtonLabel === 'Marker (M)'} />
-                      <ShapeButton icon={<HighlighterIcon />} label="Highlighter (H)" onClick={() => handleShapeClick('highlighter', 'Highlighter (H)')} active={selectedButtonLabel === 'Highlighter (H)'} />
-                      <ShapeButton icon={<EraserIcon />} label="Eraser (E)" onClick={() => handleShapeClick('eraser', 'Eraser (E)')} active={selectedButtonLabel === 'Eraser (E)'} />
+                      {filtered.map(item => (
+                        <ShapeButton key={item.label} icon={item.icon} label={item.label} onClick={() => handleShapeClick(item.tool, item.label)} active={selectedButtonLabel === item.label} />
+                      ))}
                     </div>
-                  </div>
-                </CollapsibleSection>
+                  </CollapsibleSection>
+                );
+              })()}
 
-                {/* Connectors Section */}
-                <CollapsibleSection title="Connectors">
-                  <div className="zm-shapes-grid">
-                    <ShapeButton icon={ShapeIcons.arrowRight} label="Arrow (Connector)" onClick={() => handleConnectorClick('arrow', 'Arrow (Connector)')} active={selectedButtonLabel === 'Arrow (Connector)'} />
-                    <ShapeButton icon={ShapeIcons.arrowBidirectional} label="Bidirectional Arrow" onClick={() => handleConnectorClick('bidirectional', 'Bidirectional Arrow')} active={selectedButtonLabel === 'Bidirectional Arrow'} />
-                    <ShapeButton icon={ShapeIcons.arrowElbow} label="Elbow Arrow" onClick={() => handleConnectorClick('elbow', 'Elbow Arrow')} active={selectedButtonLabel === 'Elbow Arrow'} />
-                    <ShapeButton icon={ShapeIcons.line} label="Line" onClick={() => handleConnectorClick('line', 'Line')} active={selectedButtonLabel === 'Line'} />
-                  </div>
-                </CollapsibleSection>
+              {/* Basic Shapes Section */}
+              {(() => {
+                const q = searchQuery.toLowerCase();
+                const basicItems = [
+                  { icon: ShapeIcons.rectangle, label: 'Rectangle (R)', tool: 'rectangle' as ToolType },
+                  { icon: ShapeIcons.roundedRect, label: 'Rounded Rectangle', tool: 'roundedRectangle' as ToolType },
+                  { icon: ShapeIcons.circle, label: 'Circle', tool: 'ellipse' as ToolType },
+                  { icon: ShapeIcons.ellipse, label: 'Ellipse (O)', tool: 'ellipse' as ToolType },
+                  { icon: ShapeIcons.triangle, label: 'Triangle', tool: 'triangle' as ToolType },
+                  { icon: ShapeIcons.triangleDown, label: 'Triangle Down', tool: 'triangleDown' as ToolType },
+                  { icon: ShapeIcons.diamond, label: 'Diamond', tool: 'diamond' as ToolType },
+                  { icon: ShapeIcons.pentagon, label: 'Pentagon', tool: 'pentagon' as ToolType },
+                  { icon: ShapeIcons.hexagon, label: 'Hexagon', tool: 'hexagon' as ToolType },
+                  { icon: ShapeIcons.star, label: 'Star', tool: 'star' as ToolType },
+                  { icon: ShapeIcons.cross, label: 'Cross', tool: 'cross' as ToolType },
+                  { icon: ShapeIcons.leftRightArrow, label: 'Left Right Arrow', tool: 'leftRightArrow' as ToolType },
+                  { icon: ShapeIcons.rightArrow, label: 'Right Arrow', tool: 'rightArrow' as ToolType },
+                  { icon: ShapeIcons.chevronShape, label: 'Chevron', tool: 'chevron' as ToolType },
+                  { icon: ShapeIcons.speechBubble, label: 'Speech Bubble', tool: 'speechBubble' as ToolType },
+                  { icon: ShapeIcons.table, label: 'Table', tool: 'table' as ToolType },
+                  { icon: ShapeIcons.mindmap, label: 'Mindmap', tool: 'mindmap' as ToolType },
+                  { icon: ShapeIcons.embed, label: 'Link Preview', tool: 'embed' as ToolType },
+                ];
+                const filtered = q ? basicItems.filter(item => item.label.toLowerCase().includes(q)) : basicItems;
+                return (
+                  <CollapsibleSection title="Basic" hidden={filtered.length === 0}>
+                    <div className="zm-shapes-grid">
+                      {filtered.map(item => (
+                        <ShapeButton key={item.label} icon={item.icon} label={item.label} onClick={() => handleShapeClick(item.tool, item.label)} active={selectedButtonLabel === item.label} />
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                );
+              })()}
 
-                {/* Basic Shapes Section */}
-                <CollapsibleSection title="Basic">
-                  <div className="zm-shapes-grid">
-                    <ShapeButton icon={ShapeIcons.rectangle} label="Rectangle (R)" onClick={() => handleShapeClick('rectangle', 'Rectangle (R)')} active={selectedButtonLabel === 'Rectangle (R)'} />
-                    <ShapeButton icon={ShapeIcons.roundedRect} label="Rounded Rectangle" onClick={() => handleShapeClick('roundedRectangle', 'Rounded Rectangle')} active={selectedButtonLabel === 'Rounded Rectangle'} />
-                    <ShapeButton icon={ShapeIcons.circle} label="Circle" onClick={() => handleShapeClick('ellipse', 'Circle')} active={selectedButtonLabel === 'Circle'} />
-                    <ShapeButton icon={ShapeIcons.ellipse} label="Ellipse (O)" onClick={() => handleShapeClick('ellipse', 'Ellipse (O)')} active={selectedButtonLabel === 'Ellipse (O)'} />
-                    <ShapeButton icon={ShapeIcons.triangle} label="Triangle" onClick={() => handleShapeClick('triangle', 'Triangle')} active={selectedButtonLabel === 'Triangle'} />
-                    <ShapeButton icon={ShapeIcons.triangleDown} label="Triangle Down" onClick={() => handleShapeClick('triangleDown', 'Triangle Down')} active={selectedButtonLabel === 'Triangle Down'} />
-                    <ShapeButton icon={ShapeIcons.diamond} label="Diamond" onClick={() => handleShapeClick('diamond', 'Diamond')} active={selectedButtonLabel === 'Diamond'} />
-                    <ShapeButton icon={ShapeIcons.pentagon} label="Pentagon" onClick={() => handleShapeClick('pentagon', 'Pentagon')} active={selectedButtonLabel === 'Pentagon'} />
-                    <ShapeButton icon={ShapeIcons.hexagon} label="Hexagon" onClick={() => handleShapeClick('hexagon', 'Hexagon')} active={selectedButtonLabel === 'Hexagon'} />
-                    <ShapeButton icon={ShapeIcons.star} label="Star" onClick={() => handleShapeClick('star', 'Star')} active={selectedButtonLabel === 'Star'} />
-                    <ShapeButton icon={ShapeIcons.cross} label="Cross" onClick={() => handleShapeClick('cross', 'Cross')} active={selectedButtonLabel === 'Cross'} />
-                    <ShapeButton icon={ShapeIcons.table} label="Table" onClick={() => handleShapeClick('table', 'Table')} active={selectedButtonLabel === 'Table'} />
-                    <ShapeButton icon={ShapeIcons.mindmap} label="Mindmap" onClick={() => handleShapeClick('mindmap', 'Mindmap')} active={selectedButtonLabel === 'Mindmap'} />
-                    <ShapeButton icon={ShapeIcons.embed} label="Link Preview" onClick={() => handleShapeClick('embed', 'Link Preview')} active={selectedButtonLabel === 'Link Preview'} />
-                  </div>
-                </CollapsibleSection>
+              {/* Flowchart Section */}
+              {(() => {
+                const q = searchQuery.toLowerCase();
+                const flowchartItems = [
+                  { icon: ShapeIcons.process, label: 'Process', tool: 'rectangle' as ToolType },
+                  { icon: ShapeIcons.decision, label: 'Decision', tool: 'diamond' as ToolType },
+                  { icon: ShapeIcons.terminal, label: 'Terminal', tool: 'ellipse' as ToolType },
+                  { icon: ShapeIcons.document, label: 'Document', tool: 'document' as ToolType },
+                  { icon: ShapeIcons.database, label: 'Database', tool: 'database' as ToolType },
+                  { icon: ShapeIcons.parallelogram, label: 'Data', tool: 'parallelogram' as ToolType },
+                  { icon: ShapeIcons.pill, label: 'Pill', tool: 'pill' as ToolType },
+                  { icon: ShapeIcons.folder, label: 'Folder', tool: 'folder' as ToolType },
+                  { icon: ShapeIcons.commentShape, label: 'Comment', tool: 'comment' as ToolType },
+                  { icon: ShapeIcons.callout, label: 'Callout', tool: 'callout' as ToolType },
+                  { icon: ShapeIcons.dividedBox, label: 'Divided Box', tool: 'dividedBox' as ToolType },
+                  { icon: ShapeIcons.pentagonLabel, label: 'Pentagon Label', tool: 'pentagonLabel' as ToolType },
+                  { icon: ShapeIcons.trapezoid, label: 'Trapezoid', tool: 'trapezoid' as ToolType },
+                  { icon: ShapeIcons.hexagonHorizontal, label: 'Hexagon Horizontal', tool: 'hexagonHorizontal' as ToolType },
+                  { icon: ShapeIcons.dividedSquare, label: 'Divided Square', tool: 'dividedSquare' as ToolType },
+                  { icon: ShapeIcons.circleCross, label: 'Circle Cross', tool: 'circleCross' as ToolType },
+                  { icon: ShapeIcons.circleX, label: 'Circle X', tool: 'circleX' as ToolType },
+                ];
+                const filtered = q ? flowchartItems.filter(item => item.label.toLowerCase().includes(q)) : flowchartItems;
+                return (
+                  <CollapsibleSection title="Flowchart" hidden={filtered.length === 0}>
+                    <div className="zm-shapes-grid">
+                      {filtered.map(item => (
+                        <ShapeButton key={item.label} icon={item.icon} label={item.label} onClick={() => handleShapeClick(item.tool, item.label)} active={selectedButtonLabel === item.label} />
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                );
+              })()}
 
-                {/* Flowchart Section */}
-                <CollapsibleSection title="Flowchart">
-                  <div className="zm-shapes-grid">
-                    <ShapeButton icon={ShapeIcons.process} label="Process" onClick={() => handleShapeClick('rectangle', 'Process')} active={selectedButtonLabel === 'Process'} />
-                    <ShapeButton icon={ShapeIcons.decision} label="Decision" onClick={() => handleShapeClick('diamond', 'Decision')} active={selectedButtonLabel === 'Decision'} />
-                    <ShapeButton icon={ShapeIcons.terminal} label="Terminal" onClick={() => handleShapeClick('ellipse', 'Terminal')} active={selectedButtonLabel === 'Terminal'} />
-                    <ShapeButton icon={ShapeIcons.document} label="Document" onClick={() => handleShapeClick('document', 'Document')} active={selectedButtonLabel === 'Document'} />
-                    <ShapeButton icon={ShapeIcons.database} label="Database" onClick={() => handleShapeClick('database', 'Database')} active={selectedButtonLabel === 'Database'} />
-                    <ShapeButton icon={ShapeIcons.parallelogram} label="Data" onClick={() => handleShapeClick('parallelogram', 'Data')} active={selectedButtonLabel === 'Data'} />
-                  </div>
-                </CollapsibleSection>
+              {/* Icons Section */}
+              {(() => {
+                const q = searchQuery.toLowerCase();
+                const iconItems = [
+                  { icon: ShapeIcons.iconHeartbeat, label: 'Heartbeat', tool: 'iconHeartbeat' as ToolType },
+                  { icon: ShapeIcons.iconArchive, label: 'Archive', tool: 'iconArchive' as ToolType },
+                  { icon: ShapeIcons.iconKey, label: 'Key', tool: 'iconKey' as ToolType },
+                  { icon: ShapeIcons.iconChat, label: 'Chat', tool: 'iconChat' as ToolType },
+                  { icon: ShapeIcons.iconCloud, label: 'Cloud', tool: 'iconCloud' as ToolType },
+                  { icon: ShapeIcons.iconArchiveBox, label: 'Archive Box', tool: 'iconArchiveBox' as ToolType },
+                  { icon: ShapeIcons.iconDatabase, label: 'Database Icon', tool: 'iconDatabase' as ToolType },
+                  { icon: ShapeIcons.iconMonitor, label: 'Monitor', tool: 'iconMonitor' as ToolType },
+                  { icon: ShapeIcons.iconMail, label: 'Mail', tool: 'iconMail' as ToolType },
+                  { icon: ShapeIcons.iconDocument, label: 'Document Icon', tool: 'iconDocument' as ToolType },
+                  { icon: ShapeIcons.iconCode, label: 'Code', tool: 'iconCode' as ToolType },
+                  { icon: ShapeIcons.iconLightning, label: 'Lightning', tool: 'iconLightning' as ToolType },
+                  { icon: ShapeIcons.iconLocation, label: 'Location', tool: 'iconLocation' as ToolType },
+                  { icon: ShapeIcons.iconPhone, label: 'Phone', tool: 'iconPhone' as ToolType },
+                  { icon: ShapeIcons.iconBox3d, label: '3D Box', tool: 'iconBox3d' as ToolType },
+                  { icon: ShapeIcons.iconDollar, label: 'Dollar', tool: 'iconDollar' as ToolType },
+                  { icon: ShapeIcons.iconShield, label: 'Shield', tool: 'iconShield' as ToolType },
+                  { icon: ShapeIcons.iconSend, label: 'Send', tool: 'iconSend' as ToolType },
+                  { icon: ShapeIcons.iconServer, label: 'Server', tool: 'iconServer' as ToolType },
+                  { icon: ShapeIcons.iconCube3d, label: '3D Cube', tool: 'iconCube3d' as ToolType },
+                  { icon: ShapeIcons.iconGear, label: 'Gear', tool: 'iconGear' as ToolType },
+                  { icon: ShapeIcons.iconGrid, label: 'Grid', tool: 'iconGrid' as ToolType },
+                  { icon: ShapeIcons.iconTerminal, label: 'Terminal', tool: 'iconTerminal' as ToolType },
+                  { icon: ShapeIcons.iconUser, label: 'User', tool: 'iconUser' as ToolType },
+                  { icon: ShapeIcons.iconList, label: 'List', tool: 'iconList' as ToolType },
+                  { icon: ShapeIcons.iconGlobe, label: 'Globe', tool: 'iconGlobe' as ToolType },
+                ];
+                const filtered = q ? iconItems.filter(item => item.label.toLowerCase().includes(q)) : iconItems;
+                return (
+                  <CollapsibleSection title="Icons" defaultOpen={false} hidden={filtered.length === 0}>
+                    <div className="zm-shapes-grid">
+                      {filtered.map(item => (
+                        <ShapeButton key={item.label} icon={item.icon} label={item.label} onClick={() => handleShapeClick(item.tool, item.label)} active={selectedButtonLabel === item.label} />
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                );
+              })()}
 
-                {/* Other Libraries Section */}
+              {/* Other Libraries Section */}
+              {!searchQuery && (
                 <CollapsibleSection title="Other libraries" defaultOpen={false}>
                   <div className="zm-library-list">
                     <div className="zm-library-item">
@@ -1163,197 +1539,14 @@ export default function Home() {
                     </div>
                   </div>
                 </CollapsibleSection>
-              </div>
-            </aside>
-            <PanelResizer
-              side="left"
-              width={leftPanelWidth}
-              minWidth={180}
-              maxWidth={400}
-              onWidthChange={setLeftPanelWidth}
-            />
-          </>
-        )}
-
-        {/* Canvas Area */}
-        <div ref={canvasAreaRef} className="zm-draw-canvas-area">
-          {/* FigJam-style Top Header Bar - Minimal */}
-          <div className="zm-draw-header zm-draw-header-figjam">
-            <div className="zm-draw-header-left">
-              {!isLeftPanelOpen && (
-                <Tooltip content="Show Shapes">
-                  <button
-                    className="zm-draw-icon-button"
-                    onClick={toggleLeftPanel}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="3" width="7" height="7" />
-                      <rect x="14" y="3" width="7" height="7" />
-                      <rect x="3" y="14" width="7" height="7" />
-                      <rect x="14" y="14" width="7" height="7" />
-                    </svg>
-                  </button>
-                </Tooltip>
               )}
-              <div className="zm-draw-header-title">
-                <span className="zm-draw-logo">zm-draw</span>
-              </div>
             </div>
-            <div className="zm-draw-header-center">
-              {/* Zoom display - compact */}
-              <span className="zm-draw-zoom-badge" onClick={() => canvasRef.current?.zoomTo100()}>
-                {Math.round(viewport.scale * 100)}%
-              </span>
-            </div>
-            <div className="zm-draw-header-actions">
-              <Tooltip content={snapToGrid ? 'Disable Grid Snap' : 'Enable Grid Snap'}>
-                <button
-                  className={`zm-draw-icon-button ${snapToGrid ? 'active' : ''}`}
-                  onClick={() => setSnapToGrid(!snapToGrid)}
-                >
-                  <GridSnapIcon />
-                </button>
-              </Tooltip>
-              <div className="zm-draw-export-dropdown" ref={templatePickerRef}>
-                <Tooltip content="Templates">
-                  <button
-                    className="zm-draw-icon-button"
-                    onClick={() => setShowTemplatePicker(!showTemplatePicker)}
-                  >
-                    <TemplateIcon />
-                  </button>
-                </Tooltip>
-                {showTemplatePicker && (
-                  <div className="zm-draw-dropdown-menu zm-template-picker">
-                    <div className="zm-template-picker-header">
-                      <span className="zm-template-picker-title">Templates</span>
-                      <div className="zm-template-picker-categories">
-                        {(['all', 'brainstorm', 'meeting', 'planning', 'retro', 'flowchart'] as const).map((cat) => (
-                          <button
-                            key={cat}
-                            className={`zm-template-category-btn ${templateCategory === cat ? 'active' : ''}`}
-                            onClick={() => setTemplateCategory(cat)}
-                          >
-                            {cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="zm-template-picker-grid">
-                      {getTemplatesByCategory(templateCategory).map((template) => (
-                        <button
-                          key={template.id}
-                          className="zm-template-card"
-                          onClick={() => loadTemplate(template)}
-                        >
-                          <span className="zm-template-thumbnail">{template.thumbnail}</span>
-                          <span className="zm-template-name">{template.name}</span>
-                          <span className="zm-template-desc">{template.description}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="zm-draw-export-dropdown" ref={exportDropdownRef}>
-                <Tooltip content="Export">
-                  <button
-                    className="zm-draw-icon-button"
-                    onClick={() => setShowExportDropdown(!showExportDropdown)}
-                  >
-                    <DownloadIcon />
-                  </button>
-                </Tooltip>
-                {showExportDropdown && (
-                  <div className="zm-draw-dropdown-menu">
-                    <button onClick={() => {
-                      canvasRef.current?.exportToPNG();
-                      setShowExportDropdown(false);
-                    }}>
-                      Export as PNG
-                    </button>
-                    <button onClick={() => {
-                      canvasRef.current?.exportToSVG();
-                      setShowExportDropdown(false);
-                    }}>
-                      Export as SVG
-                    </button>
-                  </div>
-                )}
-              </div>
-              <Tooltip content={isDarkMode ? 'Light Mode' : 'Dark Mode'}>
-                <button
-                  className="zm-draw-icon-button"
-                  onClick={toggleDarkMode}
-                >
-                  {isDarkMode ? <SunIcon /> : <MoonIcon />}
-                </button>
-              </Tooltip>
-              <Tooltip content={isRightPanelOpen ? 'Hide Design' : 'Show Design'}>
-                <button
-                  className={`zm-draw-icon-button ${isRightPanelOpen ? 'active' : ''}`}
-                  onClick={toggleRightPanel}
-                >
-                  {isRightPanelOpen ? <PanelRightCloseIcon /> : <PanelRightIcon />}
-                </button>
-              </Tooltip>
-            </div>
-          </div>
-
-        {/* Canvas - Infinite canvas fills available space */}
-        <DrawCanvas
-          ref={canvasRef}
-          backgroundColor={canvasBgColor}
-          showGrid={true}
-          gridSize={20}
-          snapToGrid={snapToGrid}
-          onSelectionChange={handleSelectionChange}
-          onViewportChange={handleViewportChange}
-          onShapesChange={handleShapesChange}
-        />
-
-        {/* Selection Context Menu */}
-        {selectedShape && (
-          <SelectionContextMenu
-            shape={selectedShape}
-            viewport={viewport}
-            canvasOffset={canvasOffset}
-            onCopy={handleCopy}
-            onDuplicate={handleDuplicate}
-            onDelete={handleDelete}
-          />
+          </aside>
         )}
 
-        {/* Minimap */}
-        {showMinimap && (
-          <div className="zm-draw-minimap">
-            <Minimap
-              shapes={shapes}
-              connectors={connectors}
-              scale={viewport.scale}
-              position={viewport.position}
-              canvasSize={canvasSize}
-              onViewportChange={(pos) => {
-                canvasRef.current?.setViewportPosition(pos);
-              }}
-              width={180}
-              height={120}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Right Panel - Properties */}
-      {isRightPanelOpen && (
-        <>
-          <PanelResizer
-            side="right"
-            width={rightPanelWidth}
-            minWidth={220}
-            maxWidth={450}
-            onWidthChange={setRightPanelWidth}
-          />
-          <aside className="zm-draw-right-panel" style={{ width: rightPanelWidth, minWidth: rightPanelWidth }}>
+        {/* Right Panel - Properties (floating, auto show/hide) */}
+        {isRightPanelOpen && (
+          <aside className="zm-draw-right-panel" style={{ width: rightPanelWidth }}>
             {/* Tab Header */}
             <div className="zm-draw-panel-tabs">
               <button
@@ -1369,550 +1562,610 @@ export default function Home() {
                 <LayersIcon /> Layers
               </button>
             </div>
-          <div className="zm-draw-panel-content">
-            {/* Layers Panel */}
-            {rightPanelTab === 'layers' ? (
-              <div className="zm-layers-panel">
-                {shapes.length === 0 ? (
-                  <div className="zm-draw-empty-state">
-                    <div className="zm-draw-empty-state-icon">
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                        <polyline points="2 17 12 22 22 17" />
-                        <polyline points="2 12 12 17 22 12" />
-                      </svg>
+            <div className="zm-draw-panel-content">
+              {/* Layers Panel */}
+              {rightPanelTab === 'layers' ? (
+                <div className="zm-layers-panel">
+                  {shapes.length === 0 ? (
+                    <div className="zm-draw-empty-state">
+                      <div className="zm-draw-empty-state-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                          <polyline points="2 17 12 22 22 17" />
+                          <polyline points="2 12 12 17 22 12" />
+                        </svg>
+                      </div>
+                      <p>No layers yet</p>
+                      <p style={{ fontSize: 11, marginTop: 4 }}>
+                        Add shapes to see them here
+                      </p>
                     </div>
-                    <p>No layers yet</p>
-                    <p style={{ fontSize: 11, marginTop: 4 }}>
-                      Add shapes to see them here
-                    </p>
-                  </div>
-                ) : (
-                  <div className="zm-layers-list">
-                    {[...shapes].reverse().map((shape, index) => {
-                      const isSelected = selectedIds.includes(shape.id);
-                      const realIndex = shapes.length - 1 - index;
-                      return (
-                        <div
-                          key={shape.id}
-                          className={`zm-layer-item ${isSelected ? 'selected' : ''} ${shape.visible === false ? 'hidden-layer' : ''} ${shape.locked ? 'locked-layer' : ''} ${draggingLayerId === shape.id ? 'dragging' : ''} ${dropTargetId === shape.id ? 'drop-target' : ''}`}
-                          onClick={() => handleLayerClick(shape.id)}
-                          draggable
-                          onDragStart={(e) => handleLayerDragStart(e, shape.id)}
-                          onDragOver={(e) => handleLayerDragOver(e, shape.id)}
-                          onDragLeave={handleLayerDragLeave}
-                          onDrop={(e) => handleLayerDrop(e, shape.id)}
-                          onDragEnd={handleLayerDragEnd}
-                        >
-                          <button
-                            className={`zm-layer-visibility ${shape.visible === false ? 'off' : ''}`}
-                            title={shape.visible === false ? "Show layer" : "Hide layer"}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleVisibility(shape.id, shape.visible);
-                            }}
+                  ) : (
+                    <div className="zm-layers-list">
+                      {[...shapes].reverse().map((shape, index) => {
+                        const isSelected = selectedIds.includes(shape.id);
+                        const realIndex = shapes.length - 1 - index;
+                        return (
+                          <div
+                            key={shape.id}
+                            className={`zm-layer-item ${isSelected ? 'selected' : ''} ${shape.visible === false ? 'hidden-layer' : ''} ${shape.locked ? 'locked-layer' : ''} ${draggingLayerId === shape.id ? 'dragging' : ''} ${dropTargetId === shape.id ? 'drop-target' : ''}`}
+                            onClick={() => handleLayerClick(shape.id)}
+                            draggable
+                            onDragStart={(e) => handleLayerDragStart(e, shape.id)}
+                            onDragOver={(e) => handleLayerDragOver(e, shape.id)}
+                            onDragLeave={handleLayerDragLeave}
+                            onDrop={(e) => handleLayerDrop(e, shape.id)}
+                            onDragEnd={handleLayerDragEnd}
                           >
-                            {shape.visible === false ? <EyeOffIcon /> : <EyeIcon />}
-                          </button>
-                          <button
-                            className={`zm-layer-lock ${shape.locked ? 'on' : ''}`}
-                            title={shape.locked ? "Unlock layer" : "Lock layer"}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleLock(shape.id, shape.locked);
-                            }}
-                          >
-                            {shape.locked ? <LockIcon /> : <UnlockIcon />}
-                          </button>
-                          <span className="zm-layer-icon">{getShapeTypeIcon(shape.type)}</span>
-                          {editingLayerName === shape.id ? (
-                            <input
-                              type="text"
-                              className="zm-layer-name-input"
-                              value={editingNameValue}
-                              onChange={(e) => setEditingNameValue(e.target.value)}
-                              onBlur={handleSaveLayerName}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveLayerName();
-                                if (e.key === 'Escape') handleCancelEditName();
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              autoFocus
-                            />
-                          ) : (
-                            <span
-                              className="zm-layer-name"
-                              onDoubleClick={(e) => {
+                            <button
+                              className={`zm-layer-visibility ${shape.visible === false ? 'off' : ''}`}
+                              title={shape.visible === false ? "Show layer" : "Hide layer"}
+                              onClick={(e) => {
                                 e.stopPropagation();
-                                handleStartEditName(shape.id, getShapeDisplayName(shape, realIndex));
+                                handleToggleVisibility(shape.id, shape.visible);
                               }}
                             >
-                              {getShapeDisplayName(shape, realIndex)}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ) : (
-            selectedIds.length > 1 ? (
-              // Multi-selection: show alignment options
-              <>
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">
-                    <strong>{selectedIds.length}</strong> items selected
-                  </div>
+                              {shape.visible === false ? <EyeOffIcon /> : <EyeIcon />}
+                            </button>
+                            <button
+                              className={`zm-layer-lock ${shape.locked ? 'on' : ''}`}
+                              title={shape.locked ? "Unlock layer" : "Lock layer"}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleLock(shape.id, shape.locked);
+                              }}
+                            >
+                              {shape.locked ? <LockIcon /> : <UnlockIcon />}
+                            </button>
+                            <span className="zm-layer-icon">{getShapeTypeIcon(shape.type)}</span>
+                            {editingLayerName === shape.id ? (
+                              <input
+                                type="text"
+                                className="zm-layer-name-input"
+                                value={editingNameValue}
+                                onChange={(e) => setEditingNameValue(e.target.value)}
+                                onBlur={handleSaveLayerName}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveLayerName();
+                                  if (e.key === 'Escape') handleCancelEditName();
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                autoFocus
+                              />
+                            ) : (
+                              <span
+                                className="zm-layer-name"
+                                onDoubleClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStartEditName(shape.id, getShapeDisplayName(shape, realIndex));
+                                }}
+                              >
+                                {getShapeDisplayName(shape, realIndex)}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-
-                {/* Alignment Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Align</div>
-                  <div className="zm-draw-panel-row" style={{ gap: 4 }}>
-                    <Tooltip content="Align Left">
-                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('left')}>
-                        <AlignShapeLeftIcon />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Align Center">
-                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('center')}>
-                        <AlignShapeCenterHIcon />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Align Right">
-                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('right')}>
-                        <AlignShapeRightIcon />
-                      </button>
-                    </Tooltip>
-                  </div>
-                  <div className="zm-draw-panel-row" style={{ gap: 4, marginTop: 4 }}>
-                    <Tooltip content="Align Top">
-                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('top')}>
-                        <AlignShapeTopIcon />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Align Middle">
-                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('middle')}>
-                        <AlignShapeMiddleIcon />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Align Bottom">
-                      <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('bottom')}>
-                        <AlignShapeBottomIcon />
-                      </button>
-                    </Tooltip>
-                  </div>
-                </div>
-
-                {/* Distribution Section - only show for 3+ shapes */}
-                {selectedIds.length >= 3 && (
+              ) : (
+              selectedIds.length > 1 ? (
+                // Multi-selection: show alignment options
+                <>
                   <div className="zm-draw-panel-section">
-                    <div className="zm-draw-panel-section-title">Distribute</div>
+                    <div className="zm-draw-panel-section-title">
+                      <strong>{selectedIds.length}</strong> items selected
+                    </div>
+                  </div>
+
+                  {/* Alignment Section */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Align</div>
                     <div className="zm-draw-panel-row" style={{ gap: 4 }}>
-                      <Tooltip content="Distribute Horizontally">
-                        <button className="zm-style-button" onClick={() => canvasRef.current?.distributeShapes('horizontal')}>
-                          <DistributeHIcon />
+                      <Tooltip content="Align Left">
+                        <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('left')}>
+                          <AlignShapeLeftIcon />
                         </button>
                       </Tooltip>
-                      <Tooltip content="Distribute Vertically">
-                        <button className="zm-style-button" onClick={() => canvasRef.current?.distributeShapes('vertical')}>
-                          <DistributeVIcon />
+                      <Tooltip content="Align Center">
+                        <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('center')}>
+                          <AlignShapeCenterHIcon />
+                        </button>
+                      </Tooltip>
+                      <Tooltip content="Align Right">
+                        <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('right')}>
+                          <AlignShapeRightIcon />
+                        </button>
+                      </Tooltip>
+                    </div>
+                    <div className="zm-draw-panel-row" style={{ gap: 4, marginTop: 4 }}>
+                      <Tooltip content="Align Top">
+                        <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('top')}>
+                          <AlignShapeTopIcon />
+                        </button>
+                      </Tooltip>
+                      <Tooltip content="Align Middle">
+                        <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('middle')}>
+                          <AlignShapeMiddleIcon />
+                        </button>
+                      </Tooltip>
+                      <Tooltip content="Align Bottom">
+                        <button className="zm-style-button" onClick={() => canvasRef.current?.alignShapes('bottom')}>
+                          <AlignShapeBottomIcon />
                         </button>
                       </Tooltip>
                     </div>
                   </div>
-                )}
 
-                {/* Group Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Group</div>
-                  <div className="zm-draw-panel-row" style={{ gap: 4 }}>
-                    <Tooltip content="Group (Ctrl+G)">
-                      <button className="zm-style-button" onClick={() => canvasRef.current?.groupSelected()}>
-                        <GroupIcon />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Ungroup (Ctrl+Shift+G)">
-                      <button className="zm-style-button" onClick={() => canvasRef.current?.ungroupSelected()}>
-                        <UngroupIcon />
-                      </button>
-                    </Tooltip>
-                  </div>
-                </div>
+                  {/* Distribution Section - only show for 3+ shapes */}
+                  {selectedIds.length >= 3 && (
+                    <div className="zm-draw-panel-section">
+                      <div className="zm-draw-panel-section-title">Distribute</div>
+                      <div className="zm-draw-panel-row" style={{ gap: 4 }}>
+                        <Tooltip content="Distribute Horizontally">
+                          <button className="zm-style-button" onClick={() => canvasRef.current?.distributeShapes('horizontal')}>
+                            <DistributeHIcon />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Distribute Vertically">
+                          <button className="zm-style-button" onClick={() => canvasRef.current?.distributeShapes('vertical')}>
+                            <DistributeVIcon />
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  )}
 
-                <div className="zm-draw-panel-section">
-                  <p style={{ fontSize: 11, color: 'var(--zm-text-muted)' }}>
-                    Shift+Click to add/remove<br />
-                    Ctrl+A to select all
-                  </p>
-                </div>
-              </>
-            ) : selectedShape ? (
-              <>
-                {/* Position Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Position</div>
-                  <div className="zm-draw-panel-row">
-                    <span className="zm-draw-panel-label">X</span>
-                    <input
-                      type="number"
-                      className="zm-draw-panel-input"
-                      value={Math.round(selectedShape.x)}
-                      onChange={(e) => updateShapeProperty('x', parseFloat(e.target.value) || 0)}
-                    />
-                    <span className="zm-draw-panel-label">Y</span>
-                    <input
-                      type="number"
-                      className="zm-draw-panel-input"
-                      value={Math.round(selectedShape.y)}
-                      onChange={(e) => updateShapeProperty('y', parseFloat(e.target.value) || 0)}
-                    />
-                  </div>
-                </div>
-
-                {/* Size Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Size</div>
-                  <div className="zm-draw-panel-row">
-                    <span className="zm-draw-panel-label">W</span>
-                    <input
-                      type="number"
-                      className="zm-draw-panel-input"
-                      value={Math.round(selectedShape.width)}
-                      onChange={(e) => updateShapeProperty('width', Math.max(1, parseFloat(e.target.value) || 1))}
-                      min={1}
-                    />
-                    <span className="zm-draw-panel-label">H</span>
-                    <input
-                      type="number"
-                      className="zm-draw-panel-input"
-                      value={Math.round(selectedShape.height)}
-                      onChange={(e) => updateShapeProperty('height', Math.max(1, parseFloat(e.target.value) || 1))}
-                      min={1}
-                    />
-                  </div>
-                </div>
-
-                {/* Rotation Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Rotation</div>
-                  <div className="zm-draw-panel-row">
-                    <span className="zm-draw-panel-label">R</span>
-                    <input
-                      type="number"
-                      className="zm-draw-panel-input"
-                      value={Math.round(selectedShape.rotation)}
-                      onChange={(e) => updateShapeProperty('rotation', parseFloat(e.target.value) || 0)}
-                    />
-                    <span className="zm-draw-panel-label" style={{ minWidth: 'auto' }}>deg</span>
-                  </div>
-                </div>
-
-                {/* Fill Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Fill</div>
-                  <div className="zm-draw-panel-row">
-                    <ColorPicker
-                      color={selectedShape.fill}
-                      onChange={(color) => updateShapeProperty('fill', color)}
-                      label="Fill color"
-                    />
-                    <input
-                      type="text"
-                      className="zm-draw-panel-input"
-                      value={selectedShape.fill}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
-                          updateShapeProperty('fill', value || '#000000');
-                        }
-                      }}
-                      placeholder="#3b82f6"
-                    />
-                  </div>
-                </div>
-
-                {/* Stroke Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Stroke</div>
-                  <div className="zm-draw-panel-row">
-                    <ColorPicker
-                      color={selectedShape.stroke}
-                      onChange={(color) => updateShapeProperty('stroke', color)}
-                      label="Stroke color"
-                    />
-                    <input
-                      type="text"
-                      className="zm-draw-panel-input"
-                      value={selectedShape.stroke}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
-                          updateShapeProperty('stroke', value || '#000000');
-                        }
-                      }}
-                      placeholder="#1d4ed8"
-                    />
-                  </div>
-                  <div className="zm-draw-panel-row">
-                    <span className="zm-draw-panel-label">Width</span>
-                    <input
-                      type="number"
-                      className="zm-draw-panel-input"
-                      value={selectedShape.strokeWidth}
-                      onChange={(e) => updateShapeProperty('strokeWidth', Math.max(0, parseFloat(e.target.value) || 0))}
-                      min={0}
-                      step={1}
-                    />
-                  </div>
-                </div>
-
-                {/* Corner Radius Section - Only for rectangles */}
-                {selectedShape.type === 'rectangle' && (
+                  {/* Group Section */}
                   <div className="zm-draw-panel-section">
-                    <div className="zm-draw-panel-section-title">Corner Radius</div>
+                    <div className="zm-draw-panel-section-title">Group</div>
+                    <div className="zm-draw-panel-row" style={{ gap: 4 }}>
+                      <Tooltip content="Group (Ctrl+G)">
+                        <button className="zm-style-button" onClick={() => canvasRef.current?.groupSelected()}>
+                          <GroupIcon />
+                        </button>
+                      </Tooltip>
+                      <Tooltip content="Ungroup (Ctrl+Shift+G)">
+                        <button className="zm-style-button" onClick={() => canvasRef.current?.ungroupSelected()}>
+                          <UngroupIcon />
+                        </button>
+                      </Tooltip>
+                    </div>
+                  </div>
+
+                  <div className="zm-draw-panel-section">
+                    <p style={{ fontSize: 11, color: 'var(--zm-text-muted)' }}>
+                      Shift+Click to add/remove<br />
+                      Ctrl+A to select all
+                    </p>
+                  </div>
+                </>
+              ) : selectedShape ? (
+                <>
+                  {/* Position Section */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Position</div>
+                    <div className="zm-draw-panel-row">
+                      <span className="zm-draw-panel-label">X</span>
+                      <input
+                        type="number"
+                        className="zm-draw-panel-input"
+                        value={Math.round(selectedShape.x)}
+                        onChange={(e) => updateShapeProperty('x', parseFloat(e.target.value) || 0)}
+                      />
+                      <span className="zm-draw-panel-label">Y</span>
+                      <input
+                        type="number"
+                        className="zm-draw-panel-input"
+                        value={Math.round(selectedShape.y)}
+                        onChange={(e) => updateShapeProperty('y', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Size Section */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Size</div>
+                    <div className="zm-draw-panel-row">
+                      <span className="zm-draw-panel-label">W</span>
+                      <input
+                        type="number"
+                        className="zm-draw-panel-input"
+                        value={Math.round(selectedShape.width)}
+                        onChange={(e) => updateShapeProperty('width', Math.max(1, parseFloat(e.target.value) || 1))}
+                        min={1}
+                      />
+                      <span className="zm-draw-panel-label">H</span>
+                      <input
+                        type="number"
+                        className="zm-draw-panel-input"
+                        value={Math.round(selectedShape.height)}
+                        onChange={(e) => updateShapeProperty('height', Math.max(1, parseFloat(e.target.value) || 1))}
+                        min={1}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Rotation Section */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Rotation</div>
                     <div className="zm-draw-panel-row">
                       <span className="zm-draw-panel-label">R</span>
                       <input
                         type="number"
                         className="zm-draw-panel-input"
-                        value={selectedShape.cornerRadius}
-                        onChange={(e) => updateShapeProperty('cornerRadius', Math.max(0, parseFloat(e.target.value) || 0))}
+                        value={Math.round(selectedShape.rotation)}
+                        onChange={(e) => updateShapeProperty('rotation', parseFloat(e.target.value) || 0)}
+                      />
+                      <span className="zm-draw-panel-label" style={{ minWidth: 'auto' }}>deg</span>
+                    </div>
+                  </div>
+
+                  {/* Fill Section */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Fill</div>
+                    <div className="zm-draw-panel-row">
+                      <ColorPicker
+                        color={selectedShape.fill}
+                        onChange={(color) => updateShapeProperty('fill', color)}
+                        label="Fill color"
+                      />
+                      <input
+                        type="text"
+                        className="zm-draw-panel-input"
+                        value={selectedShape.fill}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
+                            updateShapeProperty('fill', value || '#000000');
+                          }
+                        }}
+                        placeholder="#3b82f6"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stroke Section */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Stroke</div>
+                    <div className="zm-draw-panel-row">
+                      <ColorPicker
+                        color={selectedShape.stroke}
+                        onChange={(color) => updateShapeProperty('stroke', color)}
+                        label="Stroke color"
+                      />
+                      <input
+                        type="text"
+                        className="zm-draw-panel-input"
+                        value={selectedShape.stroke}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
+                            updateShapeProperty('stroke', value || '#000000');
+                          }
+                        }}
+                        placeholder="#1d4ed8"
+                      />
+                    </div>
+                    <div className="zm-draw-panel-row">
+                      <span className="zm-draw-panel-label">Width</span>
+                      <input
+                        type="number"
+                        className="zm-draw-panel-input"
+                        value={selectedShape.strokeWidth}
+                        onChange={(e) => updateShapeProperty('strokeWidth', Math.max(0, parseFloat(e.target.value) || 0))}
                         min={0}
                         step={1}
                       />
                     </div>
                   </div>
-                )}
 
-                {/* Text Section - Only for text shapes */}
-                {selectedShape.type === 'text' && (
-                  <>
+                  {/* Corner Radius Section - Only for rectangles */}
+                  {selectedShape.type === 'rectangle' && (
                     <div className="zm-draw-panel-section">
-                      <div className="zm-draw-panel-section-title">Text</div>
+                      <div className="zm-draw-panel-section-title">Corner Radius</div>
                       <div className="zm-draw-panel-row">
-                        <span className="zm-draw-panel-label">Size</span>
+                        <span className="zm-draw-panel-label">R</span>
                         <input
                           type="number"
                           className="zm-draw-panel-input"
-                          value={selectedShape.fontSize || 16}
-                          onChange={(e) => updateShapeProperty('fontSize', Math.max(8, parseFloat(e.target.value) || 16))}
-                          min={8}
+                          value={selectedShape.cornerRadius}
+                          onChange={(e) => updateShapeProperty('cornerRadius', Math.max(0, parseFloat(e.target.value) || 0))}
+                          min={0}
                           step={1}
                         />
                       </div>
-                      <div className="zm-draw-panel-row">
-                        <ColorPicker
-                          color={selectedShape.textColor || '#000000'}
-                          onChange={(color) => updateShapeProperty('textColor', color)}
-                          label="Text color"
-                        />
-                        <input
-                          type="text"
-                          className="zm-draw-panel-input"
-                          value={selectedShape.textColor || '#000000'}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
-                              updateShapeProperty('textColor', value || '#000000');
-                            }
-                          }}
-                          placeholder="#000000"
-                        />
-                      </div>
-                      <div className="zm-draw-panel-row" style={{ gap: 4 }}>
-                        <Tooltip content="Align Left">
-                          <button
-                            className={`zm-style-button ${(!selectedShape.textAlign || selectedShape.textAlign === 'left') ? 'active' : ''}`}
-                            onClick={() => updateShapeProperty('textAlign', 'left')}
-                          >
-                            <AlignLeftIcon />
-                          </button>
-                        </Tooltip>
-                        <Tooltip content="Align Center">
-                          <button
-                            className={`zm-style-button ${selectedShape.textAlign === 'center' ? 'active' : ''}`}
-                            onClick={() => updateShapeProperty('textAlign', 'center')}
-                          >
-                            <AlignCenterIcon />
-                          </button>
-                        </Tooltip>
-                        <Tooltip content="Align Right">
-                          <button
-                            className={`zm-style-button ${selectedShape.textAlign === 'right' ? 'active' : ''}`}
-                            onClick={() => updateShapeProperty('textAlign', 'right')}
-                          >
-                            <AlignRightIcon />
-                          </button>
-                        </Tooltip>
-                      </div>
                     </div>
-                  </>
-                )}
+                  )}
 
-                {/* Type Info */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Info</div>
-                  <div className="zm-draw-panel-row">
-                    <span className="zm-draw-panel-label" style={{ minWidth: 'auto' }}>Type:</span>
-                    <span style={{ fontSize: 12, color: 'var(--zm-text-secondary)' }}>
-                      {selectedShape.type}
-                    </span>
-                  </div>
-                </div>
-              </>
-            ) : selectedConnector ? (
-              <>
-                {/* Connector Properties */}
-                {/* Line Style Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Line Style</div>
-                  <div className="zm-draw-panel-row" style={{ gap: 4 }}>
-                    <Tooltip content="Solid">
-                      <button
-                        className={`zm-style-button ${(!selectedConnector.lineStyle || selectedConnector.lineStyle === 'solid') ? 'active' : ''}`}
-                        onClick={() => updateConnectorProperty('lineStyle', 'solid')}
-                      >
-                        <LineSolidIcon />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Dashed">
-                      <button
-                        className={`zm-style-button ${selectedConnector.lineStyle === 'dashed' ? 'active' : ''}`}
-                        onClick={() => updateConnectorProperty('lineStyle', 'dashed')}
-                      >
-                        <LineDashedIcon />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Dotted">
-                      <button
-                        className={`zm-style-button ${selectedConnector.lineStyle === 'dotted' ? 'active' : ''}`}
-                        onClick={() => updateConnectorProperty('lineStyle', 'dotted')}
-                      >
-                        <LineDottedIcon />
-                      </button>
-                    </Tooltip>
-                  </div>
-                </div>
+                  {/* Text Section - Only for text shapes */}
+                  {selectedShape.type === 'text' && (
+                    <>
+                      <div className="zm-draw-panel-section">
+                        <div className="zm-draw-panel-section-title">Text</div>
+                        <div className="zm-draw-panel-row">
+                          <span className="zm-draw-panel-label">Size</span>
+                          <input
+                            type="number"
+                            className="zm-draw-panel-input"
+                            value={selectedShape.fontSize || 16}
+                            onChange={(e) => updateShapeProperty('fontSize', Math.max(8, parseFloat(e.target.value) || 16))}
+                            min={8}
+                            step={1}
+                          />
+                        </div>
+                        <div className="zm-draw-panel-row">
+                          <ColorPicker
+                            color={selectedShape.textColor || '#000000'}
+                            onChange={(color) => updateShapeProperty('textColor', color)}
+                            label="Text color"
+                          />
+                          <input
+                            type="text"
+                            className="zm-draw-panel-input"
+                            value={selectedShape.textColor || '#000000'}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
+                                updateShapeProperty('textColor', value || '#000000');
+                              }
+                            }}
+                            placeholder="#000000"
+                          />
+                        </div>
+                        <div className="zm-draw-panel-row" style={{ gap: 4 }}>
+                          <Tooltip content="Align Left">
+                            <button
+                              className={`zm-style-button ${(!selectedShape.textAlign || selectedShape.textAlign === 'left') ? 'active' : ''}`}
+                              onClick={() => updateShapeProperty('textAlign', 'left')}
+                            >
+                              <AlignLeftIcon />
+                            </button>
+                          </Tooltip>
+                          <Tooltip content="Align Center">
+                            <button
+                              className={`zm-style-button ${selectedShape.textAlign === 'center' ? 'active' : ''}`}
+                              onClick={() => updateShapeProperty('textAlign', 'center')}
+                            >
+                              <AlignCenterIcon />
+                            </button>
+                          </Tooltip>
+                          <Tooltip content="Align Right">
+                            <button
+                              className={`zm-style-button ${selectedShape.textAlign === 'right' ? 'active' : ''}`}
+                              onClick={() => updateShapeProperty('textAlign', 'right')}
+                            >
+                              <AlignRightIcon />
+                            </button>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    </>
+                  )}
 
-                {/* Routing Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Routing</div>
-                  <div className="zm-draw-panel-row" style={{ gap: 4 }}>
-                    <Tooltip content="Straight">
-                      <button
-                        className={`zm-style-button ${(!selectedConnector.routing || selectedConnector.routing === 'straight') ? 'active' : ''}`}
-                        onClick={() => updateConnectorProperty('routing', 'straight')}
-                      >
-                        <RoutingStraightIcon />
-                      </button>
-                    </Tooltip>
-                    <Tooltip content="Orthogonal (Elbow)">
-                      <button
-                        className={`zm-style-button ${selectedConnector.routing === 'orthogonal' ? 'active' : ''}`}
-                        onClick={() => updateConnectorProperty('routing', 'orthogonal')}
-                      >
-                        <RoutingOrthogonalIcon />
-                      </button>
-                    </Tooltip>
+                  {/* Type Info */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Info</div>
+                    <div className="zm-draw-panel-row">
+                      <span className="zm-draw-panel-label" style={{ minWidth: 'auto' }}>Type:</span>
+                      <span style={{ fontSize: 12, color: 'var(--zm-text-secondary)' }}>
+                        {selectedShape.type}
+                      </span>
+                    </div>
                   </div>
-                </div>
-
-                {/* Arrow Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Arrows</div>
-                  <div className="zm-draw-panel-row">
-                    <span className="zm-draw-panel-label">End</span>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <Tooltip content="No Arrow">
+                </>
+              ) : selectedConnector ? (
+                <>
+                  {/* Connector Properties */}
+                  {/* Line Style Section */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Line Style</div>
+                    <div className="zm-draw-panel-row" style={{ gap: 4 }}>
+                      <Tooltip content="Solid">
                         <button
-                          className={`zm-style-button ${!selectedConnector.arrow && selectedConnector.arrowEnd !== 'arrow' ? 'active' : ''}`}
-                          onClick={() => {
-                            updateConnectorProperty('arrow', false);
-                            updateConnectorProperty('arrowEnd', 'none');
-                          }}
+                          className={`zm-style-button ${(!selectedConnector.lineStyle || selectedConnector.lineStyle === 'solid') ? 'active' : ''}`}
+                          onClick={() => updateConnectorProperty('lineStyle', 'solid')}
                         >
-                          <ArrowNoneIcon />
+                          <LineSolidIcon />
                         </button>
                       </Tooltip>
-                      <Tooltip content="Arrow">
+                      <Tooltip content="Dashed">
                         <button
-                          className={`zm-style-button ${selectedConnector.arrow || selectedConnector.arrowEnd === 'arrow' ? 'active' : ''}`}
-                          onClick={() => {
-                            updateConnectorProperty('arrow', true);
-                            updateConnectorProperty('arrowEnd', 'arrow');
-                          }}
+                          className={`zm-style-button ${selectedConnector.lineStyle === 'dashed' ? 'active' : ''}`}
+                          onClick={() => updateConnectorProperty('lineStyle', 'dashed')}
                         >
-                          <ArrowEndIcon />
+                          <LineDashedIcon />
+                        </button>
+                      </Tooltip>
+                      <Tooltip content="Dotted">
+                        <button
+                          className={`zm-style-button ${selectedConnector.lineStyle === 'dotted' ? 'active' : ''}`}
+                          onClick={() => updateConnectorProperty('lineStyle', 'dotted')}
+                        >
+                          <LineDottedIcon />
                         </button>
                       </Tooltip>
                     </div>
                   </div>
-                </div>
 
-                {/* Stroke Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Stroke</div>
-                  <div className="zm-draw-panel-row">
-                    <ColorPicker
-                      color={selectedConnector.stroke}
-                      onChange={(color) => updateConnectorProperty('stroke', color)}
-                      label="Stroke color"
-                    />
-                    <input
-                      type="text"
-                      className="zm-draw-panel-input"
-                      value={selectedConnector.stroke}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
-                          updateConnectorProperty('stroke', value || '#000000');
-                        }
-                      }}
-                      placeholder="#6b7280"
-                    />
+                  {/* Routing Section */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Routing</div>
+                    <div className="zm-draw-panel-row" style={{ gap: 4 }}>
+                      <Tooltip content="Straight">
+                        <button
+                          className={`zm-style-button ${(!selectedConnector.routing || selectedConnector.routing === 'straight') ? 'active' : ''}`}
+                          onClick={() => updateConnectorProperty('routing', 'straight')}
+                        >
+                          <RoutingStraightIcon />
+                        </button>
+                      </Tooltip>
+                      <Tooltip content="Orthogonal (Elbow)">
+                        <button
+                          className={`zm-style-button ${selectedConnector.routing === 'orthogonal' ? 'active' : ''}`}
+                          onClick={() => updateConnectorProperty('routing', 'orthogonal')}
+                        >
+                          <RoutingOrthogonalIcon />
+                        </button>
+                      </Tooltip>
+                    </div>
                   </div>
-                  <div className="zm-draw-panel-row">
-                    <span className="zm-draw-panel-label">Width</span>
-                    <input
-                      type="number"
-                      className="zm-draw-panel-input"
-                      value={selectedConnector.strokeWidth}
-                      onChange={(e) => updateConnectorProperty('strokeWidth', Math.max(1, parseFloat(e.target.value) || 1))}
-                      min={1}
-                      step={1}
-                    />
-                  </div>
-                </div>
 
-                {/* Info Section */}
-                <div className="zm-draw-panel-section">
-                  <div className="zm-draw-panel-section-title">Info</div>
-                  <div className="zm-draw-panel-row">
-                    <span className="zm-draw-panel-label" style={{ minWidth: 'auto' }}>Type:</span>
-                    <span style={{ fontSize: 12, color: 'var(--zm-text-secondary)' }}>
-                      Connector
-                    </span>
+                  {/* Arrow Section */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Arrows</div>
+                    <div className="zm-draw-panel-row">
+                      <span className="zm-draw-panel-label">End</span>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <Tooltip content="No Arrow">
+                          <button
+                            className={`zm-style-button ${!selectedConnector.arrow && selectedConnector.arrowEnd !== 'arrow' ? 'active' : ''}`}
+                            onClick={() => {
+                              updateConnectorProperty('arrow', false);
+                              updateConnectorProperty('arrowEnd', 'none');
+                            }}
+                          >
+                            <ArrowNoneIcon />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Arrow">
+                          <button
+                            className={`zm-style-button ${selectedConnector.arrow || selectedConnector.arrowEnd === 'arrow' ? 'active' : ''}`}
+                            onClick={() => {
+                              updateConnectorProperty('arrow', true);
+                              updateConnectorProperty('arrowEnd', 'arrow');
+                            }}
+                          >
+                            <ArrowEndIcon />
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Stroke Section */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Stroke</div>
+                    <div className="zm-draw-panel-row">
+                      <ColorPicker
+                        color={selectedConnector.stroke}
+                        onChange={(color) => updateConnectorProperty('stroke', color)}
+                        label="Stroke color"
+                      />
+                      <input
+                        type="text"
+                        className="zm-draw-panel-input"
+                        value={selectedConnector.stroke}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^#[0-9A-Fa-f]{0,6}$/.test(value) || value === '') {
+                            updateConnectorProperty('stroke', value || '#000000');
+                          }
+                        }}
+                        placeholder="#6b7280"
+                      />
+                    </div>
+                    <div className="zm-draw-panel-row">
+                      <span className="zm-draw-panel-label">Width</span>
+                      <input
+                        type="number"
+                        className="zm-draw-panel-input"
+                        value={selectedConnector.strokeWidth}
+                        onChange={(e) => updateConnectorProperty('strokeWidth', Math.max(1, parseFloat(e.target.value) || 1))}
+                        min={1}
+                        step={1}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Info Section */}
+                  <div className="zm-draw-panel-section">
+                    <div className="zm-draw-panel-section-title">Info</div>
+                    <div className="zm-draw-panel-row">
+                      <span className="zm-draw-panel-label" style={{ minWidth: 'auto' }}>Type:</span>
+                      <span style={{ fontSize: 12, color: 'var(--zm-text-secondary)' }}>
+                        Connector
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="zm-draw-empty-state">
+                  <div className="zm-draw-empty-state-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <path d="M3 9h18" />
+                      <path d="M9 21V9" />
+                    </svg>
+                  </div>
+                  <p>Select a shape to view<br />its properties</p>
                 </div>
-              </>
-            ) : (
-              <div className="zm-draw-empty-state">
-                <div className="zm-draw-empty-state-icon">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <path d="M3 9h18" />
-                    <path d="M9 21V9" />
-                  </svg>
-                </div>
-                <p>Select a shape to view<br />its properties</p>
-              </div>
-            ))}
-          </div>
-        </aside>
-        </>
-      )}
+              ))}
+            </div>
+          </aside>
+        )}
+
+        {/* Bottom Toolbar — FigJam variant */}
+        <div className="zm-draw-bottom-toolbar">
+          <Toolbar
+            variant="figjam"
+            tool={currentTool}
+            setTool={setTool}
+            connectingFrom={null}
+            cancelConnecting={() => {}}
+            hasSelection={!!selectedShape || selectedIds.length > 0}
+            onDelete={handleDelete}
+            shapeCount={shapes.length}
+            onClearAll={() => {}}
+            canUndo={canvasRef.current?.canUndo ?? false}
+            onUndo={() => canvasRef.current?.undo()}
+            canRedo={canvasRef.current?.canRedo ?? false}
+            onRedo={() => canvasRef.current?.redo()}
+            scale={viewport.scale}
+            onResetZoom={() => canvasRef.current?.zoomTo100()}
+            onSave={() => canvasRef.current?.saveToJSON()}
+            onLoad={() => canvasRef.current?.loadFromJSONFile()}
+            onShapesToggle={toggleLeftPanel}
+            isShapesPanelOpen={isLeftPanelOpen}
+            currentStampType={currentStampType}
+            onStampTypeChange={setStampType}
+            onAddStamp={() => {}}
+          />
+        </div>
+
+        {/* Zoom Controls — floating bottom-right */}
+        <div className="zm-draw-zoom-floating">
+          <button onClick={() => canvasRef.current?.setZoom(viewport.scale / 1.2)} title="Zoom Out">
+            <ZoomOutIcon />
+          </button>
+          <button
+            className="zm-zoom-level"
+            onClick={() => canvasRef.current?.zoomTo100()}
+            title="Reset Zoom"
+          >
+            {Math.round(viewport.scale * 100)}%
+          </button>
+          <button onClick={() => canvasRef.current?.setZoom(viewport.scale * 1.2)} title="Zoom In">
+            <ZoomInIcon />
+          </button>
+          <button onClick={() => canvasRef.current?.zoomToFit()} title="Zoom to Fit">
+            <ZoomFitIcon />
+          </button>
+        </div>
+
+        {/* Selection Context Menu */}
+        {selectedShape && (
+          <SelectionContextMenu
+            shape={selectedShape}
+            viewport={viewport}
+            canvasOffset={canvasOffset}
+            onCopy={handleCopy}
+            onDuplicate={handleDuplicate}
+            onDelete={handleDelete}
+          />
+        )}
+
       </div>
     </TooltipProvider>
   );

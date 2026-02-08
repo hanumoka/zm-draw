@@ -64,7 +64,11 @@
   --zm-focus-ring: 0 0 0 2px var(--zm-accent-light), 0 0 0 4px var(--zm-accent);
 }
 
-body {
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
   color: var(--zm-text-primary);
   background: var(--zm-bg-primary);
 }
@@ -79,19 +83,18 @@ body {
   box-shadow: var(--zm-focus-ring);
 }
 
-/* zm-draw Editor Layout */
+/* zm-draw Editor Layout — Full-screen canvas with floating overlays */
 .zm-draw-editor {
-  display: flex;
+  position: relative;
+  width: 100vw;
   height: 100vh;
   overflow: hidden;
 }
 
 .zm-draw-canvas-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  position: relative;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
 /* Header Bar */
@@ -196,12 +199,76 @@ body {
   gap: 4px;
 }
 
-/* Minimap */
-.zm-draw-minimap {
+/* Bottom Toolbar — FigJam floating centered */
+.zm-draw-bottom-toolbar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+}
+
+/* Zoom Controls — floating bottom-right */
+.zm-draw-zoom-floating {
   position: absolute;
   bottom: 16px;
   right: 16px;
-  z-index: 100;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--zm-bg-primary);
+  border-radius: 8px;
+  padding: 4px 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--zm-border);
+}
+
+.zm-draw-zoom-floating button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--zm-text-secondary);
+  cursor: pointer;
+  transition: all 0.12s;
+  font-size: 14px;
+}
+
+.zm-draw-zoom-floating button:hover {
+  background: var(--zm-bg-hover);
+  color: var(--zm-text-primary);
+}
+
+.zm-draw-zoom-floating .zm-zoom-level {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--zm-text-secondary);
+  min-width: 44px;
+  text-align: center;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  transition: all 0.12s;
+}
+
+.zm-draw-zoom-floating .zm-zoom-level:hover {
+  background: var(--zm-bg-hover);
+  color: var(--zm-text-primary);
+}
+
+/* Minimap — above zoom controls */
+.zm-draw-minimap {
+  position: absolute;
+  bottom: 60px;
+  right: 16px;
+  z-index: 50;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -309,39 +376,43 @@ body {
 }
 
 .zm-draw-canvas-container {
-  flex: 1;
-  border: 1px solid var(--zm-border);
-  border-radius: 8px;
+  width: 100%;
+  height: 100%;
   background: var(--zm-bg-canvas);
-  /* overflow: hidden removed to allow floating toolbar visibility */
 }
 
-/* Left Panel - FigJam style */
+/* Left Panel - Floating over canvas */
 .zm-draw-left-panel {
+  position: absolute;
+  left: 8px;
+  top: 56px;
+  bottom: 80px;
+  z-index: 40;
+  width: 280px;
   background: var(--zm-bg-primary);
-  border-right: 1px solid var(--zm-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  flex-shrink: 0;
-  margin: 8px 0 8px 8px;
   border-radius: 12px;
   border: 1px solid var(--zm-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-/* Right Panel - FigJam style */
+/* Right Panel - Floating over canvas */
 .zm-draw-right-panel {
+  position: absolute;
+  right: 8px;
+  top: 56px;
+  bottom: 80px;
+  z-index: 40;
+  width: 280px;
   background: var(--zm-bg-primary);
-  border-left: 1px solid var(--zm-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  flex-shrink: 0;
-  margin: 8px 8px 8px 0;
   border-radius: 12px;
   border: 1px solid var(--zm-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 .zm-draw-panel-header {
@@ -788,6 +859,7 @@ body {
 .zm-shapes-section-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   width: 100%;
   padding: 10px 12px;
@@ -805,15 +877,16 @@ body {
   background: var(--zm-bg-tertiary);
 }
 
+.zm-shapes-section-title {
+  flex: 1;
+}
+
 .zm-shapes-section-chevron {
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--zm-text-muted);
-}
-
-.zm-shapes-section-title {
-  flex: 1;
+  flex-shrink: 0;
 }
 
 .zm-shapes-section-content {
@@ -823,7 +896,7 @@ body {
 /* Shapes Grid */
 .zm-shapes-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px;
 }
 

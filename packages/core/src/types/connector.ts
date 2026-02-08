@@ -16,10 +16,14 @@ export type ConnectorVariant = 'arrow' | 'bidirectional' | 'elbow' | 'line';
 export interface Connector {
   /** Unique identifier */
   id: string;
-  /** ID of the source shape */
-  fromShapeId: string;
-  /** ID of the target shape */
-  toShapeId: string;
+  /** ID of the source shape (optional for free-floating endpoints) */
+  fromShapeId?: string;
+  /** ID of the target shape (optional for free-floating endpoints) */
+  toShapeId?: string;
+  /** Free-floating start position (used when fromShapeId is absent) */
+  fromPos?: { x: number; y: number };
+  /** Free-floating end position (used when toShapeId is absent) */
+  toPos?: { x: number; y: number };
   /** Line color (hex or rgba) */
   stroke: string;
   /** Line width in pixels */

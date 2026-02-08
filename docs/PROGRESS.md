@@ -1,6 +1,6 @@
 # zm-draw 진행상황
 
-> 최종 업데이트: 2026-01-29 (Phase 17 완료 - 모든 핵심 기능 구현)
+> 최종 업데이트: 2026-02-08 (캔버스 하단 공백 버그 수정)
 
 ---
 
@@ -179,8 +179,62 @@
 - [x] **점선 그리드** (Figma 스타일) ✅ NEW
 - [x] **검색 입력창** (UI만) ✅ NEW
 - [x] **접을 수 있는 섹션** (Connectors, Basic, Flowchart) ✅ NEW
+- [x] **검색 필터링** (도형 이름 기반 실시간 필터) ✅ NEW
 - [ ] 패널 접기/펼치기 (Shift+\) - 선택적
 - [ ] EditorLayout 컴포넌트 분리 - 선택적
+
+### 2.3 Shapes 패널 Figma 패리티 ✅ (2026-02-08)
+
+> **목표**: 좌측 Shapes 패널에 Figma/FigJam 수준 도형 카테고리 구현 (41개 신규 도형)
+
+#### Connections 섹션 ✅
+- [x] Connections 섹션 추가 (패널 최상단) ✅
+
+#### Basic Shapes (4) ✅
+- [x] Triangle ✅
+- [x] Pentagon ✅
+- [x] Hexagon ✅
+- [x] Octagon ✅
+
+#### Flowchart Shapes (11) ✅
+- [x] Process ✅
+- [x] Decision ✅
+- [x] Terminator ✅
+- [x] Data (Parallelogram) ✅
+- [x] Document ✅
+- [x] Predefined Process ✅
+- [x] Internal Storage ✅
+- [x] Manual Input ✅
+- [x] Preparation ✅
+- [x] Delay ✅
+- [x] Or ✅
+
+#### Icons Shapes (26) ✅
+- [x] Arrow Right / Left / Up / Down ✅
+- [x] Double Arrow, Chevron ✅
+- [x] Cross, Heart, Star 5-Point, Lightning ✅
+- [x] Cloud, Chat Bubble, Ban ✅
+- [x] Info Circle, Warning Triangle, Check Circle ✅
+- [x] Plus Circle, Minus Circle ✅
+- [x] Lock, Unlock, Eye, Eye Off ✅
+- [x] Settings Gear, User, Home, Bookmark ✅
+
+> **Note**: Advanced 섹션은 Icons에 통합 (paywall 없음)
+
+#### UI 개선 ✅
+- [x] 검색 필터링 (도형 이름 기반 실시간 필터) ✅
+- [x] Chevron 렌더링 수정 ✅
+- [x] 패널 너비 수정 (도형 목록 잘림 해결) ✅
+
+### 2.4 캔버스 하단 공백 버그 수정 ✅ (2026-02-08)
+
+> **문제**: DrawCanvas 래퍼 div의 flex 레이아웃이 absolute 부모 내에서 높이를 100% 채우지 못해 하단 흰색 공백 발생
+> **해결**: 외부/내부 래퍼를 `position: absolute; inset: 0; overflow: hidden`으로 변경
+
+- [x] 외부 래퍼: `flex + overflow: visible` → `absolute + inset: 0 + overflow: hidden` ✅
+- [x] 내부 래퍼: `relative + flex: 1 + overflow: visible` → `absolute + inset: 0 + overflow: hidden` ✅
+- [x] 빌드 확인 ✅
+- [x] 동작 확인 (하단 공백 제거됨) ✅
 
 ---
 
@@ -267,6 +321,43 @@
 - [x] 화살촉 종류: None, Arrow ✅
 - [x] 라인 스타일: Solid, Dashed, Dotted ✅
 - [x] 속성 패널 연동 (커넥터 색상/두께/스타일) ✅
+
+### 3.5.4 드래그 생성 UX (2026-02-08)
+
+- [x] FigJam 스타일 drag-to-connect (mousedown→drag→mouseup) ✅
+- [x] 실시간 프리뷰 Arrow (점선, 파란색) ✅
+- [x] 연결점 스냅 인디케이터 (30px 반경) ✅
+- [x] connectorVariant 프리뷰 반영 (arrow/bidirectional/line/elbow) ✅
+- [x] ESC 드래그 취소 + 도구 전환 시 자동 cleanup ✅
+
+### 3.5.5 Select 모드 커넥터 생성 (2026-02-08)
+
+- [x] Select 모드에서 도형 호버 시 연결점 표시 ✅
+- [x] 연결점 스타일 차별화 (select: 6px/0.7, connector: 8px/1.0) ✅
+- [x] 연결점에서 드래그 → 커넥터 생성 (도형 body는 선택/드래그 유지) ✅
+- [x] stopDrag() 안전장치 (도형 드래그 충돌 방지) ✅
+
+### 3.5.6 커넥터 끝점 편집 (2026-02-08)
+
+- [x] 선택된 커넥터 양 끝에 핸들 Circle 렌더링 ✅
+- [x] 핸들 드래그 → 다른 도형에 재연결 (updateConnector) ✅
+- [x] connectorDragModeRef로 create/reconnect 분기 ✅
+- [x] 고정 끝(반대쪽) 기준 프리뷰 Arrow 표시 ✅
+
+### 3.5.7 FigJam 방식 개선 🔄 (일부 완료)
+
+- [ ] 커넥터 시작 UI: 4방향 원 → 파란 → 아이콘 1개
+- [ ] 프리뷰 경로: 직선 → orthogonal 라운드 곡선
+- [ ] 스냅 대상 표시: 도형 반투명 하이라이트
+- [ ] 중간점 핸들 (커브 조절용 사각형)
+- [x] 커넥터 전용 플로팅 툴바 ✅ (2026-02-08)
+
+### 3.5.8 자유 커넥터 ✅ (2026-02-08)
+
+- [x] Connector 타입: fromShapeId/toShapeId optional + fromPos/toPos 좌표 ✅
+- [x] 빈 캔버스에서 커넥터 드래그 생성 (도형 불필요) ✅
+- [x] 4가지 끝점 조합: 도형→도형, 도형→자유, 자유→도형, 자유→자유 ✅
+- [x] 자유 끝점 재연결 (핸들 드래그) ✅
 
 ---
 
@@ -913,13 +1004,17 @@ export function DrawDiagramNode({ node, updateAttributes }: NodeViewProps) {
 
 | 기능 | FigJam | Excalidraw | Draw.io | **zm-draw** |
 |------|--------|------------|---------|-------------|
-| 커넥터 선택 | ✅ | ✅ | ✅ | ✅ (v1.5) |
-| 화살촉 위치 | 도형 외곽 | 도형 외곽 | 커스텀 | ✅ 도형 외곽 (v1.5) |
-| 라우팅 | Bent/Curved/Straight | Simple/Elbow | Waypoint | **Straight만** |
-| Connection Points | 4방향 스냅 | 4방향 | 완전 커스텀 | ❌ |
-| 화살촉 종류 | 5가지 | 다양 | UML포함 | **1가지** |
-| 라인 스타일 | Solid/Dashed | Solid/Dashed | 다양 | **Solid만** |
+| 커넥터 선택 | ✅ | ✅ | ✅ | ✅ |
+| 화살촉 위치 | 도형 외곽 | 도형 외곽 | 커스텀 | ✅ 도형 외곽 |
+| 라우팅 | Bent/Curved/Straight | Simple/Elbow | Waypoint | Straight + Orthogonal |
+| Connection Points | 4방향 스냅 | 4방향 | 완전 커스텀 | ✅ 4방향 + 드래그 스냅 |
+| Select 모드 커넥터 생성 | ✅ (→ 아이콘) | ❌ | ❌ | ✅ (연결점 드래그) |
+| 끝점 편집 (재연결) | ✅ | ✅ | ✅ | ✅ |
+| 중간점 핸들 | ✅ (커브 조절) | ❌ | ✅ (웨이포인트) | ❌ |
+| 화살촉 종류 | 5가지 | 다양 | UML포함 | Arrow/None/Bidirectional |
+| 라인 스타일 | Solid/Dashed | Solid/Dashed | 다양 | Solid/Dashed/Dotted |
 | 커넥터 레이블 | ✅ | ✅ | ✅ | ❌ |
+| 커넥터 전용 툴바 | ✅ | ✅ | ✅ | ✅ |
 
 ---
 

@@ -185,3 +185,96 @@
 .zm-input:focus-visible {
   box-shadow: var(--zm-focus-ring);
 }
+
+/* ========================================
+   FigJam Toolbar Overflow Menu
+   ======================================== */
+
+.zm-toolbar-overflow-menu {
+  animation: zmToolbarOverflowFadeIn 0.12s ease-out;
+}
+
+@keyframes zmToolbarOverflowFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================
+   Connector Floating Toolbar
+   ======================================== */
+
+.zm-connector-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background-color: var(--zm-bg-primary, #ffffff);
+  border-radius: var(--zm-radius-md, 8px);
+  box-shadow: var(--zm-shadow-md, 0 4px 16px rgba(0, 0, 0, 0.12));
+  border: 1px solid var(--zm-border, #e5e5e5);
+  pointer-events: auto;
+  animation: zmConnectorToolbarFadeIn 0.12s ease-out;
+}
+
+.zm-connector-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: var(--zm-radius-sm, 4px);
+  color: var(--zm-text-secondary, #6b6b6b);
+  cursor: pointer;
+  transition: all var(--zm-transition-fast, 0.1s ease);
+}
+
+.zm-connector-toolbar-btn:hover:not(:disabled) {
+  background-color: var(--zm-bg-hover, #f0f0f0);
+  color: var(--zm-text-primary, #1e1e1e);
+}
+
+.zm-connector-toolbar-btn.active {
+  background-color: var(--zm-accent, #9747ff);
+  color: #ffffff;
+}
+
+.zm-connector-toolbar-btn:focus-visible {
+  box-shadow: var(--zm-focus-ring);
+}
+
+.zm-connector-toolbar-btn-danger {
+  color: var(--zm-text-secondary, #6b6b6b);
+}
+
+.zm-connector-toolbar-btn-danger:hover:not(:disabled) {
+  background-color: var(--zm-danger-light, rgba(239, 68, 68, 0.1));
+  color: var(--zm-danger, #ef4444);
+}
+
+.zm-connector-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background-color: var(--zm-border, #e5e5e5);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+@keyframes zmConnectorToolbarFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
